@@ -1,0 +1,15 @@
+#!/usr/bin/env luajit
+
+local function script_dir()
+  -- arg[0] is the script path; resolve symlinks to get the real location
+  local handle = io.popen("readlink -f " .. arg[0])
+  local real = handle:read("*l")
+  handle:close()
+  return real:match("(.+)/[^/]+$")
+end
+
+local dir = script_dir()
+package.path  = dir .. "/?.lua;" .. dir .. "/?/init.lua;" .. package.path
+package.cpath = dir .. "/?.so;"  .. package.cpath
+
+require 'vex'
