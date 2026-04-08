@@ -210,7 +210,7 @@ function CLI:call(verbname, args)
 end
 
 -- Throw a named error and exit.
-function CLI:throw(errtype, msg, trace)
+function CLI:throw(errtype, msg, ...)
     local handler = self.errors[errtype][1]
     if not handler then
         io.stderr:write("Unknown error type '" .. tostring(errtype) .. "'\n")
@@ -218,7 +218,7 @@ function CLI:throw(errtype, msg, trace)
         io.stderr:write(debug.traceback(nil, 2) .. "\n")
         os.exit(1)
     end
-    io.stderr:write(handler(msg, trace) .. "\n")
+    io.stderr:write(handler(msg, ...) .. "\n")
     if self.errors[errtype].hint then 
         io.stderr:write(self.errors[errtype].hint .. "\n")
     end 

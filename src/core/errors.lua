@@ -27,3 +27,16 @@ cli:error "file" {
     end,
     hint = "Check that the file exists and is not in use?"
 }
+
+cli:error "task-already-exists" {
+    function(msg, path)
+        local str = "Cannot create a new task; task vexid already exists: " .. msg
+        if path then 
+            str = str .. " at path " .. path
+        end 
+        return str
+    end,
+    hint = "You may be trying to create the same task twice?"
+}
+
+

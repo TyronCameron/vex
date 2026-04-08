@@ -2,6 +2,12 @@ local script_dir = debug.getinfo(1, "S").source:match("^@(.+[\\/])")
 package.path = script_dir .. "?.lua;" .. script_dir .. "?/init.lua;" .. package.path
 -- package.cpath = script_dir .. "?.dll;"  .. script_dir .. "?.so;"       .. package.cpath
 
+local plugin = require 'lib.plugin'
+plugin:addenum("tagger", {"canonicalvexid"})
+plugin:addenum("taskpath", {"flatpath"})
+plugin:addenum("taskformat", {"obsidian"})
+plugin:addenum("dataformat", {"csvdata"})
+
 local cli = require 'lib.cli'
 
 require 'core.errors'
