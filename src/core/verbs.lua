@@ -11,11 +11,11 @@ local function bootstrap()
     return Task.new(vexdex, config)
 end 
 
-local function args_to_single_table(args)
+local function argflags(args)
     local taskproperties = {}
     local argproperties = func.ifilter(args, function(word) return type(word) == "table" end)
     for _, pair in ipairs(argproperties) do
-        if taskproperties[pair[2]] then 
+        if pair[2] then 
             taskproperties[pair[1]] = pair[2]
         end 
     end
@@ -54,7 +54,6 @@ cli:verb "optic" {
     example = "vex optic all --filter status:done"
 }
 
-
 cli:verb "view" {
     function(args)
         cli:throw("unimplemented")
@@ -77,7 +76,7 @@ cli:verb "add" {
     function(args)
         local task = bootstrap()
 
-        local taskproperties = args_to_single_table(args)
+        local taskproperties = argflags(args)
         taskproperties.description = table.concat(positional_args(args), " ")
 
         local vexid = task:add(taskproperties)
@@ -93,11 +92,9 @@ cli:verb "add" {
 cli:verb "remove" {
     function(args)
         local task = bootstrap()
-
         local vexid = task:delete(args[1])
-        task:remove()
+        task:remove(vexid)
         task:resolve(vexid)
-        return vexid
     end,
     doc = "Deletes tasks in the optic. Runs resolve on all linked tasks thereafter. Not recommended for regular use",
     args = "[optic]",
@@ -106,7 +103,13 @@ cli:verb "remove" {
 
 cli:verb "get" {
     function(args)
-        cli:throw("unimplemented")
+        local task = bootstrap()
+        local t = task:getsingle(args[1])
+        local values = {}
+        for _,pair in ipairs(func.ifilter(args, function(word) return type(word) == "table" end)) do
+            table.insert(values, t[pair[1]])
+        end
+        return table.concat(values, "\n")
     end,
     doc = "Presents the optic in a tangible data format. Can specify which fields by supplying them as flags",
     args = "[optic] [flags...]",
@@ -115,7 +118,12 @@ cli:verb "get" {
 
 cli:verb "set" {
     function(args)
-        cli:throw("unimplemented")
+        local task = bootstrap()
+        local vexid = positional_args(args)[1]
+        local taskproperties = argflags(args)
+        task:set(vexid, taskproperties)
+        task:resolve(vexid)
+        task:write(vexid)
     end,
     doc = "Allows you to set fields in the optic. Resolution is called on that `optic`",
     args = "[optic] [flags...]",

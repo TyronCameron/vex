@@ -70,6 +70,7 @@ end
 -- returns a single task's data
 function Task:getsingle(vexid)
     assert(vexid, "getsingle() requires an id")
+    self.tasks[vexid] = self.tasks[vexid] or self:read(vexid)
     return self.tasks[vexid]
 end
 
@@ -101,6 +102,7 @@ end
 -- - data normalisation (convert "tomorrow" to actual date)
 -- - path checking and resolving links
 -- - tag duplication checks
+-- should always add to index at the end of a resolve, possibly already removing the task
 function Task:resolve(optic)
     assert(optic, "resolve() requires an optic")
 end
@@ -112,10 +114,12 @@ function Task:to_optic(tasks)
     return tasks 
 end
 
-
 -- reads a file from disk and adds it to memory
+-- possible for an error to be thrown here if we include more things than vexid in the name ... 
 function Task:read(vexid)
-    local task = taskformat.read(taskpath(self.vexdex.path, self.config, {vexid = vexid}))
+    local staletask = self.vexdex:get(vexid) or {}
+    staletask.vexid = vexid
+    local task = taskformat.read(taskpath(self.vexdex.path, self.config, staletask))
     self.tasks[task.vexid] = task
     self:index(task.vexid)
     return task

@@ -7,4 +7,4 @@ local cli = require 'lib.cli'
 require 'core.errors'
 require 'core.verbs'
 
-cli:run(arg)
+cli:run(table.concat(arg, " "))

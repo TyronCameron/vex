@@ -7,7 +7,7 @@ CLI.__index = CLI
 
 local function parse_args(txt)
     -- splits a string into positional args and named flags
-    -- "query tag --select a --drop b" => {"query","tag", {"select","a"}, {"drop", "b"}}
+    -- "query tag --filter --select a --drop b" => {"query", "tag", {"filter"}, {"select","a"}, {"drop", "b"}}
     local args = {}
     local i = 1
     local tokens = {}
@@ -28,6 +28,7 @@ local function parse_args(txt)
             end
         else
             table.insert(args, t)
+            i = i + 1
         end
     end
     return args

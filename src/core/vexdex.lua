@@ -95,6 +95,10 @@ function VexDex:remove(vexid)
     return self:writeindex()
 end
 
+function VexDex:get(vexid)
+    return self.index[vexid]
+end
+
 function VexDex:vexpath(file)
     return self.path .. '/.vex/' .. file
 end
