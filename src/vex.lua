@@ -7,6 +7,9 @@ plugin:addenum("tagger", {"canonicalvexid"})
 plugin:addenum("taskpath", {"flatpath"})
 plugin:addenum("taskformat", {"obsidian"})
 plugin:addenum("dataformat", {"csvdata"})
+plugin:addenum("sortdata", {"canonicalsort"})
+plugin:addenum("frontmatter", {"canonicalfrontmatter"})
+plugin:addenum("body", {"canonicalbody"})
 
 local cli = require 'lib.cli'
 

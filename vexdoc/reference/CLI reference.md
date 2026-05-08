@@ -10,24 +10,24 @@ In the table below `monosopaced` values are arguments. Arguments starting with a
 | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | vex help                                  | Provides a list of commands and descriptions                                                                |
 | vex init                                  | initialises a .vex directory in the current directory                                                       |
-| vex show \[`optic`]                       | prints a task's contents to stdout. If the optic results in more than one task, will print them all.        |
-| vex optic \[`optic`] \[flags...]          | creates an optic which can be used as a data query against the vex folder. More details in a section below. |
-| vex view \[`optic`] \[`view`] \[flags...] | prints a view of current tasks.                                                                             |
-| vex resolve \[`optic`]                    | validates, updates and normalises fields and tasks                                                          |
+| vex show \[`focus`]                       | prints a task's contents to stdout. If the focus results in more than one task, will print them all.        |
+| vex focus \[`focus`] \[flags...]          | creates an focus which can be used as a data query against the vex folder. More details in a section below. |
+| vex view \[`focus`] \[`view`] \[flags...] | prints a view of current tasks.                                                                             |
+| vex resolve \[`focus`]                    | validates, updates and normalises fields and tasks                                                          |
 ### Editing tasks
 
 | **Command**                       | **Description**                                                                                                                                         |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| vex add `Description` \[flags...] | Creates a task with the `Description` provided. Automatically fills out some frontmatter and resolves. This outputs and sets the optic to this new tag. |
-| vex remove \[`optic`]             | Deletes tasks in the optic. Runs resolve on all linked tasks thereafter. Not recommended for regular use.                                               |
-| vex get \[`optic`] \[flags...]    | Presents the optic in a tangible data format. Can specify which fields by supplying them as flags.                                                      |
-| vex set \[`optic`] \[flags...]    | Allows you to set fields in the optic. Resolution is called on that `optic`.                                                                            |
-| vex recipe `recipe`               | Creates a recipe (series of tasks). This outputs and changes the optic.                                                                                 |
+| vex add `Description` \[flags...] | Creates a task with the `Description` provided. Automatically fills out some frontmatter and resolves. This outputs and sets the focus to this new tag. |
+| vex remove \[`focus`]             | Deletes tasks in the focus. Runs resolve on all linked tasks thereafter. Not recommended for regular use.                                               |
+| vex get \[`focus`] \[flags...]    | Presents the focus in a tangible data format. Can specify which fields by supplying them as flags.                                                      |
+| vex set \[`focus`] \[flags...]    | Allows you to set fields in the focus. Resolution is called on that `focus`.                                                                            |
+| vex recipe `recipe`               | Creates a recipe (series of tasks). This outputs and changes the focus.                                                                                 |
 ### Inline mode (plugin)
 
 | **Command**          | **Description**                                     |
 | -------------------- | --------------------------------------------------- |
-| vex open \[`optic`]  | Opens the task in the editor of your choice.        |
+| vex open \[`focus`]  | Opens the task in the editor of your choice.        |
 | vex inline \[`path`] | Read a file and use inline vex tags to create tasks |
 
 ### Vexations (plugin)
@@ -46,7 +46,7 @@ Initialising a folder creates a `.vex` directory in the working directory. Insid
 - A `config.lua` file which you can change to influence vex behaviour 
 - A `tasks` folder which allows you to create new tasks 
 - A `recipes` folder which allows you to create new recipes
-- An `optics` folder for named optics
+- An `focuss` folder for named focuss
 - A `views` folder which allows you to create new views
 - An `events` folder which allows you to add hooks to certain events. 
 
@@ -55,14 +55,14 @@ If you do not initialise a folder before using vex, vex will look at parent dire
 > [!NOTE] Global vex
 > If you wish for a global .vex folder, there is nothing stopping you from creating one in your home folder, and using its config to point to any directory of your choosing. 
 
-### Optics
+### Focuses
 
-Optics are data tools. They are named as such because they are a lazy composable way to create getters and setters of data, and they are used in a large number of vex commands.
+Focuses are data tools. They are named as such because they are a lazy composable way to create getters and setters of data, and they are used in a large number of vex commands.
 
-In order to query your data, you need to create an optic and pass it through to a `vex get` command. For example: 
+In order to query your data, you need to create an focus and pass it through to a `vex get` command. For example: 
 
 ```txt
-vex optic --filter status:done | vex get
+vex focus --filter status:done | vex get
 ```
 
 `vex get` provides a data format which is usable for other programs, such as a CSV. You could therefore pipe this query to `duckdb` or another data tool of your preference. 
@@ -70,16 +70,17 @@ vex optic --filter status:done | vex get
 They are composable in the sense that you can write either of these with the same meaning: 
 
 ```txt
-vex optic --filter due:2030-01-01 --select id,tag,due,description 
+vex focus --filter due:2030-01-01 --select id,tag,due,description 
 ```
+
 OR: 
 
 ```txt
-vex optic --filter due:2030-01-01 | vex optic --select id,tag,due,description
+vex focus --filter due:2030-01-01 | vex focus --select id,tag,due,description
 ```
 
-Named optics: 
-- `prev` which saves the previous optic used. For conciseness, this is the default optic. If no `prev` is available, it uses `none` instead. This applies in all cases except for `optic` itself. 
+Named focuses: 
+- `prev` which saves the previous focus used. For conciseness, this is the default focus. If no `prev` is available, it uses `none` instead. This applies in all cases except for `focus` itself. 
 - `all`
 - `none`
 - `tag` for any task tag 
@@ -101,9 +102,9 @@ Flags:
 
 All flag commands run in the order provided.
 
-Mapping and folding is reserved for optics in Lua rather than through the CLI. 
+Mapping and folding is reserved for focuss in Lua rather than through the CLI. 
 
-You can create new named optics by adding files to the `optics` subdirectory of your `.vex` folder. 
+You can create new named focuss by adding files to the `focuss` subdirectory of your `.vex` folder. 
 
 ### Views
 
@@ -113,7 +114,7 @@ You can create new views by creating Lua files in the `views` subdirectory of yo
 
 You can override the default view by editing your `config.lua` file. 
 
-Views live on top of optics in the sense that they can accept any optic and attempt to provide a view of the tasks hooked into that optic. 
+Views live on top of focuss in the sense that they can accept any focus and attempt to provide a view of the tasks hooked into that focus. 
 
 ### Resolution 
 

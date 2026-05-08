@@ -25,6 +25,8 @@ return {
 
         local task = {}
         local frontmatter, body = content:match("^%-%-%-\n(.-)\n%-%-%-\n(.*)$")
+        frontmatter = frontmatter:match("^%s*(.-)%s*$")
+        assert(#frontmatter > 0, "frontmatter must not be empty")
 
         if frontmatter then
             for line in frontmatter:gmatch("[^\n]+") do
@@ -41,15 +43,12 @@ return {
         return task
     end,
 
-    write = function(path, task)
+    write = function(path, frontmatter_iter, body)
         local f = assert(io.open(path, "w"))
-        local body = task.body
 
         f:write("---\n")
-        for k, v in pairs(task) do
-            if k ~= "body" then
-                f:write(k .. ": " .. to_yaml_value(v) .. "\n")
-            end
+        for k, v in frontmatter_iter do
+            f:write(k .. ": " .. to_yaml_value(v) .. "\n")
         end
         f:write("---\n")
 

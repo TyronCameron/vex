@@ -13,7 +13,7 @@ local default_config = {
         taskformat = 'obsidian',
         view = 'table',
         dataformat = 'csv',
-        option = 'prev', 
+        option = 'prev',
         tasktype = 'task'
     }, 
     plugins = {
@@ -52,7 +52,7 @@ end
 
 local function create_config(path)
     local f = io.open(path .. "/config.lua", "w")
-    local str = "return " .. pretty.table_to_string(default_config)
+    local str = "return " .. pretty.table(default_config)
     f:write(str)
     f:close()
 end 
@@ -80,18 +80,29 @@ function VexDex.new(path)
     end
     local this = setmetatable({
         path = found,
+        modified = os.time(),
         index = {}
     }, VexDex)
     return this:ensureindex()
 end
 
-function VexDex:add(vexid, storage)
+function VexDex:unsafe_add(vexid, storage)
     self.index[vexid] = storage
+    return self
+end
+
+function VexDex:add(vexid, storage)
+    self:unsafe_add(vexid, storage)
     return self:writeindex()
 end
 
-function VexDex:remove(vexid)
+function VexDex:unsafe_remove(vexid)
     self.index[vexid] = nil
+    return self
+end
+
+function VexDex:remove(vexid)
+    self:unsafe_remove(vexid)
     return self:writeindex()
 end
 
@@ -99,18 +110,30 @@ function VexDex:get(vexid)
     return self.index[vexid]
 end
 
+function VexDex:getfocus()
+    return self.focus or self:readfocus() and self.focus
+end 
+
+function VexDex:setfocus(focus)
+    self.focus = focus
+    self:writefocus()
+    return self
+end 
+
 function VexDex:vexpath(file)
     return self.path .. '/.vex/' .. file
 end
 
 function VexDex:readindex()
     local results = {binser.readFile(self:vexpath("vexdex/index.bin"))}
-    self.index = results[1]
+    self.index = results[1][1]
     return self 
 end
 
 function VexDex:writeindex()
+    self.modified = os.time()
     binser.writeFile(self:vexpath("vexdex/index.bin"), self.index)
+    pretty.write(self:vexpath("vexdex/index.lua"), self.index)
     return self 
 end
 
@@ -123,6 +146,22 @@ function VexDex:ensureindex()
         self:readindex()
     end
     return self
+end
+
+function VexDex:readfocus()
+    local path = self:vexpath("vexdex/focus.bin")
+    if lfs.attributes(path, "mode") ~= "file" then 
+        cli:throw("no-focus", "A focus cannot be found at path " .. tostring(path))
+    end 
+    local results = {binser.readFile(path)}
+    self.focus = results[1][1]
+    return self 
+end
+
+function VexDex:writefocus()
+    binser.writeFile(self:vexpath("vexdex/focus.bin"), self.focus)
+    pretty.write(self:vexpath("vexdex/focus.lua"), self.focus)
+    return self 
 end
 
 return VexDex

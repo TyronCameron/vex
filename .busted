@@ -1,0 +1,14 @@
+return {
+  _all = {
+    coverage = true
+  },
+  default = {
+    verbose = true,
+    ["suppress-pending"] = true
+  },
+  apiUnit = {
+    tags = "api",
+    ROOT = {"test"},
+    verbose = true
+  }
+}

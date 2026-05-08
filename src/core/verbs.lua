@@ -1,9 +1,10 @@
 local cli = require "lib.cli"
 local VexDex = require "core.vexdex"
 local Task = require "core.task"
-local optic = require 'core.optic'
+local focus = require 'core.focus'
 local cfg = require 'lib.config'
 local func = require 'lib.func'
+local pretty = require 'lib.pretty'
 
 local function bootstrap()
     local vexdex = VexDex.new()
@@ -37,21 +38,24 @@ cli:verb "init" {
 
 cli:verb "show" {
     function(args)
-        local opt = optic:get(args[1])
-        Task:show(opt)
+        local task = bootstrap()
+        task:show(args[1])
     end,
     doc = "Prints out a task to terminal, highlighting YAML frontmatter and Markdown notes.",
-    args = "[optic]",
+    args = "[focus]",
     example = "vex show make-coffee"
 }
 
-cli:verb "optic" {
+cli:verb "focus" {
     function(args)
-        cli:throw("unimplemented")
+        local vexdex = VexDex.new()
+        focus.init(vexdex)
+        local f = focus.parse(args)
+        vexdex:setfocus(f)
     end,
-    doc = "Creates an optic which can be used as a data query against the vex folder",
-    args = "[optic] [flags...]",
-    example = "vex optic all --filter status:done"
+    doc = "Creates an focus which can be used as a data query against the vex folder",
+    args = "[focus] [flags...]",
+    example = "vex focus all --filter status:done"
 }
 
 cli:verb "view" {
@@ -59,16 +63,17 @@ cli:verb "view" {
         cli:throw("unimplemented")
     end,
     doc = "Prints a view of current tasks",
-    args = "[optic] [view] [flags...]",
+    args = "[focus] [view] [flags...]",
     example = "vex view all table"
 }
 
 cli:verb "resolve" {
     function(args)
-        cli:throw("unimplemented")
+        local task = bootstrap()
+        task:resolve(args[1])
     end,
     doc = "Validates, updates and normalises fields and tasks",
-    args = "[optic]",
+    args = "[focus]",
     example = "vex resolve all"
 }
 
@@ -84,7 +89,7 @@ cli:verb "add" {
         task:write(vexid)
         return vexid
     end,
-    doc = "Creates a task with the Description provided. Automatically fills out some frontmatter and resolves. This outputs and sets the optic to this new tag",
+    doc = "Creates a task with the Description provided. Automatically fills out some frontmatter and resolves. This outputs and sets the focus to this new tag",
     args = "Description [flags...]",
     example = "vex add Make coffee for wife --importance high"
 }
@@ -96,23 +101,18 @@ cli:verb "remove" {
         task:remove(vexid)
         task:resolve(vexid)
     end,
-    doc = "Deletes tasks in the optic. Runs resolve on all linked tasks thereafter. Not recommended for regular use",
-    args = "[optic]",
+    doc = "Deletes tasks in the focus. Runs resolve on all linked tasks thereafter. Not recommended for regular use",
+    args = "[focus]",
     example = "vex remove make-coffee"
 }
 
 cli:verb "get" {
     function(args)
         local task = bootstrap()
-        local t = task:getsingle(args[1])
-        local values = {}
-        for _,pair in ipairs(func.ifilter(args, function(word) return type(word) == "table" end)) do
-            table.insert(values, t[pair[1]])
-        end
-        return table.concat(values, "\n")
+        return task:getstring(args[1])
     end,
-    doc = "Presents the optic in a tangible data format. Can specify which fields by supplying them as flags",
-    args = "[optic] [flags...]",
+    doc = "Presents the focus in a tangible data format. Can specify which fields by supplying them as flags",
+    args = "[focus] [flags...]",
     example = "vex get all --select due,id,description"
 }
 
@@ -125,8 +125,8 @@ cli:verb "set" {
         task:resolve(vexid)
         task:write(vexid)
     end,
-    doc = "Allows you to set fields in the optic. Resolution is called on that `optic`",
-    args = "[optic] [flags...]",
+    doc = "Allows you to set fields in the focus. Resolution is called on that `focus`",
+    args = "[focus] [flags...]",
     example = "vex set make-coffee --priority 1"
 }
 
@@ -134,7 +134,7 @@ cli:verb "recipe" {
     function(args)
         cli:throw("unimplemented")
     end,
-    doc = "Creates a recipe (series of tasks). This outputs and changes the optic",
+    doc = "Creates a recipe (series of tasks). This outputs and changes the focus",
     args = "recipe",
     example = "vex recipe abstract"
 }

@@ -11,10 +11,14 @@
             "id": "3d97f7eeb5eace06",
             "type": "leaf",
             "state": {
-              "type": "empty",
-              "state": {},
+              "type": "markdown",
+              "state": {
+                "file": "reference/CLI reference.md",
+                "mode": "source",
+                "source": false
+              },
               "icon": "lucide-file",
-              "title": "New tab"
+              "title": "CLI reference"
             }
           }
         ]
@@ -192,6 +196,8 @@
   },
   "active": "3d97f7eeb5eace06",
   "lastOpenFiles": [
+    "Vexdex todo.md",
+    "Optics.md",
     "vex/make-coffee-wifeling.md",
     "vex/project.md",
     "Vex.md",

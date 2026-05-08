@@ -33,11 +33,27 @@ end
 function lfs.attributes(path, attr)
     local info = {}
     if is_windows then
-        local out = shell('powershell -Command "Get-Item \'' .. path .. '\' | Select-Object -Property Mode,Length,LastWriteTime | ConvertTo-Csv -NoTypeInformation" 2>nul')
+        local cmd = string.format(
+            'powershell -NoProfile -Command ' ..
+            '"$i=Get-Item \'%s\' -ErrorAction SilentlyContinue;' ..
+            'if($i){$i.PSIsContainer;' ..
+            'if($i.PSIsContainer){0}else{$i.Length};' ..
+            '$i.LastWriteTimeUtc.ToFileTimeUtc()}"',
+            path
+        )
+        local out = shell(cmd)
         if out == "" then return nil end
-        -- rough parse: just enough to answer mode/size/modification
-        info.mode   = out:match("^d") and "directory" or "file"
-        info.size   = tonumber(out:match(",(%d+),")) or 0
+
+        local lines = {}
+        for line in (out .. "\n"):gmatch("([^\r\n]*)\r?\n") do
+            lines[#lines + 1] = line
+        end
+
+        info.mode         = (lines[1] == "True") and "directory" or "file"
+        info.size         = tonumber(lines[2]) or 0
+        local ft          = tonumber(lines[3]) or 0
+        info.modification = math.floor((ft - 116444736000000000) / 10000000)
+        info.access       = info.modification
     else
         local out = shell('stat "' .. path .. '" 2>/dev/null')
         if out == "" then return nil end
