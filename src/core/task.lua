@@ -9,7 +9,8 @@ local frontmatter = plugin:get 'frontmatter'
 local body = plugin:get 'body'
 local cli = require 'lib.cli'
 local lfs = require 'lib.lfs'
-local focus = require 'core.focus'
+local pretty = require 'lib.pretty'
+local schema = require 'lib.schema'
 
 local Task = {}
 Task.__index = Task
@@ -27,13 +28,70 @@ end
 -- registers task type
 function Task:vextype(name)
     return function(tab)
+        assert(tab.fields and getmetatable(tab.fields).validations, "Cannot register a vextype without a valid schema. Ensure your vextype is registered with a `fields` field which is a schema.")
         self.tasktypes[name] = tab
     end
 end
 
--- vextype 'abstract' {
-
+-- Task.new():vextype 'task' {
+--     fields = schema.atleast {
+--         vexid = schema.all {
+--             schema.str(),
+--             function(template, instance) return #instance > 0 end
+--         },
+--         vextype = schema.constant("task"),
+--         created = function() return os.time() end,
+--         modified = function() return os.time() end,
+--         status = function() return "todo" end,
+--         vexbody = schema.str()
+--     }
 -- }
+
+-- vextype 'abstract' {
+    -- new = function(tab) end,
+    -- validate = function(task) end,
+    -- derive = function(task) end,
+    -- normalise = function(task) end,
+    -- fields = schema {}
+    -- pre = {
+        -- resolve = function(taskmanager, task) end
+        -- add = function(taskmanager, task) end
+        -- remove = function(taskmanager, task) end
+        -- set = function(taskmanager, task) end
+        -- get = function(taskmanager, task) end
+    -- }
+    -- post = {
+        -- resolve = function(taskmanager, task) end
+        -- add = function(taskmanager, task) end
+        -- remove = function(taskmanager, task) end
+        -- set = function(taskmanager, task) end
+        -- get = function(taskmanager, task) end
+    -- }
+-- }
+
+---------------------------------------------------
+-- Tasks and focuses
+---------------------------------------------------
+
+-- Get a table of tasks 
+function Task:gettasks(focus)
+    
+end
+
+-- gets single task by id
+-- first attempts to get it from the index, but then tries reading it 
+function Task:getsingle(vexid)
+    assert(vexid, "getsingle() requires an id")
+    self.tasks[vexid] = self.tasks[vexid] or self:read(vexid)
+    return self.tasks[vexid]
+end
+
+-- converts an id list to a focus representation
+-- allows composable focuses from id lists
+function Task:to_focus(tasks)
+    if tasks.id then return {tasks} end 
+    return tasks 
+end
 
 ---------------------------------------------------
 -- Public API
@@ -63,11 +121,11 @@ function Task:remove(vexid)
 end
 
 -- gets data from a task and returns it as a string for the command line
-function Task:getstring(vexid)
-    local t = task:getsingle()
+function Task:getstring(vexid, fields)
+    local task = self:getsingle(vexid)
     local values = {}
-    for _, pair in ipairs(func.ifilter(args, function(word) return type(word) == "table" end)) do
-        table.insert(values, t[pair[1]])
+    for _, pair in ipairs(func.ifilter(fields, function(word) return type(word) == "table" end)) do
+        table.insert(values, task[pair[1]])
     end
     return table.concat(values, "\n")
 end
@@ -90,15 +148,15 @@ end
 function Task:show(vexid)
     assert(vexid, "show() requires an vexid")
     local task = self:getsingle(vexid)
-    local path = '' 
-    if task.path then path = ' (' .. task.path .. ')' end 
-    print('# ' .. task.vexid .. path)
-    print("---")
+    local path = self:getpath(vexid)
+    local final_str = pretty.string('# ' .. string.upper(tostring(task.vexid)) .. '\n', 'cyan', 'underline', 'bold', {filelink = tostring(path)})
+    final_str = final_str .. pretty.string("---\n", 'cyan')
     for k, v in sortdata(frontmatter(task)) do 
-        print(k .. ": " .. v)
+        final_str = final_str .. pretty.string(tostring(k) .. ": ", 'green') .. pretty.string(tostring(v or '') ..  '\n')
     end 
-    print("---")
-    print(body(task))
+    final_str = final_str .. pretty.string("---\n", 'cyan')
+    final_str = final_str .. pretty.string(tostring(body(task) or '') .. "\n\n")
+    return final_str
 end
 
 -- views a list of tasks with a specific view
@@ -196,30 +254,6 @@ function Task:resolve(vexid)
 end
 
 ---------------------------------------------------
--- Tasks and focuses
----------------------------------------------------
-
--- Get a table of tasks 
-function Task:gettasks(focus)
-    
-end
-
--- gets single task by id
--- first attempts to get it from the index, but then tries reading it 
-function Task:getsingle(vexid)
-    assert(vexid, "getsingle() requires an id")
-    self.tasks[vexid] = self.tasks[vexid] or self:read(vexid)
-    return self.tasks[vexid]
-end
-
--- converts an id list to a focus representation
--- allows composable focuses from id lists
-function Task:to_focus(tasks)
-    if tasks.id then return {tasks} end 
-    return tasks 
-end
-
----------------------------------------------------
 -- File I/O
 ---------------------------------------------------
 
@@ -228,7 +262,7 @@ end
 -- This should be the source of truth everywhere.
 -- it should probably also allow passing the full task manager through so you can iterate through it nicely 
 function Task:getpath(vexid)
-    local task = self:getsingle(vexid)
+    local task = self.tasks[vexid] or self.vexdex:get(vexid) or {vexid = vexid}
     return taskpath.path(self.config, self.vexdex.path .. '/' .. self.config.taskfolder, task)
 end
 
@@ -258,6 +292,7 @@ end
 -- deletes a file from disk
 function Task:delete(vexid)
     os.remove(self:getpath(vexid))
+    self:unindex(vexid)
     return vexid
 end
 

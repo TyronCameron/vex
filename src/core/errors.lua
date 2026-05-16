@@ -47,6 +47,13 @@ cli:error "no-focus" {
     hint = "Try using `vex focus` or `vex add` to set the current focus."
 }
 
+cli:error "unknown-focus" {
+    function(focusname)
+        return "You are attempting to create an unknown focus with name: " .. tostring(focusname)
+    end,
+    hint = "Use one of the standard focus names ('all', 'none', 'prev') or a valid vexid which is in the vexdex. Use vex resolve all if your vexdex is out of date."
+}
+
 cli:error "missing-required-field" {
     function(vexid, field)
         return "A required field is missing from a task. Vexid = " .. tostring(vexid) .. ', field = ' .. tostring(field)
@@ -61,7 +68,6 @@ cli:error "unknown-vextype" {
     end,
     hint = "Ensure that the vextype is correctly written in your `config.lua` file and that this vex task has a matching name."
 }
-
 
 cli:error 'resolution-failed-validation' {
     function(vexid, msg)
@@ -91,4 +97,17 @@ cli:error 'resolution-failed-linking' {
     hint = "Ensure that data is correct and that the tasktype definitions in `config.lua` are sound."
 }
 
+cli:error "unknown-view" {
+    function(viewname)
+        return 'A view of name `' .. tostring(viewname) .. '` does not exist.'
+    end,
+    hint = "Ensure that this view is correctly written in your `config.lua` file."
+}
+
+cli:error "unknown-recipe" {
+    function(recipe)
+        return 'A recipe of name `' .. tostring(recipe) .. '` does not exist.'
+    end,
+    hint = "Ensure that this recipe is correctly written in your `config.lua` file."
+}
 

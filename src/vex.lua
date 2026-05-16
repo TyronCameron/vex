@@ -1,6 +1,6 @@
 local script_dir = debug.getinfo(1, "S").source:match("^@(.+[\\/])")
 package.path = script_dir .. "?.lua;" .. script_dir .. "?/init.lua;" .. package.path
--- package.cpath = script_dir .. "?.dll;"  .. script_dir .. "?.so;"       .. package.cpath
+package.cpath = script_dir .. "?.dll;"  .. script_dir .. "?.so;"       .. package.cpath
 
 local plugin = require 'lib.plugin'
 plugin:addenum("tagger", {"canonicalvexid"})
@@ -10,10 +10,12 @@ plugin:addenum("dataformat", {"csvdata"})
 plugin:addenum("sortdata", {"canonicalsort"})
 plugin:addenum("frontmatter", {"canonicalfrontmatter"})
 plugin:addenum("body", {"canonicalbody"})
-
-local cli = require 'lib.cli'
+plugin:addall(script_dir .. '/plugin')
 
 require 'core.errors'
 require 'core.verbs'
 
+plugin:each(function(plug) end) -- automatically loads them
+
+local cli = require 'lib.cli'
 cli:run(table.concat(arg, " "))

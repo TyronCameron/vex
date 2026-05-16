@@ -1,3 +1,31 @@
+local func = require 'lib.func'
+
+-- ---------------------------------------------------------------------------
+-- Arguments
+-- ---------------------------------------------------------------------------
+
+local Arguments = {}
+Arguments.__index = Arguments
+
+function Arguments:flags()
+    local taskproperties = {}
+    local argproperties = func.ifilter(self, function(word) return type(word) == "table" end)
+    for _, pair in ipairs(argproperties) do
+        if pair[2] then 
+            taskproperties[pair[1]] = pair[2]
+        end 
+    end
+    return taskproperties
+end 
+
+function Arguments:positional()
+    return func.ifilter(self, function(word) return type(word) == "string" end)
+end 
+
+-- ---------------------------------------------------------------------------
+-- CLI
+-- ---------------------------------------------------------------------------
+
 local CLI = {}
 CLI.__index = CLI
 
@@ -31,7 +59,7 @@ local function parse_args(txt)
             i = i + 1
         end
     end
-    return args
+    return setmetatable(args, Arguments)
 end
 
 local function validate_normalise_verb(verbname, tab)
@@ -171,7 +199,7 @@ function CLI:run(input)
     if type(input) == "string" then
         args = parse_args(input)
     elseif type(input) == "table" then
-        args = input
+        args = setmetatable(input, Arguments)
     else
         self:throw("usage", "run() expects a string or arg table")
     end
@@ -223,10 +251,6 @@ function CLI:throw(errtype, msg, ...)
         io.stderr:write(self.errors[errtype].hint .. "\n")
     end 
     os.exit(1)
-end
-
-function CLI:help(verb)
-    
 end
 
 -- onky need one

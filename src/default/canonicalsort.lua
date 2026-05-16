@@ -1,4 +1,4 @@
-local field_order = { vexid = 1, tasktype = 2, description = 3 }
+local field_order = { vexid = 1, vextype = 2, description = 3 }
 
 local function sort_keys(keys)
     table.sort(keys, function(a, b)

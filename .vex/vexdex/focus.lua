@@ -1,3 +1,10 @@
 {
-  _get = function: 0x7f764b837ba8
-}
+  operations = {
+    [1] = {
+      args = {
+        [1] = "-1"
+      },
+      operation = "focus"
+    }
+  }
+}	

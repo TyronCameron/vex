@@ -59,9 +59,8 @@ end
 
 local function create_ext_folders(path)
     lfs.mkdir(path .. "/vexdex")
-    lfs.mkdir(path .. "/optics")
+    lfs.mkdir(path .. "/focuses")
     lfs.mkdir(path .. "/views")
-    lfs.mkdir(path .. "/events")
     lfs.mkdir(path .. "/tasks")
     lfs.mkdir(path .. "/recipes")
 end 

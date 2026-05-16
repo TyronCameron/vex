@@ -1,0 +1,4 @@
+2	{
+  [1] = "recipe",
+  [2] = "ab"
+}	recipe	abstract	

@@ -35,9 +35,9 @@ return {
                     task[key] = parse_yaml_value(value)
                 end
             end
-            task.body = body
+            task.vexbody = body
         else
-            task.body = content
+            task.vexbody = content
         end
 
         return task

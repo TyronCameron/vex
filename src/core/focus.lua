@@ -3,42 +3,64 @@ local func = require 'lib.func'
 local optic = require 'lib.optic'
 local lfs = require 'lib.lfs'
 local cli = require 'lib.cli'
+local pretty = require 'lib.pretty'
 
-local Focuses = {}
-local vexdex = nil 
-local Tasks = nil
+local vexdex = nil
 
-local Focus = {}
+local Focus = {
+    named = {}
+}
 Focus.__index = Focus
 
-function Focus.new(get)
-    return setmetatable({_get = get}, Focus)    
+function Focus.new(name, get, operations)
+    return setmetatable({
+        name = name, 
+        _get = get, 
+        operations = operations or {{operation = 'focus', args = {name}}}
+    }, Focus)    
 end
 
 function Focus.register_focus(name, get)
-    Focuses[name] = Focus.new(get)
+    Focus.named[name] = Focus.new(name, get)
 end
 
-function Focus.init(vexdex)
-    vexdex = vexdex
-    Tasks = func.values(vexdex.index)
+function Focus.init(vdex)
+    vexdex = vdex
 end
+
+function Focus.getalltasks()
+    local tasks = {}
+    for _, task in ipairs(func.values(vexdex.index)) do
+        table.insert(tasks, task)
+    end
+    return tasks
+end
+
+Focus.register_focus("all", function()
+    return Focus.getalltasks() 
+end)
+Focus.register_focus("none", function() 
+    return {} 
+end)
+Focus.register_focus("updated", function() 
+    return func.filter(Focus.getalltasks(), function(task) return task.modified > vexdex.modified end) 
+end)
 
 -----------------------------------------
 -- Binary Operations 
 -----------------------------------------
 
-function Focus:chain(focus)
+function Focus:chain(operation, focus, ...)
     if type(focus) == "function" then 
-        focus = Focus.new(focus)
+        focus = Focus.new(operation, focus)
     end 
-    return Focus.new(function(tasks) 
+    return Focus.new('chain', function(tasks) 
         return focus:get(self:get(tasks))
-    end)
+    end, func.imerge(self.operations or {}, {{ operation = operation, args = {...} }}))
 end
 
 function Focus:intersect(focus)
-    return Focus.new(function(tasks) 
+    return Focus.new('intersect', function(tasks) 
         local dedup = {}
         for _, task in ipairs(self:get(tasks)) do
             if not dedup[task] then 
@@ -53,11 +75,11 @@ function Focus:intersect(focus)
             end 
         end
         return tasklist
-    end)
+    end, func.imerge(self.operations or {}, {{ operation = 'intersect', args = {{ name = focus.name, operations = focus.operations }}}}))
 end 
 
 function Focus:union(focus)
-    return Focus.new(function(tasks) 
+    return Focus.new('union', function(tasks) 
         local tasklist = {}
         local dedup = {}
         for _, task in ipairs(self:get(tasks)) do
@@ -73,25 +95,25 @@ function Focus:union(focus)
             end 
         end
         return tasklist 
-    end)
+    end, func.imerge(self.operations or {}, {{ operation = 'union', args = {{ name = focus.name, operations = focus.operations }}}}))
 end 
 
 function Focus:complement()
-    return Focus.new(function(tasks) 
+    return Focus.new('complement', function(tasks) 
         local tasklist = {}
         local hash = {}
         for _, task in ipairs(self:get(tasks)) do 
             hash[task] = true 
         end 
-        for _, task in pairs(Tasks) do
+        for _, task in pairs(Focus.getalltasks()) do
             if not hash[task] then table.insert(tasklist, task) end 
         end
         return tasklist 
-    end)
+    end, func.imerge(self.operations or {}, {{ operation = 'complement', args = {}}}))
 end 
 
 function Focus:xor(focus)
-    return Focus.new(function(tasks) 
+    return Focus.new('xor', function(tasks) 
         local dedup = {}
         for _, task in ipairs(self:get(tasks)) do
             if not dedup[task] then 
@@ -106,11 +128,11 @@ function Focus:xor(focus)
             end 
         end
         return func.values(dedup) 
-    end)
+    end, func.imerge(self.operations or {}, {{ operation = 'xor', args = {{ name = focus.name, operations = focus.operations }}}}))
 end 
 
 function Focus:notin(focus)
-    return Focus.new(function(tasks) 
+    return Focus.new('notin', function(tasks) 
         local dedup = {}
         for _, task in ipairs(self:get(tasks)) do
             if not dedup[task] then 
@@ -123,11 +145,11 @@ function Focus:notin(focus)
             end 
         end
         return func.values(dedup) 
-    end)
+    end, func.imerge(self.operations or {}, {{ operation = 'notin', args = {{ name = focus.name, operations = focus.operations }}}}))
 end 
 
 function Focus:onlyin(focus)
-    return Focus.new(function(tasks) 
+    return Focus.new('onlyin', function(tasks) 
         local dedup = {}
         for _, task in ipairs(focus:get(tasks)) do
             if not dedup[task] then 
@@ -144,7 +166,7 @@ function Focus:onlyin(focus)
 end 
 
 -----------------------------------------
--- Named Focuses
+-- Named Focus.named
 -----------------------------------------
 
 -- Examples:
@@ -156,22 +178,31 @@ end
 -- `updated` for only tasks which have updated against the index. 
 -- comma separation of the above is allowed so as to union them
 
-Focus.register_focus("all", function() return Tasks end)
-Focus.register_focus("none", function() return {} end)
-Focus.register_focus("prev", function(tasks) return  end)
-Focus.register_focus("updated", function() return func.filter(Tasks, function(task) return task.modified > vexdex.modified end) end)
+local namedfocus = {}
 
-local function get_focus_from_name(focusname)
-    return Focuses[focusname]
+function namedfocus.from_comma_sep(focusname)
+    local focuses = {}
+    for name in focusname:gmatch("([^,]+)") do
+        table.insert(focuses, namedfocus.get_named_focus(name:match("^%s*(.-)%s*$")))
+    end
+    local result = table.remove(focuses, 1)
+    for _, f in ipairs(focuses) do
+        result = result:union(f)
+    end
+    return result
 end 
 
-local function get_focus_from_vexid(vexid)
-    return Focus.new(function() return Tasks[vexid] end)
+function namedfocus.from_name(focusname)
+    return Focus.named[focusname]
 end 
 
-local function get_focus_from_file_path(path)
+function namedfocus.from_vexid(vexid)
+    return Focus.new(vexid, function() return {vexdex.index[vexid]} end)
+end 
+
+function namedfocus.from_file_path(path)
     local vexid = path:gsub(".*/", "")
-    return Focus.new(function() return Tasks[vexid] end)
+    return Focus.new(path, function() return {vexdex.index[vexid]} end)
 end 
 
 local function recursive_dir_walk(path, paths)
@@ -187,43 +218,48 @@ local function recursive_dir_walk(path, paths)
     return paths
 end
 
-local function get_focus_from_folder_path(path)
-    return Focus.new(function() 
+function namedfocus.from_folder_path(path)
+    return Focus.new(path, function() 
         local tasks = {}
         -- walk through path recursively 
         local files = recursive_dir_walk(path)
         for _, file in ipairs(files) do 
-            table.insert(tasks, get_focus_from_file_path(path))
+            table.insert(tasks, namedfocus.from_file_path(path))
         end 
         return tasks
     end)
 end 
 
-local function get_named_focus(focusname)
-    if focusname == 'prev' then return vexdex:getfocus():get(tasks) end 
-    if Focuses[focusname] then 
-        return get_focus_from_name(focusname)
+function namedfocus.focus(focusname)
+    if focusname:find(",") then
+        return namedfocus.from_comma_sep(focusname)
+    end 
+    if Focus.named[focusname] then 
+        return namedfocus.from_name(focusname)
     end 
     if vexdex.index[focusname] then
-        return get_focus_from_vexid(focusname)
+        return namedfocus.from_vexid(focusname)
     end 
     if type(focusname) == "string" and focusname:find("/") then
         local attr = lfs.attributes(focusname, "mode")
         if attr == "file" then
-            return get_focus_from_file_path(focusname)
+            return namedfocus.from_file_path(focusname)
         elseif attr == "directory" then
-            return get_focus_from_folder_path(focusname)
+            return namedfocus.from_folder_path(focusname)
         end
     end 
-    assert(false, "Oh no, this focus is broken!")
+    if focusname == 'prev' then 
+        return Focus.read()
+    end 
+    cli:throw('unknown-focus', focusname)
 end 
 
 function Focus.focus(...)
     local focusnames = {...}
-    assert(#focusnames >= 1, 'Focus by name needs at least one focus') 
-    local focus = get_named_focus(table.remove(focusnames, 1))
+    if not focusnames[1] then focusnames = {'prev'} end 
+    local focus = namedfocus.focus(table.remove(focusnames, 1))
     for _, focusname in ipairs(focusnames) do
-        focus:union(get_named_focus(focusname))
+        focus:union(namedfocus.focus(focusname))
     end
     return focus
 end
@@ -236,7 +272,7 @@ end
 function Focus:select(...)
     local fields = {...}
     table.insert(fields, 'vexid') -- can't remove this one
-    return self:chain(function(tasks)
+    return self:chain('select', function(tasks)
         local tasklist = {}
         for _, task in ipairs(tasks) do
             local newtask = {}
@@ -246,21 +282,27 @@ function Focus:select(...)
             table.insert(tasklist, newtask)
         end
         return tasklist
-    end)
+    end, ...)
 end 
 
 -- filter key:value
 function Focus:filter(field, value)
-    return self:chain(function(tasks)
+    if value == nil then 
+        cli:throw('usage', 'You need to provide a field and value to filter on. We saw field = ' .. tostring(field) .. ' and value ' .. tostring(value)) 
+    end 
+    return self:chain('filter', function(tasks)
         return func.ifilter(tasks, function(task) return task[field] == value end)
-    end)
+    end, field, value)
 end 
 
 -- fuzzy key:value 
 local function levenshtein(a, b)
     local la, lb = #a, #b
     local dist = {}
-    for i = 0, la do dist[i] = {i} end
+    for i = 0, la do
+        dist[i] = {}
+        dist[i][0] = i  -- was: dist[i] = {i}, which sets dist[i][1], not dist[i][0]
+    end
     for j = 0, lb do dist[0][j] = j end
     for i = 1, la do
         for j = 1, lb do
@@ -297,41 +339,43 @@ end
 
 function Focus:fuzzy(field, fuzz, n)
     n = n or 3
-    return self:chain(function(tasks) 
+    return self:chain('fuzzy', function(tasks) 
         return func.ifilter(tasks, function(task) return levenshtein_less_than_equal_to(fuzz, task[field], n) end)
-    end)
+    end, field, fuzz, n)
 end 
 
 -- between field:begin:end
 function Focus:between(field, start, finish)
-    return self:chain(function(tasks) 
-        return func.ifilter(tasks, function(task) return start <= task[field] and task[field] <= finish end)
-    end)
+    return self:chain('between', function(tasks) 
+        return func.ifilter(tasks, function(task) 
+            return (not start or start <= task[field]) and (not finish or task[field] <= finish)
+        end)
+    end, field, start, finish)
 end 
 
 -- tree field
 local function get_children(field)
     return function(task) 
-        if type(task[field]) == "string" then return {Tasks[task[field]]} end
+        if type(task[field]) == "string" then return {Focus.getalltasks()[task[field]]} end
         local children = {}
         for _, child in ipairs(task[field]) do
-            table.insert(children, Tasks[child])
+            table.insert(children, Focus.getalltasks()[child])
         end 
         return children
     end 
 end
 
 function Focus:tree(field)
-    return self:chain(function(tasks) 
+    return self:chain('tree', function(tasks) 
         return optic.traverse(get_children(field)):get(tasks)
-    end)
+    end, field)
 end
 
 -- reversetree
 local function get_parents(field)
     return function(task) 
         local parents = {}
-        for _, parent in pairs(Tasks) do
+        for _, parent in pairs(Focus.getalltasks()) do
             if type(parent[field]) == "string" and parent[field] == task.vexid then 
                 table.insert(parents, parent)
             else 
@@ -346,10 +390,10 @@ local function get_parents(field)
     end 
 end
 
-function Focus:tree(field)
-    return self:chain(function(tasks) 
+function Focus:reversetree(field)
+    return self:chain('reversetree', function(tasks) 
         return optic.traverse(get_parents(field)):get(tasks)
-    end)
+    end, field)
 end
 
 -----------------------------------------
@@ -365,13 +409,20 @@ end
 -- Universal 
 -----------------------------------------
 
-function Focus:get(...)
-    return self._get(...)
+function Focus:get(tasks)
+    return self._get(tasks or Focus.getalltasks())
 end
 
-function Focus:map(tasks, f)
-    for _, task in ipairs(self:get(tasks)) do
-        f(task)
+function Focus:each_task(f, ...)
+    for _, task in ipairs(self:get()) do
+        f(task, ...)
+    end
+    return self
+end
+
+function Focus:each(f, ...)
+    for _, task in ipairs(self:get()) do
+        f(task.vexid, ...)
     end
     return self
 end
@@ -380,22 +431,78 @@ end
 -- Parsing
 -----------------------------------------
 
+local function split(str, sep)
+    local parts = {}
+    for part in str:gmatch('([^' .. sep .. ']+)') do
+        table.insert(parts, part)
+    end
+    return unpack(parts)
+end
+
 function Focus.parse(args)
     local current
     if type(args[1]) == "string" then 
         current = Focus.focus(args[1])
     else 
-        current = vexdex:getfocus()
+        current = Focus.read()
     end 
     if not current then cli:error('no-focus') end
     for _, arg in ipairs(args) do
         if type(arg) == "table" then 
-            f = table.remove(arg, 1)
-            current = current[f](current, unpack(arg))
+            local f = table.remove(arg, 1)
+            local split_args = {}
+            for _, a in ipairs(arg) do
+                for _, part in ipairs({ split(a, ':') }) do
+                    table.insert(split_args, part)
+                end
+            end
+            current = current[f](current, unpack(split_args))
         end 
     end
     return current
 end
+
+-----------------------------------------
+-- Saving
+-----------------------------------------
+
+local function deserialize(saved)
+    local f
+    for _, op in ipairs(saved.operations) do
+        if op.operation == 'focus' then
+            f = Focus.focus(unpack(op.args))
+        else
+            f = f[op.operation](f, unpack(op.args))
+        end
+    end
+    return f
+end
+
+function Focus.read()
+    local saved = vexdex:getfocus()
+    if not saved or not saved.operations then 
+        cli:throw('no-focus', 'Recreate your focus.')
+    end
+    return deserialize(saved)
+end
+
+local function serialize(focus)
+    return { operations = focus.operations }
+end
+
+function Focus:write()
+    vexdex:setfocus(serialize(self))
+end
+
+-- function Focus.read()
+--     local f = vexdex:getfocus()
+--     if not f._get or type(f._get) ~= 'function' then return Focus.focus('none') end
+--     return Focus.new(f._get)
+-- end
+
+-- function Focus:write()
+--     vexdex:setfocus(self)
+-- end
 
 -- namedfocus(all)
 --     :select("vexid", "description", "due")

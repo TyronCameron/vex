@@ -2,12 +2,22 @@
 local PrettyString = {}
 PrettyString.__index = PrettyString
 PrettyString.__tostring = function(self)
-    if #self == 1 then return self[1] end
-    local codes = {}
-    for i = 2, #self do
-        table.insert(codes, self[i])
+    local text
+    if #self == 1 then
+        text = self[1]
+    else
+        local codes = {}
+        for i = 2, #self do
+            table.insert(codes, self[i])
+        end
+        text = "\27[" .. table.concat(codes, ";") .. "m" .. self[1] .. "\27[0m"
     end
-    return "\27[" .. table.concat(codes, ";") .. "m" .. self[1] .. "\27[0m"
+
+    if self._link then
+        text = '\27]8;;' .. self._link .. '\27\\' .. text .. '\27]8;;\27\\'
+    end
+
+    return text
 end
 setmetatable(PrettyString, {
     __call = function(cls, text, ...)
@@ -99,7 +109,11 @@ end
 function PrettyString:style(...)
     local stylenames = {...}
     for _, style in ipairs(stylenames) do
-        table.insert(self, tocode(style))
+        if style.link or style.uri or style.filelink then 
+            self:link(style) 
+        else
+            table.insert(self, tocode(style))
+        end
     end
     return self
 end
@@ -111,6 +125,20 @@ end
 
 function PrettyString:bg(tab)
     table.insert(self, bg(tab))
+    return self
+end
+
+local function urlencode_path(path)
+    return path:gsub('([^%w/%-%.%_~])', function(c)
+        return string.format('%%%02X', string.byte(c))
+    end)
+end
+
+function PrettyString:link(tab)
+    if type(tab) == "string" then tab = {link = tab} end
+    if tab.link     then self._link = tab.link end
+    if tab.uri      then self._link = tab.uri end
+    if tab.filelink then self._link = 'file://' .. urlencode_path(tab.filelink) end
     return self
 end
 
@@ -189,6 +217,29 @@ function pretty.table(val, indent, visited)
     return "{\n" .. table.concat(parts, ",\n") .. "\n" .. pad .. "}"
 end
 
+function pretty.any(...)
+    local printables = {...}
+    if #printables == 0 then 
+        return unpack({...})
+    end 
+    local final_printable = ""
+    for _, printable in ipairs(printables) do
+        if type(printable) == 'table' and getmetatable(printable) == PrettyString then 
+            final_printable = final_printable .. pretty.string(printable)
+        elseif type(printable) == 'table' then 
+            final_printable = final_printable .. pretty.table(printable)
+        else 
+            final_printable = final_printable .. tostring(printable)
+        end
+        final_printable = final_printable .. '\t'
+    end
+    return final_printable
+end
+
+function pretty.print(...)
+    print(pretty.any(...))
+end
+
 function pretty.markdown(md)
   md = md:gsub("^# (.-)\n", "\27[1m%1\27[0m\n")
   md = md:gsub("%*%*(.-)%*%*", "\27[1m%1\27[0m")
@@ -196,10 +247,98 @@ function pretty.markdown(md)
   return md
 end
 
-function pretty.write(path, value)
+function pretty.write(path, ...)
     local f = assert(io.open(path, "w"))
-    f:write(pretty.table(value))
+    f:write(pretty.any(...))
     f:close()
 end 
+
+function pretty.append(path, ...)
+    local f = assert(io.open(path, "a"))
+    f:write(pretty.any(...))
+    f:close()
+end
+
+local box = {
+    top       = '┌',
+    left      = '│',
+    right     = '│',
+    bottom    = '└',
+    mid       = '─',
+    top_left  = '┌',
+    top_right = '┐',
+    bottom_left  = '└',
+    bottom_right = '┘',
+    left_mid  = '├',
+    right_mid = '┤',
+    top_mid   = '┬',
+    bottom_mid = '┴',
+    cross     = '┼',
+}
+
+local function strip_ansi(s)
+    return (s:gsub("\27%[[0-9;]*m", ""))
+end
+
+local function pad(s, w)
+    s = tostring(s)
+    return s .. string.rep(' ', w - #strip_ansi(s))
+end
+
+function pretty.tabular(data, sortfunc)
+    if #data == 0 then return '' end
+    sortfunc = sortfunc or pairs
+
+    local fields = {}
+    for key in sortfunc(data[1]) do
+        table.insert(fields, key)
+    end 
+
+    -- compute column widths (ignoring ANSI escape sequences)
+    local widths = {}
+    for _, f in ipairs(fields) do widths[f] = #f end
+    for _, task in ipairs(data) do
+        for _, f in ipairs(fields) do
+            widths[f] = math.max(widths[f], #strip_ansi(tostring(task[f])))
+        end
+    end
+
+    -- build separator lines using box table
+    local sep = box.left_mid .. string.rep(box.mid, widths[fields[1]] + 2)
+    for i = 2, #fields do
+        sep = sep .. box.cross .. string.rep(box.mid, widths[fields[i]] + 2)
+    end
+    sep = sep .. box.right_mid
+
+    local top = box.top_left .. string.rep(box.mid, widths[fields[1]] + 2)
+    for i = 2, #fields do
+        top = top .. box.top_mid .. string.rep(box.mid, widths[fields[i]] + 2)
+    end
+    top = top .. box.top_right
+
+    local bot = box.bottom_left .. string.rep(box.mid, widths[fields[1]] + 2)
+    for i = 2, #fields do
+        bot = bot .. box.bottom_mid .. string.rep(box.mid, widths[fields[i]] + 2)
+    end
+    bot = bot .. box.bottom_right
+
+    -- header row
+    local header = box.left
+    for _, f in ipairs(fields) do
+        header = header .. ' ' .. pretty.string(pad(f, widths[f]), "bold") .. ' ' .. box.right
+    end
+
+    -- data rows
+    local lines = {top, header, sep}
+    for _, task in ipairs(data) do
+        local row = box.left
+        for _, f in ipairs(fields) do
+            row = row .. ' ' .. pad(task[f], widths[f]) .. ' ' .. box.right
+        end
+        table.insert(lines, row)
+    end
+    table.insert(lines, bot)
+    return table.concat(lines, '\n')
+end
 
 return pretty

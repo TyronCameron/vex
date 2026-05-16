@@ -1,4 +1,6 @@
 
+local lfs = require 'lib.lfs'
+
 local Plugin = {}
 Plugin.__index = Plugin
 
@@ -44,6 +46,19 @@ function Plugin:add(name)
     assert(not self.plugins[name], "plugin '" .. name .. "' already registered")
     assert(not self.sets[name], "'" .. name .. "' is already a set name")
     self.plugins[name] = { loaded = false, mod = nil }
+    return self
+end
+
+-- Register a folder of plugins
+function Plugin:addall(plugin_dir)
+    for filename in lfs.dir(plugin_dir) do
+        if filename ~= "." and filename ~= ".." then
+            if lfs.attributes(plugin_dir .. '/' .. filename, 'mode') == 'directory'
+                or filename:find("%.lua") then
+                self:add(filename:gsub("%.lua", ""))
+            end
+        end
+    end
     return self
 end
 
