@@ -29,6 +29,13 @@ cli:error "file" {
     hint = "Check that the file exists and is not in use?"
 }
 
+cli:error "write" {
+    function(path, vexpath)
+        return 'Could not write file intended for `' .. tostring(path) .. '`. This may be partially written to `' .. tostring(vexpath) .. '`.'
+    end,
+    hint = "This could be an error in a function rather than a write failure itself. Worth checking both possibilities."
+}
+
 cli:error "task-already-exists" {
     function(msg, path)
         local str = "Cannot create a new task; task vexid already exists: " .. msg
@@ -39,6 +46,15 @@ cli:error "task-already-exists" {
     end,
     hint = "You may be trying to create the same task twice?"
 }
+
+cli:error "path-already-exists" {
+    function(path)
+        local str = "Cannot create a new task here; the path already exists: " .. tostring(path)
+        return str
+    end,
+    hint = "Possibly something has gone wrong with the structuring of files?"
+}
+
 
 cli:error "no-focus" {
     function(msg)
@@ -70,22 +86,34 @@ cli:error "unknown-vextype" {
 }
 
 cli:error 'resolution-failed-validation' {
-    function(vexid, msg)
-        return 'The Validation step failed during resolution for vexid ' .. tostring(vexid) .. '. ' .. tostring(msg or '')
+    function(vexid, msg, undermsg)
+        return table.concat({
+            'The validation step failed during resolution for vexid `' .. (vexid and tostring(vexid)) .. '`',
+            msg and tostring(msg) or '',
+            undermsg and tostring(undermsg) or ''
+        }, '.\n')
     end,
     hint = "Ensure that data is correct and that the tasktype definitions in `config.lua` are sound."
 }
 
 cli:error 'resolution-failed-derivation' {
-    function(vexid, msg)
-        return 'The Derivation step failed during resolution for vexid ' .. tostring(vexid) .. '. ' .. tostring(msg or '')
+    function(vexid, msg, undermsg)
+        return table.concat({
+            'The derivation step failed during resolution for vexid `' .. (vexid and tostring(vexid)) .. '`',
+            msg and tostring(msg) or '',
+            undermsg and tostring(undermsg) or ''
+        }, '.\n')
     end,
     hint = "Ensure that data is correct and that the tasktype definitions in `config.lua` are sound."
 }
 
 cli:error 'resolution-failed-normalisation' {
-    function(vexid, msg)
-        return 'The Normalisation step failed during resolution for vexid ' .. tostring(vexid) .. '. ' .. tostring(msg or '')
+    function(vexid, msg, undermsg)
+        return table.concat({
+            'The normalisation step failed during resolution for vexid `' .. (vexid and tostring(vexid)) .. '`',
+            msg and tostring(msg) or '',
+            undermsg and tostring(undermsg) or ''
+        }, '.\n')
     end,
     hint = "Ensure that data is correct and that the tasktype definitions in `config.lua` are sound."
 }
@@ -111,3 +139,16 @@ cli:error "unknown-recipe" {
     hint = "Ensure that this recipe is correctly written in your `config.lua` file."
 }
 
+cli:error "unknown-field" {
+    function(field)
+        return 'A field of name `' .. tostring(field) .. '` does not exist.'
+    end,
+    hint = "Ensure that this field is correctly written in your `config.lua` file."
+}
+
+cli:error "task-creation-failed" {
+    function(msg)
+        return 'Cannot create task. Reason: ' .. tostring(msg)
+    end,
+    hint = "Ensure that you are calling the task adding function correctly."
+}

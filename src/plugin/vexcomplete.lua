@@ -1,11 +1,10 @@
 local cli = require 'lib.cli'
-local bootstrap = require 'core.bootstrap'
 local focus = require 'core.focus'
 local pretty = require 'lib.pretty'
 local func = require 'lib.func'
 local view = require 'core.view'
-
--- TODO: create a bootstrapper file. I'm reusing a lot of logic here.
+local task = require 'core.task'
+require 'core.taskdefinitions'
 
 local POWERSHELL_SCRIPT = [[
 Register-ArgumentCompleter -Native -CommandName vex -ScriptBlock {
@@ -165,7 +164,6 @@ end
 function suggest.focus()
     local suggestions = func.keys(focus.named)
     table.insert(suggestions, 'prev')
-    bootstrap()
     focus.focus('all'):each(function(vexid) return table.insert(suggestions, vexid) end)
     return suggestions
 end
@@ -175,12 +173,11 @@ function suggest.view()
 end
 
 function suggest.recipe()
-    local tasks, vexdex, config, recipe = bootstrap()
     return func.keys(recipe.recipes)
 end
 
 function suggest.fields()
-    
+    return func.imap(func.keys(task.fields), function(field) return '--' .. tostring(field) end)
 end
 
 function suggest.focusflags()

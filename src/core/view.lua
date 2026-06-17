@@ -40,7 +40,7 @@ v:view 'csv' {
 
 v:view 'tabular' {
     display = function(focus, flags)
-        local tasks = func.map(focus:get(), function(task) 
+        local tasks = func.imap(focus:get(), function(task) 
             return func.filter(task, function(value, key) return key ~= 'vexbody' end)
         end)
         return pretty.tabular(tasks, sortdata)

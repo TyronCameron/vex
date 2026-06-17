@@ -1,6 +1,6 @@
 
 return {
-	path = function(config, rootpath, task)
-		return rootpath .. '/' .. task.vexid .. '.md'
+	path = function(taskmanager, config, vexid)
+		return vexid .. '.md'
 	end 
 }

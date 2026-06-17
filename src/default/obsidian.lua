@@ -7,9 +7,29 @@ local function parse_yaml_value(s)
     return (s:match('^"(.*)"$') or s:match("^'(.*)'$") or s)
 end
 
-local function to_yaml_value(v)
+local function to_yaml_value(v, indent)
+    indent = indent or ""
     local t = type(v)
     if t == "boolean" or t == "number" then return tostring(v) end
+    if t == "table" then
+        local inner = indent .. "  "
+        -- Detect array: all keys are sequential integers
+        local is_array = #v > 0
+        if is_array then
+            local lines = {}
+            for _, item in ipairs(v) do
+                lines[#lines + 1] = inner .. "- " .. to_yaml_value(item, inner)
+            end
+            return "\n" .. table.concat(lines, "\n")
+        else
+            local lines = {}
+            for k, val in pairs(v) do
+                lines[#lines + 1] = inner .. k .. ": " .. to_yaml_value(val, inner)
+            end
+            return "\n" .. table.concat(lines, "\n")
+        end
+    end
+    -- String
     local s = tostring(v)
     if s:match("[:#%[%]{},&*?|>'\"%@`]") or s:match("^%s") or s:match("%s$") then
         return '"' .. s:gsub('"', '\\"') .. '"'

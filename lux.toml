@@ -1,0 +1,19 @@
+package = "vex"
+version = "0.1.0"
+lua = ">=5.1"
+
+[description]
+summary = "The minimal and meta task system"
+maintainer = "TyronCameron"
+labels = [  ]
+license = "MIT"
+
+[dependencies]
+# Add your dependencies here
+# `busted = ">=2.0"`
+
+[run]
+args = [ "src/main.lua" ]
+
+[build]
+type = "builtin"

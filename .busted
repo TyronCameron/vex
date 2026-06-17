@@ -4,7 +4,9 @@ return {
   },
   default = {
     verbose = true,
-    ["suppress-pending"] = true
+    helper = "test/load.lua",
+    ["suppress-pending"] = true,
+    ROOT = {"test"},
   },
   apiUnit = {
     tags = "api",

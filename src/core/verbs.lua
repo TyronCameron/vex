@@ -1,13 +1,13 @@
 local cli = require "lib.cli"
-local VexDex = require "core.vexdex"
-local Task = require "core.task"
 local focus = require 'core.focus'
 local cfg = require 'lib.config'
 local func = require 'lib.func'
 local pretty = require 'lib.pretty'
-local bootstrap = require 'core.bootstrap'
 local view = require 'core.view'
 local recipe = require 'core.recipe'
+local vexdex = require 'core.vexdex'
+local task = require 'core.task'
+require 'core.taskdefinitions'
 
 local function focus_pop_args(args)
     if type(args[1]) ~= 'table' then 
@@ -16,19 +16,8 @@ local function focus_pop_args(args)
     return focus.focus()
 end 
 
-cli:verb "init" {
-    function(args)
-        if #args > 0 then cli:throw('usage', 'You cannot provide args to vex init') end
-        VexDex.init()
-    end,
-    doc = "Initialise a new vex directory by setting up a `.vex` folder",
-    args = "",
-    example = "vex init"
-}
-
 cli:verb "show" {
     function(args)
-        local task = bootstrap()
         local f = focus_pop_args(args)
         f:each(function(vexid) 
             return print(task:show(vexid)) 
@@ -41,7 +30,6 @@ cli:verb "show" {
 
 cli:verb "focus" {
     function(args)
-        bootstrap()
         if #args == 0 then 
             local f = focus.read()
             pretty.print('Current focus')
@@ -64,7 +52,6 @@ cli:verb "focus" {
 
 cli:verb "view" {
     function(args)
-        bootstrap()
         local positional_args = args:positional()
         local focusname
         local viewname
@@ -85,16 +72,13 @@ cli:verb "view" {
 
 cli:verb "resolve" {
     function(args)
-        local task = bootstrap()
         if args[1] == 'all' then 
-            -- need to recurse through everything without using the vexdex
-            cli:throw("unimplemented")
+            task:reindexall()
         end 
         local f = focus_pop_args(args)
         f:each(function(vexid)
             task:resolve(vexid)
         end)
-        cli:throw("unimplemented") -- just check that this is what I wanna do
     end,
     doc = "Validates, updates and normalises fields and tasks",
     args = "[focus]",
@@ -103,7 +87,6 @@ cli:verb "resolve" {
 
 cli:verb "add" {
     function(args)
-        local task = bootstrap()
         local taskproperties = args:flags()
         taskproperties.description = table.concat(args:positional(), " ")
         local vexid = task:add(taskproperties)
@@ -119,14 +102,12 @@ cli:verb "add" {
 
 cli:verb "remove" {
     function(args)
-        local task, vexdex = bootstrap()
         local f = focus_pop_args(args)
         f:each(function(vexid)
             task:delete(vexid)
             task:remove(vexid)
             pretty.print(vexid)
         end)
-        focus.init(vexdex)
         vexdex:setfocus(nil)
         focus.focus('all'):each(function(vexid)
             task:resolve(vexid)
@@ -139,12 +120,10 @@ cli:verb "remove" {
 
 cli:verb "get" {
     function(args)
-        local task = bootstrap()
         local f = focus_pop_args(args)
         if #args == 0 then args = {{'vexid'}} end
         f:each(function(vexid)
-            pretty.print(task:getstring(vexid, args))
-            pretty.print()
+            pretty.print(task:get(vexid, args))
         end)
     end,
     doc = "Presents the focus in a tangible data format. Can specify which fields by supplying them as flags",
@@ -154,7 +133,6 @@ cli:verb "get" {
 
 cli:verb "set" {
     function(args)
-        local task = bootstrap()
         local f = focus_pop_args(args)
         local taskproperties = args:flags()
         f:each(function(vexid)
@@ -170,8 +148,6 @@ cli:verb "set" {
 
 cli:verb "recipe" {
     function(args)
-        local task, vexdex, config, recipe = bootstrap()
-
         local recipename = table.remove(args, 1)
         if not recipename then 
             pretty.print('Available recipes:')

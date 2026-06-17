@@ -12,10 +12,24 @@ plugin:addenum("frontmatter", {"canonicalfrontmatter"})
 plugin:addenum("body", {"canonicalbody"})
 plugin:addall(script_dir .. '/plugin')
 
+local cli = require 'lib.cli'
+
+cli:verb "init" {
+    function(args)
+        if #args > 0 then cli:throw('usage', 'You cannot provide args to vex init') end
+        require('core.init')()
+    end,
+    doc = "Initialise a new vex directory by setting up a `.vex` folder",
+    args = "",
+    example = "vex init"
+}
+
 require 'core.errors'
-require 'core.verbs'
+
+if arg[1] ~= 'init' then                              
+    require 'core.verbs'
+end
 
 plugin:each(function(plug) end) -- automatically loads them
 
-local cli = require 'lib.cli'
 cli:run(table.concat(arg, " "))

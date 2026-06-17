@@ -100,10 +100,10 @@ function func.any(tab, func)
 	return func.reduce(func.map(tab, func), function(a,b) return a or b end)
 end
 
-function func.all(tab, func)
+function func.all(tab, f)
 	if not func and type(tab) == "function" then return function(x) return func.all(x, tab) end end
-	local func = func or function(x) return x end
-	return func.reduce(func.map(tab, func), function(a,b) return a and b end)
+	local f = f or function(x) return x end
+	return func.reduce(func.map(tab, f), function(a,b) return a and b end)
 end
 
 function func.reverse(tab)

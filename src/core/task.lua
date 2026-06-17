@@ -9,78 +9,149 @@ local frontmatter = plugin:get 'frontmatter'
 local body = plugin:get 'body'
 local cli = require 'lib.cli'
 local lfs = require 'lib.lfs'
+local lfsext = require 'lib.lfsext'
 local pretty = require 'lib.pretty'
-local schema = require 'lib.schema'
+local vexdex = require 'core.vexdex'
+local config = require 'core.config'
+
+------------------------------------------------
+--- Tasks
+------------------------------------------------
 
 local Task = {}
 Task.__index = Task
 
--- creates new task manager
-function Task.new(vexdex, config)
-    return setmetatable({
-        vexdex = vexdex,
-        tasktypes = {task = {}},
-        tasks = {},
-        config = config
-    }, Task)
+-- construction
+function Task.new(task)
+    assert(type(task) == "table", "A task must be a table of information")
+    assert(task.vexid, "A task must have a vexid")
+    return setmetatable(task, Task)
 end
 
--- registers task type
-function Task:vextype(name)
+-- gets data from a task and returns it as a string for the command line
+function Task:tostring(fields)
+    local values = {}
+    for _, pair in ipairs(func.ifilter(fields, function(word) return type(word) == "table" end)) do
+        table.insert(values, self[pair[1]])
+    end
+    return table.concat(values, "\t")
+end
+
+-- show 
+function Task:show(path)
+    local final_str = pretty.string('# ' .. string.upper(tostring(self.vexid)) .. '\n', 'cyan', 'underline', 'bold', {filelink = tostring(path)})
+    final_str = final_str .. pretty.string("---\n", 'cyan')
+    for k, v in sortdata(frontmatter(self)) do 
+        final_str = final_str .. pretty.string(tostring(k) .. ": ", 'green') .. pretty.string(tostring(v or '') ..  '\n')
+    end 
+    final_str = final_str .. pretty.string("---\n", 'cyan')
+    final_str = final_str .. pretty.string(tostring(body(self) or '') .. "\n\n")
+    return final_str
+end
+
+------------------------------------------------
+--- Task Manager
+------------------------------------------------
+
+local TaskManager = {}
+TaskManager.__index = TaskManager
+
+-- creates new task manager
+function TaskManager.new()
+    return setmetatable({
+        fields = {},
+        transients = {},
+        tasktypes = {},
+        modifiers = {},
+        tasks = {}
+    }, TaskManager)
+end
+
+-- registers a field
+
+-- function TaskManager:field(name)
+--     return function(tab)
+--         assert(type(tab) == "table", "field: expected a table")
+--         assert(tab.validate or tab.derive, "Field definition must include at least a validate or derive function.")
+--         self.fields[name] = tab
+--     end
+-- end
+
+-- registers a transient field which is not stored anywhere
+function TaskManager:transient(name)
     return function(tab)
-        assert(tab.fields and getmetatable(tab.fields).validations, "Cannot register a vextype without a valid schema. Ensure your vextype is registered with a `fields` field which is a schema.")
-        self.tasktypes[name] = tab
+        assert(type(tab) == "table", "transient: expected a table")
+        assert(tab.derive, "Field definition must include at least a derive function.")        
+        self.transients[name] = tab
     end
 end
 
--- Task.new():vextype 'task' {
---     fields = schema.atleast {
---         vexid = schema.all {
---             schema.str(),
---             function(template, instance) return #instance > 0 end
---         },
---         vextype = schema.constant("task"),
---         created = function() return os.time() end,
---         modified = function() return os.time() end,
---         status = function() return "todo" end,
---         vexbody = schema.str()
---     }
--- }
+-- register mod
+function TaskManager:modifier(name, modfunc)
+	assert(type(modfunc) == "function", "Must supply a modifier function")
+	self.modifiers[name] = modfunc
+end
 
--- vextype 'abstract' {
-    -- new = function(tab) end,
-    -- validate = function(task) end,
-    -- derive = function(task) end,
-    -- normalise = function(task) end,
-    -- fields = schema {}
-    -- pre = {
-        -- resolve = function(taskmanager, task) end
-        -- add = function(taskmanager, task) end
-        -- remove = function(taskmanager, task) end
-        -- set = function(taskmanager, task) end
-        -- get = function(taskmanager, task) end
-    -- }
-    -- post = {
-        -- resolve = function(taskmanager, task) end
-        -- add = function(taskmanager, task) end
-        -- remove = function(taskmanager, task) end
-        -- set = function(taskmanager, task) end
-        -- get = function(taskmanager, task) end
-    -- }
--- }
+-- registers task type
+function TaskManager:registertask(name, parent, tab)
+    assert(name, "Task must have a task name")
+    assert(tab.schema, "Cannot register a task type without a valid schema. Ensure your task type is registered with a `schema` field which is a schema.")
+    assert(not self.tasktypes[name], "Task with name " .. tostring(name) .. " already exists.")
+    assert(not parent or self.tasktypes[parent], "Unknown parent of name " .. tostring(parent))
+    self.tasktypes[name] = {
+        parent = parent,
+        name = name,
+        schema = tab.schema,
+        fields = tab.fields
+    }
+    if type(tab.schema.specification) == "table" then 
+        for key in pairs(tab.schema.specification) do 
+            self.fields[key] = true
+        end 
+    end 
+end
+
+-- setup modifier behaviour 
+function TaskManager:applymods(name, modifiers)
+	local tasktype = func.map(self.tasktypes[name], function(v) return v end) -- copy 
+	for _, modifier in ipairs(modifiers) do
+		tasktype = self.modifiers[modifier](tasktype)
+	end
+	return tasktype
+end
+
+-- register task with sugar 
+function TaskManager:task(name)
+	return setmetatable({
+		extends = function(this, parent)
+			return function(task)
+				return self:registertask(name, parent, task)
+			end
+		end,
+		modify = function(this, parent)
+			return function(modifiers)
+				return self:registertask(name, nil, self:applymods(parent, modifiers))
+			end 
+		end 
+	}, {
+		__call = function(_, task)
+			return self:registertask(name, nil, task)
+		end
+	})
+end
 
 ---------------------------------------------------
 -- Tasks and focuses
 ---------------------------------------------------
 
 -- Get a table of tasks 
-function Task:gettasks(focus)
+function TaskManager:gettasks(focus)
     
 end
 
 -- gets single task by id
 -- first attempts to get it from the index, but then tries reading it 
-function Task:getsingle(vexid)
+function TaskManager:getsingle(vexid)
     assert(vexid, "getsingle() requires an id")
     self.tasks[vexid] = self.tasks[vexid] or self:read(vexid)
     return self.tasks[vexid]
@@ -88,50 +159,46 @@ end
 
 -- converts an id list to a focus representation
 -- allows composable focuses from id lists
-function Task:to_focus(tasks)
-    if tasks.id then return {tasks} end 
-    return tasks 
-end
+-- function TaskManager:to_focus(tasks)
+--     cli:throw('unimplemented')
+--     if tasks.vexid then return {tasks} end 
+--     return tasks 
+-- end
 
 ---------------------------------------------------
 -- Public API
 ---------------------------------------------------
 
 -- creates new task
-function Task:add(task)
+function TaskManager:add(task)
     assert(task and type(task) == "table", "add() requires a table of task properties")
-    assert(task.description, "task must have a description to be added")
-    task.vexid = tagger.generate(task.description, self.vexdex.index)
-    task.vextype = task.vextype or "task"
-    task.created = os.time()
-    task.modified = task.created
-    task.status = task.status or "todo"
-    task.vexbody = ""
+    if not (type(task.description) == "string") then cli:throw("task-creation-failed", "task must have a description to be added") end
+    if not (#task.description > 3) then cli:throw("task-creation-failed", "Need more than 3 characters to create a task") end
+    
+    task.vexid = tagger.generate(task.description, vexdex.index)
     local existing_task = self:getsingle(task.vexid)
     if existing_task then cli:throw('task-already-exists', task.vexid, existing_task.path) end 
-    self.tasks[task.vexid] = task
+    task.vextype = task.vextype or 'task'
+
+    self.tasks[task.vexid] = Task.new(task)
     return task.vexid
 end
 
 -- removes task by id or focus
-function Task:remove(vexid)
+function TaskManager:remove(vexid)
     assert(vexid, "remove() requires an id or focus")
     self.tasks[vexid] = nil
     return vexid
 end
 
 -- gets data from a task and returns it as a string for the command line
-function Task:getstring(vexid, fields)
+function TaskManager:get(vexid, fields)
     local task = self:getsingle(vexid)
-    local values = {}
-    for _, pair in ipairs(func.ifilter(fields, function(word) return type(word) == "table" end)) do
-        table.insert(values, task[pair[1]])
-    end
-    return table.concat(values, "\n")
+    return task:tostring(fields)
 end
 
 -- sets task properties for a given focus
-function Task:set(vexid, tab)
+function TaskManager:set(vexid, tab)
     assert(tab and type(tab) == "table", "set() requires a table")
     local task = self:getsingle(vexid) 
     for k,v in pairs(tab) do 
@@ -143,31 +210,10 @@ function Task:set(vexid, tab)
 end
 
 -- shows task, basically cat 'filename'
--- prints a task's contents to stdout
--- if the focus results in more than one task, will print them all
-function Task:show(vexid)
+function TaskManager:show(vexid)
     assert(vexid, "show() requires an vexid")
     local task = self:getsingle(vexid)
-    local path = self:getpath(vexid)
-    local final_str = pretty.string('# ' .. string.upper(tostring(task.vexid)) .. '\n', 'cyan', 'underline', 'bold', {filelink = tostring(path)})
-    final_str = final_str .. pretty.string("---\n", 'cyan')
-    for k, v in sortdata(frontmatter(task)) do 
-        final_str = final_str .. pretty.string(tostring(k) .. ": ", 'green') .. pretty.string(tostring(v or '') ..  '\n')
-    end 
-    final_str = final_str .. pretty.string("---\n", 'cyan')
-    final_str = final_str .. pretty.string(tostring(body(task) or '') .. "\n\n")
-    return final_str
-end
-
--- views a list of tasks with a specific view
--- example focus = "not-done"
--- example view = "table" or "kanban"
-function Task:view(focus, view)
-    focus = focus or "prev"  -- default to previous focus
-    view = view or "table"   -- default to table view
-    
-    -- Get tasks matching focus
-    -- Apply view formatting
+    return task:show(self:getabspath(vexid))
 end
 
 ---------------------------------------------------
@@ -183,73 +229,82 @@ end
 -- - tag duplication checks
 -- should always add to index at the end of a resolve, possibly already removing the task
 
-
--- recursively walk dir to get all vexids. 
-local function get_all_vexids(path, tasks)
-    tasks = tasks or {}
-    for _, file in lfs.readdir(path) do
-        if lfs.isdir(file) then  
-            get_all_vexids(file, tasks)
-        else
-            table.insert(tasks, file:gsub("%..*$", ""))
-        end
-    end
-    return tasks
-end
-
 -- rebuild the entire vexdex by iterating through the filesystem
-function Task:refreshall()
-    for key in pairs(self.vexdex.index) do
-        self.vexdex:unsafe_remove(key)
+function TaskManager:reindexall()
+    for key in pairs(vexdex.index) do
+        vexdex:unsafe_remove(key)
     end
-    local vexids = get_all_vexids(self.vexdex.path)
+
+    local vexids = func.ifilter(func.imap(lfsext.walk(vexdex.path .. '/' .. config.taskfolder), function(path) 
+        local t = self:readfrompath(path)
+        return t and t.vexid
+    end), function(vexid) return vexid end)
+
     for _, vexid in ipairs(vexids) do
         self:read(vexid)
-        self.vexdex:unsafe_add(vexid, self.tasks[vexid])
+        vexdex:unsafe_add(vexid, self.tasks[vexid])
     end
-    self.vexdex:writeindex()
+    vexdex:writeindex()
     return self 
 end
 
-local function validate(vextype, task)
-    return true 
+local function normalise(vextype, task, context)
+    vextype.schema.prevalidate(vextype.schema, task, context)
+    local ok, res = pcall(vextype.schema.prevalidate, vextype.schema, task, context)
+    if not ok then cli:throw('resolution-failed-normalisation', context.vexid, context.path, tostring(res)) end 
+    return res
 end 
 
-local function derive(vextype, task)
-    return true 
+local function validate(vextype, task, context)
+    return vextype.schema:validate(task, context) 
 end 
 
-local function normalise(vextype, task)
-    return true 
-end 
-
-local function link(vextype, task)
-    return true 
+local function derive(vextype, task, context)
+    local ok, res = pcall(vextype.schema.postvalidate, vextype.schema, task, context)
+    if not ok then cli:throw('resolution-failed-derivation', context.vexid, context.path, tostring(res)) end 
+    return res
 end 
 
 -- adds it to the index
-function Task:index(vexid)
-    self.vexdex:add(vexid, self.tasks[vexid])
+function TaskManager:index(vexid)
+    vexdex:add(vexid, self.tasks[vexid])
 end
 
 -- removes from the index
-function Task:unindex(vexid)
-    self.vexdex:remove(vexid)
+function TaskManager:unindex(vexid)
+    vexdex:remove(vexid)
 end
 
 -- resolve
-function Task:resolve(vexid)
-    assert(type(vexid) == "string", "This is not a vexid")
-    local task = self:getsingle(vexid)
-    if not task.vextype then cli:throw('missing-required-field', vexid, 'vextype') end 
+function TaskManager:resolve(vexid)
+    if not vexid then cli:throw('missing-required-field', vexid, 'vexid') end 
+
+    local task = self:getsingle(vexid) or {}
+    if not task.vextype then cli:throw('missing-required-field', task.vexid, 'vextype') end 
+
     local vextype = self.tasktypes[task.vextype]
     if not vextype then cli:throw('unknown-vextype', vextype, func.keys(self.tasktypes)) end 
 
-    if not validate(vextype, task) then cli:throw('resolution-failed-validation', vexid) end 
-    if not derive(vextype, task) then cli:throw('resolution-failed-derivation', vexid) end 
-    if not normalise(vextype, task) then cli:throw('resolution-failed-normalisation', vexid) end 
-    if not link(vextype, task) then cli:throw('resolution-failed-linking', vexid) end 
+    local context = {
+        vexid = vexid,
+        taskmanager = self, 
+        task = task, 
+    }
 
+    local parents = {vextype} 
+    while parents[1].parent do
+        local parent = self.tasktypes[parents[#parents].parent]
+        table.insert(parents, 1, parent)
+    end 
+
+    for _, parent in ipairs(parents) do 
+        if not normalise(parent, task, context) then cli:throw('resolution-failed-normalisation', vexid) end 
+        local isvalid, err = validate(parent, task, context)
+        if not isvalid then cli:throw('resolution-failed-validation', vexid, err) end 
+        if not derive(parent, task, context) then cli:throw('resolution-failed-derivation', vexid) end 
+    end 
+
+    self.tasks[vexid] = task
     self:index(vexid)
 end
 
@@ -257,22 +312,40 @@ end
 -- File I/O
 ---------------------------------------------------
 
--- this needs a bit of work. This should: read from tasks if available in memory, or fall back to checking the index, or attempt to generate a path with a nothing task in it
--- it should not use getsingle which depends on read, which depends on this. 
--- This should be the source of truth everywhere.
--- it should probably also allow passing the full task manager through so you can iterate through it nicely 
-function Task:getpath(vexid)
-    local task = self.tasks[vexid] or self.vexdex:get(vexid) or {vexid = vexid}
-    return taskpath.path(self.config, self.vexdex.path .. '/' .. self.config.taskfolder, task)
+-- format a task 
+function TaskManager:format(vexid)
+    local task = self:getsingle(vexid)
+    local schema = self.tasktypes[task.vextype].schema
+    local formatted = {}
+    for subschema, instance, schemakey, instancekey in schema:iterate(task) do
+        if instancekey and instance and subschema:findiso('format', instance) then 
+            formatted[instancekey] = subschema:apply('format', instance)
+        else 
+            formatted[instancekey] = instance
+        end 
+    end
+    return formatted
+end
+
+-- get the path that a task should live at
+function TaskManager:getabspath(vexid)
+    return vexdex.path .. '/' .. config.taskfolder .. '/' .. self:getrelpath(vexid)
+end
+
+function TaskManager:getrelpath(vexid)
+    return taskpath.path(self, config, vexid)
 end
 
 -- reads a file from disk and adds it to memory
-function Task:read(vexid)
-    local staletask = self.vexdex:get(vexid) or {}
-    staletask.vexid = vexid
-    local ok, task = pcall(taskformat.read, taskpath.path(self.config, self.vexdex.path .. '/' .. self.config.taskfolder, staletask))
+function TaskManager:read(vexid)
+    return self:readfrompath(self:getabspath(vexid))
+end
+
+-- reads a file from disk and adds it to memory by path
+function TaskManager:readfrompath(path)
+    local ok, task = pcall(taskformat.read, path)
     if ok and task then 
-        self.tasks[task.vexid] = task
+        self.tasks[task.vexid] = Task.new(task)
         self:index(task.vexid)
         return task
     else 
@@ -281,19 +354,24 @@ function Task:read(vexid)
 end
 
 -- writes a file from disk
--- should mkdir if needed
-function Task:write(vexid)
-    local task = self:getsingle(vexid)
-    local str = taskformat.write(self:getpath(vexid), sortdata(frontmatter(task)), body(task))
+function TaskManager:write(vexid)
+    local task = self:format(vexid)
+    vexdex:atomic(self:getabspath(vexid), function(path)
+        taskformat.write(path, sortdata(frontmatter(task)), body(task))
+    end)
     self:index(vexid)
     return vexid
 end
 
 -- deletes a file from disk
-function Task:delete(vexid)
-    os.remove(self:getpath(vexid))
+function TaskManager:delete(vexid)
+    os.remove(self:getabspath(vexid))
     self:unindex(vexid)
     return vexid
 end
 
-return Task
+---------------------------------------------------
+-- Create single instance and init 
+---------------------------------------------------
+
+return TaskManager.new()

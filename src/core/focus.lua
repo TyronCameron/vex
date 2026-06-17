@@ -4,8 +4,7 @@ local optic = require 'lib.optic'
 local lfs = require 'lib.lfs'
 local cli = require 'lib.cli'
 local pretty = require 'lib.pretty'
-
-local vexdex = nil
+local vexdex = require 'core.vexdex'
 
 local Focus = {
     named = {}
@@ -22,10 +21,6 @@ end
 
 function Focus.register_focus(name, get)
     Focus.named[name] = Focus.new(name, get)
-end
-
-function Focus.init(vdex)
-    vexdex = vdex
 end
 
 function Focus.getalltasks()

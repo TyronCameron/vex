@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "reference/CLI reference.md",
+                "file": "Vex.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "CLI reference"
+              "title": "Vex"
             }
           }
         ]
@@ -196,12 +196,13 @@
   },
   "active": "3d97f7eeb5eace06",
   "lastOpenFiles": [
+    "vex/put-normalise-validate-derive-1.md",
     "Vexdex todo.md",
+    "reference/CLI reference.md",
     "Optics.md",
     "vex/make-coffee-wifeling.md",
     "vex/project.md",
     "Vex.md",
-    "reference/CLI reference.md",
     "reference/Frontmatter schema.md",
     "developer/Vexdex folder/Events and hooks.md",
     "developer/Vexdex folder/The index.md",
