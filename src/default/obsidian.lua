@@ -7,9 +7,29 @@ local function parse_yaml_value(s)
     return (s:match('^"(.*)"$') or s:match("^'(.*)'$") or s)
 end
 
-local function to_yaml_value(v)
+local function to_yaml_value(v, indent)
+    indent = indent or ""
     local t = type(v)
     if t == "boolean" or t == "number" then return tostring(v) end
+    if t == "table" then
+        local inner = indent .. "  "
+        -- Detect array: all keys are sequential integers
+        local is_array = #v > 0
+        if is_array then
+            local lines = {}
+            for _, item in ipairs(v) do
+                lines[#lines + 1] = inner .. "- " .. to_yaml_value(item, inner)
+            end
+            return "\n" .. table.concat(lines, "\n")
+        else
+            local lines = {}
+            for k, val in pairs(v) do
+                lines[#lines + 1] = inner .. k .. ": " .. to_yaml_value(val, inner)
+            end
+            return "\n" .. table.concat(lines, "\n")
+        end
+    end
+    -- String
     local s = tostring(v)
     if s:match("[:#%[%]{},&*?|>'\"%@`]") or s:match("^%s") or s:match("%s$") then
         return '"' .. s:gsub('"', '\\"') .. '"'
@@ -25,6 +45,8 @@ return {
 
         local task = {}
         local frontmatter, body = content:match("^%-%-%-\n(.-)\n%-%-%-\n(.*)$")
+        frontmatter = frontmatter:match("^%s*(.-)%s*$")
+        assert(#frontmatter > 0, "frontmatter must not be empty")
 
         if frontmatter then
             for line in frontmatter:gmatch("[^\n]+") do
@@ -33,23 +55,20 @@ return {
                     task[key] = parse_yaml_value(value)
                 end
             end
-            task.body = body
+            task.vexbody = body
         else
-            task.body = content
+            task.vexbody = content
         end
 
         return task
     end,
 
-    write = function(path, task)
+    write = function(path, frontmatter_iter, body)
         local f = assert(io.open(path, "w"))
-        local body = task.body
 
         f:write("---\n")
-        for k, v in pairs(task) do
-            if k ~= "body" then
-                f:write(k .. ": " .. to_yaml_value(v) .. "\n")
-            end
+        for k, v in frontmatter_iter do
+            f:write(k .. ": " .. to_yaml_value(v) .. "\n")
         end
         f:write("---\n")
 

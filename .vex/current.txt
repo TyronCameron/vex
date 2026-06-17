@@ -1,0 +1,10 @@
+3	{
+  [1] = "view",
+  [2] = "all",
+  [3] = "tabu"
+}	view	json
+kanban
+singular
+overview
+tabular
+csv	

@@ -1,0 +1,16 @@
+return {
+  _all = {
+    coverage = true
+  },
+  default = {
+    verbose = true,
+    helper = "test/load.lua",
+    ["suppress-pending"] = true,
+    ROOT = {"test"},
+  },
+  apiUnit = {
+    tags = "api",
+    ROOT = {"test"},
+    verbose = true
+  }
+}

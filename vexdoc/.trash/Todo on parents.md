@@ -1,0 +1,1 @@
+I think parents should hold an array of children rather than children holding a single parent. 

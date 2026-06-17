@@ -3,95 +3,42 @@ local lfs = require "lib.lfs"
 local cli = require "lib.cli"
 local pretty = require 'lib.pretty'
 local binser = require 'lib.binser'
+local lfsext = require 'lib.lfsext'
 
 local VexDex = {}
 VexDex.__index = VexDex
 
-local default_config = {
-    taskfolder = '.',
-    default = {
-        taskformat = 'obsidian',
-        view = 'table',
-        dataformat = 'csv',
-        option = 'prev', 
-        tasktype = 'task'
-    }, 
-    plugins = {
-        vexations = true,
-        inline = true
-    }
-}
-
-local function rootdir(path)
-    local current = path
-    while current do
-        if lfs.attributes(current .. "/.vex", "mode") == "directory" then
-            return current
-        end
-        local parent = current:match("(.+)[\\/][^\\/]+$")
-        if parent == current then
-            break
-        end
-        current = parent
-    end
-    return nil
-end
-
-local function setup_vex_dir(path)
-    path = path or lfs.currentdir()
-    p = rootdir(path) 
-    if p then
-        cli:throw("already-vexed")
-    end
-    local ok, err = lfs.mkdir(path .. "/.vex")
-    if not ok then
-        cli:throw("bug", "Failed to create .vex directory: " .. tostring(err))
-    end
-    return path .. "/.vex"
-end 
-
-local function create_config(path)
-    local f = io.open(path .. "/config.lua", "w")
-    local str = "return " .. pretty.table_to_string(default_config)
-    f:write(str)
-    f:close()
-end 
-
-local function create_ext_folders(path)
-    lfs.mkdir(path .. "/vexdex")
-    lfs.mkdir(path .. "/optics")
-    lfs.mkdir(path .. "/views")
-    lfs.mkdir(path .. "/events")
-    lfs.mkdir(path .. "/tasks")
-    lfs.mkdir(path .. "/recipes")
-end 
-
-function VexDex.init(path)
-    vexpath = setup_vex_dir(path)
-    create_config(vexpath)
-    create_ext_folders(vexpath)
-end
-
 function VexDex.new(path)
     path = path or lfs.currentdir()
-    local found = rootdir(path)
+    local found = lfsext.rootdir(path)
     if not found then  
         cli:throw("not-vexed")
     end
     local this = setmetatable({
         path = found,
+        modified = os.time(),
         index = {}
     }, VexDex)
     return this:ensureindex()
 end
 
-function VexDex:add(vexid, storage)
+function VexDex:unsafe_add(vexid, storage)
     self.index[vexid] = storage
+    return self
+end
+
+function VexDex:add(vexid, storage)
+    self:unsafe_add(vexid, storage)
     return self:writeindex()
 end
 
-function VexDex:remove(vexid)
+function VexDex:unsafe_remove(vexid)
     self.index[vexid] = nil
+    return self
+end
+
+function VexDex:remove(vexid)
+    self:unsafe_remove(vexid)
     return self:writeindex()
 end
 
@@ -99,18 +46,34 @@ function VexDex:get(vexid)
     return self.index[vexid]
 end
 
+function VexDex:getfocus()
+    return self.focus or self:readfocus() and self.focus
+end 
+
+function VexDex:setfocus(focus)
+    self.focus = focus
+    self:writefocus()
+    return self
+end 
+
 function VexDex:vexpath(file)
     return self.path .. '/.vex/' .. file
 end
 
 function VexDex:readindex()
     local results = {binser.readFile(self:vexpath("vexdex/index.bin"))}
-    self.index = results[1]
+    self.index = results[1][1]
     return self 
 end
 
 function VexDex:writeindex()
-    binser.writeFile(self:vexpath("vexdex/index.bin"), self.index)
+    self.modified = os.time()
+    self:atomic(self:vexpath("vexdex/index.bin"), function(path)
+        binser.writeFile(path, self.index)
+    end)
+    self:atomic(self:vexpath("vexdex/index.lua"), function(path)
+        pretty.write(path, self.index)
+    end)
     return self 
 end
 
@@ -125,4 +88,39 @@ function VexDex:ensureindex()
     return self
 end
 
-return VexDex
+function VexDex:readfocus()
+    local path = self:vexpath("vexdex/focus.bin")
+    if lfs.attributes(path, "mode") ~= "file" then 
+        cli:throw("no-focus", "A focus cannot be found at path " .. tostring(path))
+    end 
+    local results = {binser.readFile(path)}
+    self.focus = results[1][1]
+    return self 
+end
+
+function VexDex:writefocus()
+    self:atomic(self:vexpath("vexdex/focus.bin"), function(path)
+        binser.writeFile(path, self.focus)
+    end)
+    self:atomic(self:vexpath("vexdex/focus.lua"), function(path)
+        pretty.write(path, self.focus)
+    end)
+    return self 
+end
+
+function VexDex:atomic(path, func)
+    local id = tostring(os.time()) .. tostring(math.random(1000))
+    local vexpath = self:vexpath("tmp/" .. id .. '.txt')
+    local ok, res = pcall(func, vexpath)
+    if not ok then 
+        cli:throw('write', path, vexpath)
+    end 
+    if package.config:sub(1,1) == '\\' then 
+        os.remove(path) -- on windows, need to remove the file first
+    end
+    os.rename(vexpath, path)
+    return res
+end
+
+-- only need one
+return VexDex.new()
