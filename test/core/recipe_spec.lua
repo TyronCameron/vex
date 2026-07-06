@@ -10,12 +10,6 @@ describe("Recipe", function()
         assert.is_table(r.recipes)
     end)
 
-    it("stores the provided taskmanager", function()
-        local fake_tm = {tasks = {}}
-        local r = Recipe.new(fake_tm)
-        assert.equal(fake_tm, r.taskmanager)
-    end)
-
     it("registers a recipe by name", function()
         local r = Recipe.new(nil)
         r:recipe("mytask") {

@@ -53,6 +53,15 @@ cli:verb "focus" {
 cli:verb "view" {
     function(args)
         local positional_args = args:positional()
+
+        if #positional_args == 0 then 
+            pretty.print('Available views:')
+            for view in pairs(view.views) do 
+                pretty.print('  ' .. view)
+            end 
+            return
+        end 
+
         local focusname
         local viewname
         if #positional_args > 1 then 
@@ -160,7 +169,12 @@ cli:verb "recipe" {
         local taskproperties = args:flags()
         taskproperties.description = table.concat(args:positional(), " ")
 
-        recipe:add(recipename, taskproperties)
+        local f = recipe:add(recipename, taskproperties)
+        f:each(function(vexid)
+            task:write(vexid)
+            pretty.print(vexid)
+        end)
+        f:write()
     end,
     doc = "Creates a recipe (series of tasks). This outputs and changes the focus",
     args = "[recipe] Description... [--fields...]",

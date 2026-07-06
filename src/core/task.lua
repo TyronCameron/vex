@@ -242,6 +242,7 @@ function TaskManager:reindexall()
 
     for _, vexid in ipairs(vexids) do
         self:read(vexid)
+        self:resolve(vexid)
         vexdex:unsafe_add(vexid, self.tasks[vexid])
     end
     vexdex:writeindex()
@@ -315,15 +316,27 @@ end
 -- format a task 
 function TaskManager:format(vexid)
     local task = self:getsingle(vexid)
-    local schema = self.tasktypes[task.vextype].schema
-    local formatted = {}
-    for subschema, instance, schemakey, instancekey in schema:iterate(task) do
-        if instancekey and instance and subschema:findiso('format', instance) then 
-            formatted[instancekey] = subschema:apply('format', instance)
-        else 
-            formatted[instancekey] = instance
-        end 
+    local vextype = self.tasktypes[task.vextype]
+
+    local parents = {vextype}
+    while parents[1].parent do
+        table.insert(parents, 1, self.tasktypes[parents[1].parent])
     end
+
+    local formatted = {}
+    for k, v in pairs(task) do formatted[k] = v end
+
+    for _, parent in ipairs(parents) do
+        for subschema, instance, schemakey, instancekey in parent.schema:iterate(task) do
+            if instancekey and instance ~= nil then
+                local iso_owner = subschema:findiso('format', instance)
+                if iso_owner and iso_owner:validate(instance) then
+                    formatted[instancekey] = subschema:apply('format', instance)
+                end
+            end
+        end
+    end
+
     return formatted
 end
 

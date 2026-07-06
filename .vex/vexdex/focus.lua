@@ -2,7 +2,7 @@
   operations = {
     [1] = {
       args = {
-        [1] = "new-task-ticky-ty-1"
+        [1] = "create-milestones-1"
       },
       operation = "focus"
     }

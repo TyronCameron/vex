@@ -470,13 +470,14 @@ Schema.register 'maybe' {
     end
 }
 
--- checks for number-only indexes and optionally an underlying schema on those values  
+-- checks for number-only indexes and optionally an underlying schema on those values
 Schema.register 'vec' {
     iterate = function(self, instance, context)
         return coroutine.wrap(function()
+            if type(instance) ~= "table" then return end
             for i in ipairs(instance) do
-                coroutine.yield(1, i)    
-            end  
+                coroutine.yield(1, i)
+            end
         end)
     end,
     prevalidate = prevalidate_children,
@@ -665,7 +666,8 @@ Schema.register 'default' {
     end,
     prevalidate = function(self, instance, context)
         if instance == nil then 
-            instance = self.specification.default(self, instance, context)     
+            local default_func = self.specification.default or self.specification[2]
+            instance = default_func(self, instance, context)     
         end
         for childschema, childinstance in self:iterate(instance, context) do
             instance = childschema:prevalidate(childinstance, context)

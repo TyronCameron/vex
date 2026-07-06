@@ -1,11 +1,13 @@
 local cli = require 'lib.cli'
+local task = require 'core.task'
+local focus = require 'core.focus'
 
 local Recipe = {}
 Recipe.__index = Recipe
 
 -- create new recipe manager
-function Recipe.new(task)
-    return setmetatable({recipes = {}, taskmanager = task}, Recipe)
+function Recipe.new()
+    return setmetatable({recipes = {}}, Recipe)
 end 
 
 function Recipe:recipe(name)
@@ -17,7 +19,9 @@ end
 
 function Recipe:add(name, taskproperties)
     if not self.recipes[name] then cli:throw('unknown-recipe', name) end 
-    return self.recipes[name].add(self.taskmanager, taskproperties)
+    local vexid = self.recipes[name].add(task, taskproperties)
+    task:resolve(vexid)
+    return focus.focus(vexid)
 end
 
-return Recipe
+return Recipe.new()

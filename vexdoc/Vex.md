@@ -19,7 +19,6 @@ These types of tasks are opinionated and should be under a plugin called vexatio
 
 Four types of tasks. Users can create their own task types which are subtypes of the above, or subtypes of the master task type. 
 Every task is a file. 
-
 ### 1. Exploration 
  A task to create the structures necessary for task decision and execution. 
  

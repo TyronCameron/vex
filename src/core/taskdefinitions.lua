@@ -95,8 +95,11 @@ task:task 'task' {
 task:task 'abstract':extends 'task' {
     schema = schema.atleast {
         vexbody = schema.maybe {schema.empty},
-        children = schema.vec {
-            schema.formatted {schema.vexlink}
+        children = schema.default {
+            schema.vec {
+                schema.formatted {schema.vexlink}
+            },
+            default = function() return {} end 
         }
     }
 }
@@ -131,6 +134,13 @@ task:task 'atom':extends 'task' {
     schema = schema.atleast {
         children = schema.maybe {schema.empty},
     }
+}
+
+recipe:recipe 'abstract' {
+    add = function(task, taskproperties)
+        taskproperties.vextype = 'abstract'
+        return task:add(taskproperties)
+    end 
 }
 
 -- task:field 'due' {

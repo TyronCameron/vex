@@ -45,6 +45,7 @@ local function create_ext_folders(path)
     lfs.mkdir(path .. "/tasks")
     lfs.mkdir(path .. "/recipes")
     lfs.mkdir(path .. "/tmp")
+    lfs.mkdir(path .. "/events")
 end 
 
 local function init(path)

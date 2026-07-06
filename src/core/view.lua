@@ -6,6 +6,7 @@ local plugin = require 'lib.plugin'
 local sortdata = plugin:get 'sortdata'
 local format = require 'lib.format'
 local Focus = require 'core.focus'
+local task = require 'core.task'
 
 local View = {}
 View.__index = View
@@ -40,8 +41,16 @@ v:view 'csv' {
 
 v:view 'tabular' {
     display = function(focus, flags)
-        local tasks = func.imap(focus:get(), function(task) 
-            return func.filter(task, function(value, key) return key ~= 'vexbody' end)
+        local tasks = func.imap(focus:get(), function(t)
+            local formatted = task:format(t.vexid)
+            local result = {}
+            for k, v in pairs(t) do
+                if k ~= 'vexbody' then result[k] = v end
+            end
+            for k, v in pairs(formatted) do
+                if k ~= 'vexbody' then result[k] = v end
+            end
+            return result
         end)
         return pretty.tabular(tasks, sortdata)
     end
