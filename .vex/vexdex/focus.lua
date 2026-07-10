@@ -2,7 +2,7 @@
   operations = {
     [1] = {
       args = {
-        [1] = "create-milestones-1"
+        [1] = "make-claude-review-docs-1"
       },
       operation = "focus"
     }

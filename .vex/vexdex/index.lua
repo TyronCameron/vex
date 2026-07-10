@@ -4,8 +4,25 @@
     description = "CLI should pass raw args",
     modified = 1779228684,
     status = "todo",
-    vexbody = "",
+    vexbody = "Make the command line also pass through a raw version of the args (single string, instead of splitting it up)",
     vexid = "cli-pass-raw-args-1",
+    vextype = "task"
+  },
+  create-events-file-slip-1 = {
+    created = 1783685405,
+    description = "Create events file and slip in events architecture",
+    modified = 1783685405,
+    status = "todo",
+    vexid = "create-events-file-slip-1",
+    vextype = "task"
+  },
+  create-linking-including-fixing-1 = {
+    created = "2026-07-10 22:05:54",
+    description = "Create linking, including fixing children and parent fields",
+    modified = "2026-07-10 22:05:54",
+    status = "todo",
+    vexbody = "",
+    vexid = "create-linking-including-fixing-1",
     vextype = "task"
   },
   create-milestones-1 = {
@@ -13,7 +30,19 @@
     description = "Create Milestones",
     modified = "2026-06-17 21:07:43",
     status = "todo",
-    vexbody = "",
+    vexbody = "\
+Need to create milestones:\
+\
+- v0.0.1 working but unstable \
+- V0.1.0 working and stable and usable on other projects\
+- v1.0.0 working and stable and feature-stable (unlikely to change)\
+\
+These make good abstracts. \
+\
+Furthermore, because a parent is defined through children, can have multiple parents ??? Maybe worth making milestones tags instead of abstracts? \
+\
+\
+",
     vexid = "create-milestones-1",
     vextype = "task"
   },
@@ -47,17 +76,75 @@ It should use the description fields, not the actual bodies.\
     description = "Ensure all verbs return data and do not print",
     modified = 1779226066,
     status = "todo",
-    vexbody = "",
+    vexbody = "Ensure all verbs return data instead of using print at each point",
     vexid = "ensure-verbs-return-data-1",
+    vextype = "task"
+  },
+  fix-lux-entrypoint-1 = {
+    created = "2026-07-10 22:04:07",
+    description = "Fix lux entrypoint",
+    modified = "2026-07-10 22:04:07",
+    status = "todo",
+    vexbody = "",
+    vexid = "fix-lux-entrypoint-1",
+    vextype = "task"
+  },
+  implement-categorical-variables-1 = {
+    created = 1783685588,
+    description = "Implement categorical variables",
+    modified = 1783685588,
+    status = "todo",
+    vexid = "implement-categorical-variables-1",
+    vextype = "task"
+  },
+  implement-priorityorder-variables-1 = {
+    created = 1783685600,
+    description = "Implement priority/order variables",
+    modified = 1783685600,
+    status = "todo",
+    vexid = "implement-priorityorder-variables-1",
+    vextype = "task"
+  },
+  make-claude-review-docs-1 = {
+    created = 1783685651,
+    description = "Make claude review docs",
+    modified = 1783685651,
+    status = "todo",
+    vexid = "make-claude-review-docs-1",
+    vextype = "task"
+  },
+  make-cli-understand-quoting-1 = {
+    created = 1783685534,
+    description = "make CLI understand quoting",
+    modified = 1783685534,
+    status = "todo",
+    vexid = "make-cli-understand-quoting-1",
+    vextype = "task"
+  },
+  make-config-actually-control-1 = {
+    created = 1783685641,
+    description = "Make config actually control plugins",
+    modified = 1783685641,
+    status = "todo",
+    vexid = "make-config-actually-control-1",
     vextype = "task"
   },
   put-normalise-validate-derive-1 = {
     created = 1779449388,
     description = "Put normalise, validate, and derive into lib.schema",
     modified = 1779449388,
-    status = "todo",
+    status = "done",
     vexbody = "",
     vexid = "put-normalise-validate-derive-1",
+    vextype = "task"
+  },
+  review-pretty-printing-1 = {
+    created = "2026-07-10 22:07:33",
+    description = "Review pretty printing",
+    modified = "2026-07-10 22:07:33",
+    status = "todo",
+    vexbody = "",
+    vexid = "review-pretty-printing-1",
     vextype = "task"
   },
   status-resolution-ensure-there-1 = {
@@ -78,5 +165,21 @@ It should use the description fields, not the actual bodies.\
     vexbody = "",
     vexid = "version-01-1",
     vextype = "abstract"
+  },
+  when-printing-focuses-pretty-1 = {
+    created = 1783685555,
+    description = "When printing focuses, pretty print it",
+    modified = 1783685555,
+    status = "todo",
+    vexid = "when-printing-focuses-pretty-1",
+    vextype = "task"
+  },
+  when-printing-validation-errors-1 = {
+    created = 1783685568,
+    description = "When printing validation errors, pretty print them",
+    modified = 1783685568,
+    status = "todo",
+    vexid = "when-printing-validation-errors-1",
+    vextype = "task"
   }
 }	

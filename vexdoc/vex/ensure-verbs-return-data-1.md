@@ -6,3 +6,4 @@ created: 1779226066
 modified: 1779226066
 status: todo
 ---
+Ensure all verbs return data instead of using print at each point
