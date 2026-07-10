@@ -24,5 +24,5 @@ vex resolve all
 
 ## See also
 
-- [[Configuration]] — the config file VexDex's owning project reads (only `taskfolder` matters to VexDex directly).
+- [[01 Configuring vex (config.lua)]] — the config file VexDex's owning project reads (only `taskfolder` matters to VexDex directly).
 - [[Plugin architecture]] — `sortdata`, `frontmatter`, and `taskformat` are the pluggable pieces VexDex depends on for reading/writing the tasks it indexes.

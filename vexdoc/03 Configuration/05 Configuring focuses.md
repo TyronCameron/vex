@@ -1,5 +1,5 @@
 > [!WARNING] Not yet implemented
-> `vex init` creates a `.vex/focuses` folder, but nothing in vex currently reads from it — the only named focuses that exist are the ones hardcoded in `src/core/focus.lua` (`all`, `none`, `updated`, `prev`). Tracked as `implement-focus-loader-1` in the project's own vex tasks.
+> `vex init` creates a `.vex/focuses` folder, but nothing in vex currently reads from it — the only named focuses that exist are the ones hardcoded in `src/core/focus.lua` (`all`, `none`, `updated`, `prev`). Tracked as [[implement-focus-loader-1]].
 
 ## Intended design
 

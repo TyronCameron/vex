@@ -1,5 +1,5 @@
 > [!WARNING] Not yet implemented
-> `vex init` creates a `.vex/views` folder, but nothing in vex currently reads from it. The 6 built-in views (`csv`, `tabular`, `json`, `kanban`, `overview`, `singular`) are registered directly in `src/core/view.lua`. Tracked as `implement-view-loader-1` in the project's own vex tasks.
+> `vex init` creates a `.vex/views` folder, but nothing in vex currently reads from it. The 6 built-in views (`csv`, `tabular`, `json`, `kanban`, `overview`, `singular`) are registered directly in `src/core/view.lua`. Tracked as [[implement-view-loader-1]].
 
 ## Intended design
 

@@ -13,7 +13,6 @@ vexid                vextype   status  owner
 make-coffee-wife-1    task      doing   alice
 ship-v02-release-1    abstract  todo
 ```
-(Confirmed by actually running `vex view all tabular` against two real tasks.)
 
 ## `csv`
 

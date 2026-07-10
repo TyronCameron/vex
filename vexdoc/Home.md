@@ -1,7 +1,7 @@
 Welcome to the vex wiki. vex is **the embeddable, local-first, minimal-and-meta task system** — every task is a plain text file, every project keeps its own `.vex` folder (much like a `.git` folder), and there is no server, no account, and no lock-in.
 
 > [!NOTE] Project status
-> vex is early (`v0.1.0`), built by a single developer, and designed around a **single operator working locally**. There is no built-in multi-user server, notification system, or sync — see [[#Powerful, real-world]] below for how teams use it anyway. Several pages under **03 Configuration** (linked below) intentionally describe features that are **not yet implemented** — they document real design intent, not real behaviour, until that callout is gone. There's also a more fundamental confirmed bug worth knowing up front: task-linking fields (`children`, `dependencies`, `options`) don't survive being saved and reloaded, so `abstract`/`decision` structure and dependency graphs aren't usable yet — see the warning in example 1 below, and [[02 Frontmatter schema]].
+> vex is early (`v0.1.0`), built by a single developer, and designed around a **single operator working locally**. There is no built-in multi-user server, notification system, or sync — see [[#Powerful, real-world]] below for how teams use it anyway. Several pages under **03 Configuration** (linked below) intentionally describe features that are **not yet implemented** — they document real design intent, not real behaviour, until that callout is gone. There's also a more fundamental bug worth knowing up front: task-linking fields (`children`, `dependencies`, `options`) don't survive being saved and reloaded, so `abstract`/`decision` structure and dependency graphs aren't usable yet — see the warning in example 1 below, and [[02 Frontmatter schema]].
 
 Because a task is just a text file, anything that can read and write text — your editor, a shell script, or an AI coding agent — can create, update, and reason about your tasks with no special API. That's not a bolted-on integration; it's the whole design.
 
@@ -20,7 +20,7 @@ Because a task is just a text file, anything that can read and write text — yo
   - **[[06 Configuring event hooks]]**, **[[05 Configuring focuses]]**, **[[04 Configuring recipes]]**, **[[03 Configuring task types]]**, **[[02 Configuring views]]** — the extension points that are scaffolded but not wired up yet.
 - **Technical documentation**
   - **[[Plugin architecture]]** — how every piece of vex's behaviour, including its default file format, is a swappable plugin.
-  - **[[The index]]**, **[[Configuration]]**, **[[Events and hooks]]** — the internals of the `.vex/vexdex` folder.
+  - **[[The index]]**, **[[Events and hooks]]** — the internals of the `.vex/vexdex` folder.
 - **[[Vex]]** — the original design journal. Read it for the "why" behind the above; read everything else for the "how."
 
 ## Powerful, real-world
@@ -33,7 +33,7 @@ You're building a feature alone and the backlog is a mess of half-formed ideas a
 
 ```txt
 vex add Ship the billing rewrite --vextype abstract
-vex add Migrate existing invoices --vextype atom
+vex add Migrate existing invoices --owner alice --status todo
 vex add Fix the flaky webhook retry --owner alice --status doing
 ```
 
@@ -51,7 +51,7 @@ vex view all kanban --field status
 ...to see everything grouped into columns by status, or `vex view all overview` for a scope/quality/structure/movement summary across the whole backlog. None of this needed a project management tool with logins and a database — it's a folder of markdown files you can grep, diff, and commit.
 
 > [!WARNING] The dependency-graph story isn't real yet
-> vex is *designed* so `abstract` tasks group children, `atom`s declare `dependencies`, and the `singular` view draws the resulting tree/DAG (see [[03 Vexations (task types)]] and [[04 Views]]) — that's the part of this tool that would really set it apart from a flat todo list. Confirmed by testing: right now, none of `children`/`dependencies`/`options` survive being written to a file and read back, so that structure can't actually be built yet. Tracked as `fix-list-field-roundtrip-1` in the project's own vex tasks — worth watching if the graph-based workflow is what drew you here.
+> vex is *designed* so `abstract` tasks group children, `atom`s declare `dependencies`, and the `singular` view draws the resulting tree/DAG (see [[03 Vexations (task types)]] and [[04 Views]]) — that's the part of this tool that would really set it apart from a flat todo list. Right now, none of `children`/`dependencies`/`options` survive being written to a file and read back, so that structure can't actually be built yet. Tracked as [[fix-list-field-roundtrip-1]] — worth watching if the graph-based workflow is what drew you here.
 
 ### 2. Two people "assigning" work to each other
 
@@ -71,13 +71,24 @@ vex focus all --filter owner:bob
 vex view tabular
 ```
 
-`owner` isn't a specially-validated field yet (see the callout on [[02 Frontmatter schema]]) — it's a plain frontmatter key like any other, which is exactly why this already works: `vex add --owner bob` just writes `owner: bob` into the task file, and `--filter owner:bob` matches it back out. **The shared git repo is doing the syncing and the notifying; vex is just making sure the data underneath stays structured and diffable.** 
+`owner` isn't a specially-validated field yet (see the callout on [[02 Frontmatter schema]]) — it's a plain frontmatter key like any other, which is exactly why this already works: `vex add --owner bob` just writes `owner: bob` into the task file, and `--filter owner:bob` matches it back out. **The shared git repo is doing the syncing and the notifying; vex is just making sure the data underneath stays structured and diffable.**
+
 ### 3. Spinning up a repeatable project skeleton
 
-Kicking off a new milestone always means the same handful of tasks. Instead of retyping them, wrap them in a recipe once (see [[04 Configuring recipes]] for where this is headed, and the built-in `abstract` recipe for what exists today):
+Every release at a company might always go through the same stages: a spike, dev work, QA, and UAT before it ships. Retyping that structure by hand each time is exactly what a recipe is for. Custom, project-defined recipes aren't loaded yet (see [[04 Configuring recipes]] and [[implement-recipe-loader-1]]), but the shape is already established by the one recipe that does ship — `abstract` (`src/core/taskdefinitions.lua`) — and a project's own `.vex/recipes/release-pipeline.lua` would follow the same pattern:
 
-```txt
-vex recipe abstract Launch the next milestone --status todo
+```lua
+-- .vex/recipes/release-pipeline.lua (illustrative — custom recipes aren't loaded yet)
+return {
+    add = function(task, taskproperties)
+        local base = taskproperties.description
+        task:add({ description = "Spike: " .. base, vextype = "atom" })
+        task:add({ description = "Dev: " .. base, vextype = "atom" })
+        task:add({ description = "QA: " .. base, vextype = "atom" })
+        local uat = task:add({ description = "UAT: " .. base, vextype = "atom" })
+        return uat -- today's recipe dispatch only resolves/focuses a single returned vexid
+    end
+}
 ```
 
-and get a fully-formed parent task back (vex prints its vexid). Growing it into a full milestone by nesting the rest of the work under its `children` is the intent — not yet the reality, per the warning in example 1 above. As recipes become user-definable (currently code-only — see [[04 Configuring recipes]]) and the linking bug gets fixed, this is the shape of "one command, whole project scaffold."
+`vex recipe release-pipeline Ship the payments API` would then create all four stages in one call — once `.vex/recipes` is actually loaded. Worth being upfront about a second, deeper limitation the snippet's `return uat` comment gestures at: `Recipe:add` (`src/core/recipe.lua`) only resolves and writes the *one* vexid a recipe returns (`task:resolve(vexid)`, then the CLI's own `f:write()` over that single-vexid focus) — a bare `task:add({...})` call by itself, as used for the spike/dev/QA tasks above, only creates an in-memory record; nothing resolves or writes those three to disk today. A genuinely multi-task recipe needs that dispatch to grow, not just the `.vex/recipes` loader — both tracked by [[implement-recipe-loader-1]].

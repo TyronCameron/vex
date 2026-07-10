@@ -1,5 +1,5 @@
 > [!WARNING] Not yet implemented
-> `vex init` creates a `.vex/tasks` folder, described in [[01 CLI reference]] as where "resolution rules" and custom task types would live — but nothing in vex currently reads from it. The four built-in types (`task`, `abstract`, `decision`, `exploration`, `atom`) are registered directly in `src/core/taskdefinitions.lua`. Tracked as `implement-task-type-loader-1` in the project's own vex tasks.
+> `vex init` creates a `.vex/tasks` folder, described in [[01 CLI reference]] as where "resolution rules" and custom task types would live — but nothing in vex currently reads from it. The four built-in types (`task`, `abstract`, `decision`, `exploration`, `atom`) are registered directly in `src/core/taskdefinitions.lua`. Tracked as [[implement-task-type-loader-1]].
 
 ## Intended design
 

@@ -1,5 +1,5 @@
 > [!WARNING] Not yet implemented
-> `vex init` creates a `.vex/recipes` folder, but nothing in vex currently reads from it — the only recipe that exists is `abstract`, registered directly in `src/core/taskdefinitions.lua`. Tracked as `implement-recipe-loader-1` in the project's own vex tasks.
+> `vex init` creates a `.vex/recipes` folder, but nothing in vex currently reads from it — the only recipe that exists is `abstract`, registered directly in `src/core/taskdefinitions.lua`. Tracked as [[implement-recipe-loader-1]].
 
 ## Intended design
 

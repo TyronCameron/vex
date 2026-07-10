@@ -1,5 +1,5 @@
 > [!WARNING] Not yet implemented
-> `vex init` creates a `.vex/events` folder, but nothing in vex currently reads from it. `src/lib/event.lua` — the module that would dispatch hooks — is a stub that just `return {}`. Tracked as `implement-event-hooks-1` in the project's own vex tasks.
+> `vex init` creates a `.vex/events` folder, but nothing in vex currently reads from it. `src/lib/event.lua` — the module that would dispatch hooks — is a stub that just `return {}`. Tracked as [[implement-event-hooks-1]].
 
 ## Intended design
 

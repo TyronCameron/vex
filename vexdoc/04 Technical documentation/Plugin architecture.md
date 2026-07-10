@@ -46,7 +46,7 @@ Not everything registered is part of a named set. `Plugin:add(name)` / `Plugin:a
 | `tagger`      | `default.canonicalvexid`            | Turns a description into a `vexid` — see the algorithm in [[01 CLI reference]]. |
 | `taskpath`    | `default.flatpath`                  | Where a task's file lives on disk relative to `taskfolder`.  |
 | `taskformat`  | `default.obsidian`                  | How a task's fields are serialized to and from a file.       |
-| `dataformat`  | `default.csvdata`                   | The format the `csv` [[Views|view]] emits.                    |
+| `dataformat`  | `default.csvdata`                   | The format the `csv` [[04 Views|view]] emits.                    |
 | `sortdata`    | `default.canonicalsort`             | The field order used when printing frontmatter.               |
 | `frontmatter` | `default.canonicalfrontmatter`      | How the frontmatter block is parsed out of a task file.       |
 | `body`        | `default.canonicalbody`             | How the markdown body is parsed out of a task file.           |
