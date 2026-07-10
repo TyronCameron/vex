@@ -1,4 +1,3 @@
-local lfsext = require 'lib.lfsext'
 local pretty = require 'lib.pretty'
 local lfs = require "lib.lfs"
 local cli = require "lib.cli"
@@ -20,8 +19,7 @@ local default_config = {
 
 local function setup_vex_dir(path)
     path = path or lfs.currentdir()
-    p = lfsext.rootdir(path) 
-    if p then
+    if lfs.attributes(path .. "/.vex", "mode") == "directory" then
         cli:throw("already-vexed")
     end
     local ok, err = lfs.mkdir(path .. "/.vex")
