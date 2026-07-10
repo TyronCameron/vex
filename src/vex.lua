@@ -26,10 +26,9 @@ cli:verb "init" {
 
 require 'core.errors'
 
-if arg[1] ~= 'init' then                              
+if arg[1] ~= 'init' then
     require 'core.verbs'
+    plugin:each(function(plug) end) -- automatically loads them
 end
-
-plugin:each(function(plug) end) -- automatically loads them
 
 cli:run(table.concat(arg, " "))
