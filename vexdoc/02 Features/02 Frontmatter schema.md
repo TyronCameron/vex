@@ -1,4 +1,4 @@
-Every task file's frontmatter is validated against the schema for its `vextype`, defined in `src/core/taskdefinitions.lua`. This page documents what's actually enforced today; see [[Task types]] for what each `vextype` means and when to use it.
+Every task file's frontmatter is validated against the schema for its `vextype`, defined in `src/core/taskdefinitions.lua`. This page documents what's actually enforced today; see [[03 Vexations (task types)]] for what each `vextype` means and when to use it.
 
 ## Fields on every task
 
@@ -6,7 +6,7 @@ Every task file's frontmatter is validated against the schema for its `vextype`,
 | ------------- | ---------------------- | ------------------------------------------------------------------------------------------------------ |
 | `vexid`       | text                   | The unique id, generated from the description by the tagger. Doubles as the filename. Only user-settable indirectly (by editing the description before the first resolve) — `set` refuses to change it. |
 | `description` | text                   | The only field you actually have to supply. Must be more than 3 characters and at least 2 words.       |
-| `vextype`     | text                   | Which task type this is. Defaults to `task` if omitted. Must be a registered type (`task`, `abstract`, `decision`, `exploration`, `atom`, or a custom one — see [[Configuring task types]]). |
+| `vextype`     | text                   | Which task type this is. Defaults to `task` if omitted. Must be a registered type (`task`, `abstract`, `decision`, `exploration`, `atom`, or a custom one — see [[03 Configuring task types]]). |
 | `status`      | text (state machine)  | Intended to be `todo → doing → done`, in that order only, with `done` terminal. Defaults to `todo`. **Confirmed by testing: this isn't actually enforced today** — `todo` can currently be set straight to `done`, and `doing` back to `todo`, with no error. Tracked as `fix-status-transition-enforcement-1`. |
 | `created`     | datetime              | Stamped automatically the first time a task is resolved. Not user-settable in practice — the schema always derives it from the current time. |
 | `modified`    | datetime              | Re-derived on every resolve. Same caveat as `created`.                                                 |
@@ -22,7 +22,7 @@ Every task file's frontmatter is validated against the schema for its `vextype`,
 | `due`         | datetime                     | `task` and everything that extends it | **Confirmed broken today** — see the callout above.          |
 | `cost`, `benefit` | number                    | `task` and everything that extends it | Plain numbers, no unit or currency semantics attached. **Also confirmed broken today**: a CLI flag value is always a string, and `schema.num` has no string→number coercion, so `--cost 15` fails resolution the same way `due` does ("The instance: `15` is not a number"). Tracked under the same `fix-typed-field-cli-input-1`. |
 | `dependencies`| list of links (`vexlink`)    | `task` and everything that extends it | Each entry must be an existing task's `vexid`. **Confirmed broken today, full stop** — see the callout below. |
-| `children`    | list of links (`vexlink`)    | `abstract`                      | The mechanism the `tree`/`reversetree`/`singular` view machinery actually walks to find parent/child relationships — see [[Task types]]. Defaults to an empty list. Same breakage as `dependencies`. |
+| `children`    | list of links (`vexlink`)    | `abstract`                      | The mechanism the `tree`/`reversetree`/`singular` view machinery actually walks to find parent/child relationships — see [[03 Vexations (task types)]]. Defaults to an empty list. Same breakage as `dependencies`. |
 | `options`     | list of links (`vexlink`)    | `decision`                      | The candidate tasks a decision is choosing between. Required (not optional) on a `decision` task — and, per the callout below, currently impossible to populate, so `decision` tasks can't be created at all today. |
 | `decision`    | link (`vexlink`)              | `decision`                      | Which `options` entry was chosen. Must be one of `options` — resolution rejects any other value. (Earlier drafts of this page called this field `choice`; the real field name is `decision`.) |
 

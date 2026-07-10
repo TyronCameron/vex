@@ -1,6 +1,6 @@
-Every task has a `vextype`. The base type is just `task`, but vex ships four opinionated subtypes that each answer a different question. This page is the reference for what's actually validated (see `src/core/taskdefinitions.lua`); [[Vex]] has the longer design rationale if you want the "why" behind the shapes below.
+Every task has a `vextype`. The base type is just `task`, but vexations ships four opinionated subtypes that each answer a different question.
 
-You can create your own subtypes too (see [[Configuring task types]] for the current status of doing that from a project rather than from vex's own source).
+You can create your own subtypes too (see [[03 Configuring task types]] for the current status of doing that from a project rather than from vex's own source).
 
 ## The four built-in types
 
@@ -11,10 +11,10 @@ You can create your own subtypes too (see [[Configuring task types]] for the cur
 | `decision`    | *Which path do we take?*          | Free-form                       | `options` (required) and `decision` (must be one of `options`) |
 | `atom`        | *What do I actually do?*          | Free-form                       | No `children` allowed                          |
 
-All four still carry the base `task` fields (`due`, `dependencies`, `cost`, `benefit`, etc. — see [[Frontmatter schema]]) on top of the above.
+All four still carry the base `task` fields (`due`, `dependencies`, `cost`, `benefit`, etc. — see [[02 Frontmatter schema]]) on top of the above.
 
 > [!WARNING] `abstract` and `decision` are confirmed broken across more than one resolve
-> Every field that actually links tasks together (`children`, `dependencies`, `options`) currently fails to survive being written to disk and read back — see the callout on [[Frontmatter schema]]. In practice: an `abstract` task can be created, but the *next* `vex resolve all` fails on it, forever, and a `decision` task can't be created at all (its `options` is required and can never be populated). `exploration` and `atom` don't use those fields structurally, so they're unaffected.
+> Every field that actually links tasks together (`children`, `dependencies`, `options`) currently fails to survive being written to disk and read back — see the callout on [[02 Frontmatter schema]]. In practice: an `abstract` task can be created, but the *next* `vex resolve all` fails on it, forever, and a `decision` task can't be created at all (its `options` is required and can never be populated). `exploration` and `atom` don't use those fields structurally, so they're unaffected.
 
 ### Exploration
 
@@ -25,7 +25,7 @@ For when the landscape itself is uncertain — you don't yet know what needs to 
 A container. An abstract holds no information of its own — schema forces its body to stay empty — it exists purely to group other tasks together via its `children` list. Fast to create (`vex add "Ship v0.2" --vextype abstract`, confirmed working), meant to be: jot down the shape of the work now, decompose it into `atom`/`decision`/`exploration` children later. In practice today, decompose it fast, too — see the warning above about what happens on the next resolve.
 
 > [!NOTE] Children, not parent
-> The tree/reversetree machinery ([[CLI reference]]'s `--tree`/`--reversetree`, and the `singular` [[Views|view]]'s parent diagram) is *designed* to walk the `children` list on the *abstract*, not a `parent` field on the child — though see the warning above about whether `children` currently holds anything at all.
+> The tree/reversetree machinery ([[01 CLI reference]]'s `--tree`/`--reversetree`, and the `singular` [[04 Views|view]]'s parent diagram) is *designed* to walk the `children` list on the *abstract*, not a `parent` field on the child — though see the warning above about whether `children` currently holds anything at all.
 
 ### Decision
 
@@ -33,7 +33,7 @@ For when the path forward branches and something — you, a teammate, or a futur
 
 ### Atom
 
-A single, fully-specified, doable action. No `children` — if you find yourself wanting to break an atom down further, that's a sign it should have been an `abstract` instead. Atoms are where `dependencies` and `due` dates are *meant* to matter most, since they're the leaves of the graph that `--tree`/`--reversetree` walk — though both `dependencies` (see the warning above) and `due` (see [[Frontmatter schema]]) are currently confirmed broken, so an atom on its own (description, status, cost/benefit) is what actually works today.
+A single, fully-specified, doable action. No `children` — if you find yourself wanting to break an atom down further, that's a sign it should have been an `abstract` instead. Atoms are where `dependencies` and `due` dates are *meant* to matter most, since they're the leaves of the graph that `--tree`/`--reversetree` walk — though both `dependencies` (see the warning above) and `due` (see [[02 Frontmatter schema]]) are currently confirmed broken, so an atom on its own (description, status, cost/benefit) is what actually works today.
 
 ### How they chain together
 
@@ -41,4 +41,4 @@ A common shape, borrowed from [[Vex]]'s own design notes: an `abstract` for the 
 
 ## Custom types
 
-`task:task 'name':extends 'existing-type' { schema = ... }` (in vex's own Lua source) is how the four built-ins above are defined, and it's the same mechanism a project-specific type would use. Today that means writing Lua against `src/core/taskdefinitions.lua`'s pattern directly; a project-local way to register new types from `.vex/tasks` is planned but not wired up yet — see [[Configuring task types]].
+`task:task 'name':extends 'existing-type' { schema = ... }` (in vex's own Lua source) is how the four built-ins above are defined, and it's the same mechanism a project-specific type would use. Today that means writing Lua against `src/core/taskdefinitions.lua`'s pattern directly; a project-local way to register new types from `.vex/tasks` is planned but not wired up yet — see [[03 Configuring task types]].

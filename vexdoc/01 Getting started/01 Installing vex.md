@@ -2,8 +2,9 @@ vex is a single LuaJIT script with no external services to stand up — installi
 
 ## Requirements
 
-- **LuaJIT** (or any Lua ≥ 5.1 interpreter — the shebang in `src/vex` calls `luajit` directly).
+- **LuaJIT** (or any Lua ≥ 5.1 interpreter).
 - A clone of the vex repository.
+- The `vex/src` directory on your path.
 
 ## Running vex
 
@@ -32,17 +33,18 @@ ln -s "$(pwd)/src/vex" /usr/local/bin/vex
 Inside any project you want to track tasks for:
 
 ```txt
+cd my-project-directory
 vex init
 ```
 
-This is meant to create a `.vex` folder in the current directory (see [[Configuring vex (config.lua)]] and [[The index]] for what lives inside it), and once it exists, vex looks in parent directories for it before giving up — so it's safe to run vex commands from a subdirectory of an already-initialized project.
+This creates a `.vex` folder in the current directory (see [[01 Configuring vex (config.lua)]] and [[The index]] for what lives inside it), and once it exists, vex looks in parent directories for it before giving up — so it's safe to run vex commands from a subdirectory of an already-initialized project.
 
 > [!WARNING] Confirmed broken on a genuinely fresh project
 > As above: `vex init` currently fails the same way `vex help` does, for the same reason, on any machine/location that doesn't already have a `.vex` folder somewhere above it. Manually pre-creating an empty `.vex` folder doesn't help either — it just trips `init`'s own "already in a vex directory" guard instead, since both checks walk the same way up the directory tree. Until `fix-init-requires-existing-vex-1` lands, there's no known way to bootstrap vex in a brand new location — every example on this wiki that assumes a working `vex init` is describing intended, not currently-reachable, behaviour for a fresh project.
 
 ## Shell completion
 
-vex ships a real, working completion plugin (`src/plugin/vexcomplete.lua`). Generate the snippet for your shell and install it in your shell's startup file:
+vex ships a completion plugin (`src/plugin/vexcomplete.lua`). Generate the snippet for your shell and install it in your shell's startup file:
 
 ```txt
 vex autocomplete bash       # or: zsh, fish, powershell
@@ -52,4 +54,4 @@ This prints a ready-to-paste snippet that calls `vex suggest <cursor-position> <
 
 ## Next steps
 
-Head to [[Creating your first task using vex]] for a five-minute walkthrough of `add`, `show`, and `resolve`.
+Head to [[02 Creating your first task using vex]] for a five-minute walkthrough of `add`, `show`, and `resolve`.

@@ -34,16 +34,16 @@ Also available: `Plugin:enable`/`Plugin:disable` (toggle a plugin off without un
 
 ## Plain plugins vs. enums
 
-Not everything registered is part of a named set. `Plugin:add(name)` / `Plugin:addall(plugin_dir)` register standalone plugins — `src/vex.lua` calls `plugin:addall(script_dir .. '/plugin')` once, at startup, which is how `src/plugin/vexcomplete.lua` (the shell-completion commands — see [[CLI reference]]) gets loaded automatically. This is currently the *only* real plugin in `src/plugin/` — "Inline mode" and "Vexations" are referenced by `config.lua`'s default `plugins` table but have no corresponding files yet (see [[CLI reference]]'s "Planned / not yet implemented" section).
+Not everything registered is part of a named set. `Plugin:add(name)` / `Plugin:addall(plugin_dir)` register standalone plugins — `src/vex.lua` calls `plugin:addall(script_dir .. '/plugin')` once, at startup, which is how `src/plugin/vexcomplete.lua` (the shell-completion commands — see [[01 CLI reference]]) gets loaded automatically. This is currently the *only* real plugin in `src/plugin/` — "Inline mode" and "Vexations" are referenced by `config.lua`'s default `plugins` table but have no corresponding files yet (see [[01 CLI reference]]'s "Planned / not yet implemented" section).
 
 > [!NOTE] This only scans vex's own bundled folder
-> `addall` is called once, against `src/plugin` — vex's own installation directory. There is currently no equivalent that scans a *project's* `.vex` folder for plugins, recipes, views, or focuses — see the 03 Configuration section ([[Configuring event hooks]], [[Configuring focuses]], [[Configuring recipes]], [[Configuring task types]], [[Configuring views]]) for the several extension points that are scaffolded (folders exist) but not wired up (nothing reads them) yet.
+> `addall` is called once, against `src/plugin` — vex's own installation directory. There is currently no equivalent that scans a *project's* `.vex` folder for plugins, recipes, views, or focuses — see the 03 Configuration section ([[06 Configuring event hooks]], [[05 Configuring focuses]], [[04 Configuring recipes]], [[03 Configuring task types]], [[02 Configuring views]]) for the several extension points that are scaffolded (folders exist) but not wired up (nothing reads them) yet.
 
 ## Default implementations today
 
 | Slot          | Default module                     | What it controls                                          |
 | ------------- | ------------------------------------ | ------------------------------------------------------------ |
-| `tagger`      | `default.canonicalvexid`            | Turns a description into a `vexid` — see the algorithm in [[CLI reference]]. |
+| `tagger`      | `default.canonicalvexid`            | Turns a description into a `vexid` — see the algorithm in [[01 CLI reference]]. |
 | `taskpath`    | `default.flatpath`                  | Where a task's file lives on disk relative to `taskfolder`.  |
 | `taskformat`  | `default.obsidian`                  | How a task's fields are serialized to and from a file.       |
 | `dataformat`  | `default.csvdata`                   | The format the `csv` [[Views|view]] emits.                    |

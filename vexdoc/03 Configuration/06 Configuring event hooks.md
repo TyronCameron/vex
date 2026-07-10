@@ -14,11 +14,11 @@ return {
 }
 ```
 
-The intent is that hooks would let a project enforce its own rules on top of vex's built-in [[CLI reference#Resolution|resolution]] — for example, rejecting a task with no `owner`, or auto-tagging tasks created from a certain folder.
+The intent is that hooks would let a project enforce its own rules on top of vex's built-in [[01 CLI reference#Resolution|resolution]] — for example, rejecting a task with no `owner`, or auto-tagging tasks created from a certain folder.
 
 ## What exists today instead
 
-There's no per-project hook mechanism yet. The closest thing you can do today is external: run `vex resolve all` as a `git pre-commit` step (see [[CLI reference]]) and let a non-zero exit code from vex block the commit — that gives you validation-as-a-gate without needing hooks wired into vex itself.
+There's no per-project hook mechanism yet. The closest thing you can do today is external: run `vex resolve all` as a `git pre-commit` step (see [[01 CLI reference]]) and let a non-zero exit code from vex block the commit — that gives you validation-as-a-gate without needing hooks wired into vex itself.
 
 ## See also
 

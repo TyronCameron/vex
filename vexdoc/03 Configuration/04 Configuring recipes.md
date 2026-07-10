@@ -19,4 +19,4 @@ A project-defined recipe in `.vex/recipes` would presumably be a Lua file follow
 
 ## What exists today instead
 
-`vex recipe abstract <Description>` gives you a single pre-typed parent task. Building out the rest of a repeatable structure means adding the remaining tasks by hand — wiring them into the abstract's `children` isn't possible yet, by any means, today (see [[Frontmatter schema]]'s warning) — see [[Using a recipe to create a sequence of tasks]] for the full walkthrough.
+`vex recipe abstract <Description>` gives you a single pre-typed parent task. Building out the rest of a repeatable structure means adding the remaining tasks by hand — wiring them into the abstract's `children` isn't possible yet, by any means, today (see [[02 Frontmatter schema]]'s warning) — see [[03 Using a recipe to create a sequence of tasks]] for the full walkthrough.

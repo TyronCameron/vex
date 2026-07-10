@@ -23,4 +23,4 @@ You can't name and save a custom focus for reuse under your own name yet. What y
 vex focus all --filter owner:alice --filter status:doing
 ```
 
-...and rely on `prev` (the persisted result of your last `vex focus` call) to avoid retyping it in the very next command. See [[CLI reference#Focuses]] for the full flag list, and [[Home]] for a worked example of this pattern.
+...and rely on `prev` (the persisted result of your last `vex focus` call) to avoid retyping it in the very next command. See [[01 CLI reference#Focuses]] for the full flag list, and [[Home]] for a worked example of this pattern.
