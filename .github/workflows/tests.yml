@@ -11,19 +11,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install LuaJIT
-        uses: leafo/gh-actions-lua@v10
-        with:
-          luaVersion: "luajit-2.1"
-
-      - name: Install LuaRocks
-        uses: leafo/gh-actions-luarocks@v4
-
-      - name: Install busted
-        run: luarocks install busted
-
-      - name: Install luacov
-        run: luarocks install luacov
+      - name: Install LuaJIT, LuaRocks and busted
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y luajit luarocks lua5.1 liblua5.1-0-dev
+          sudo luarocks install busted
+          sudo luarocks install luacov
 
       - name: Ensure vex binary is executable
         run: chmod +x src/vex
