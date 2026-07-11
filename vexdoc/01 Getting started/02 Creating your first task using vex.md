@@ -26,8 +26,13 @@ make-coffee-wife-1
 
 _**and sets your focus to it**_, so the very next command that takes an optional focus argument will default to this task. `owner` isn't schema-validated (see [[02 Frontmatter schema]]) — it's stored exactly as given, which is exactly what makes the team workflow on the vex [[Home]] page work.
 
-> [!WARNING] Skip `--due`, `--cost`, and `--benefit` for now
-> These three fail resolution unconditionally today, even with a correctly-formatted value. See the callout on [[02 Frontmatter schema]].
+You can set the schema-validated fields the same way:
+
+```txt
+vex set --cost 15 --benefit 40 --due 2026-08-01T09:00:00
+```
+
+`due` expects `YYYY-MM-DD HH:MM:SS`, but a shell-quoted flag value containing a space gets torn back into two tokens (see the warning on [[01 CLI reference]]) — use `T` as the separator instead of a space, as above, to keep it a single token.
 
 ## 3. Look at what you made
 
@@ -130,7 +135,7 @@ All tasks that you `add`, `remove`, or `set` are automatically `resolve`d.
 > [!INFO] `resolve <focus>` vs. `resolve all`
 > `vex resolve` (or `vex resolve <focus>`) re-reads and re-validates each already-tracked task in that focus straight from disk, refreshing the index for those specific tasks — but it only knows about tasks it can already find via a focus, so it won't discover a file you created outside vex, or notice one you deleted by hand.
 >
-> `vex resolve all` is special: it wipes the index and walks the entire `taskfolder` from scratch, rediscovering everything — new files included, deleted files dropped. That full walk is what makes it the right choice for a periodic integrity check, and the wrong choice to run casually (see the warning on [[01 CLI reference]] about the current list-field bug it can trip over).
+> `vex resolve all` is special: it wipes the index and walks the entire `taskfolder` from scratch, rediscovering everything — new files included, deleted files dropped. That full walk is what makes it a good fit for a periodic integrity check (e.g. a `git pre-commit` hook, as suggested in [[01 CLI reference]]).
 
 See the "Resolution" discussion in [[01 CLI reference]] for the full list of what resolution checks.
 

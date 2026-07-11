@@ -99,4 +99,31 @@ describe("vex CLI lifecycle (e2e, subprocess)", function()
     assert.are.equal(0, helper.run_vex(dir, {"remove", vexid}).code)
     assert.are.not_equal(0, helper.run_vex(dir, {"show", vexid}).code)
   end)
+
+  it("vex add resolves --due/--cost/--benefit instead of failing validation (fix-typed-field-cli-input-1)", function()
+    helper.run_vex(dir, {"init"})
+
+    -- "T" separator avoids the CLI's separately-tracked space-splitting flag bug.
+    local add_result = helper.run_vex(dir, {
+      "add", "Buy", "new", "mug",
+      "--cost", "15", "--benefit", "40", "--due", "2026-08-01T09:00:00",
+    })
+    assert.are.equal(0, add_result.code)
+    local vexid = helper.trim(add_result.stdout)
+    assert.is_true(#vexid > 0)
+
+    local show_result = helper.strip_ansi(helper.run_vex(dir, {"show", vexid}).stdout)
+    assert.is_not_nil(show_result:find("cost: 15", 1, true))
+    assert.is_not_nil(show_result:find("benefit: 40", 1, true))
+    assert.is_not_nil(show_result:find("due: 2026-08-01 09:00:00", 1, true))
+  end)
+
+  it("an abstract task survives two consecutive resolve passes (fix-list-field-roundtrip-1)", function()
+    helper.run_vex(dir, {"init"})
+    local add_result = helper.run_vex(dir, {"add", "Ship", "v0.2", "--vextype", "abstract"})
+    assert.are.equal(0, add_result.code)
+
+    assert.are.equal(0, helper.run_vex(dir, {"resolve", "all"}).code)
+    assert.are.equal(0, helper.run_vex(dir, {"resolve", "all"}).code)
+  end)
 end)

@@ -12,6 +12,7 @@ local function to_yaml_value(v, indent)
     local t = type(v)
     if t == "boolean" or t == "number" then return tostring(v) end
     if t == "table" then
+        if next(v) == nil then return "[]" end
         local inner = indent .. "  "
         -- Detect array: all keys are sequential integers
         local is_array = #v > 0
@@ -49,10 +50,18 @@ return {
         assert(#frontmatter > 0, "frontmatter must not be empty")
 
         if frontmatter then
+            local lastkey = nil
             for line in frontmatter:gmatch("[^\n]+") do
-                local key, value = line:match("^([%w_]+):%s*(.*)$")
-                if key then
-                    task[key] = parse_yaml_value(value)
+                local item = line:match("^%s+%-%s*(.*)$")
+                if item and lastkey then
+                    if type(task[lastkey]) ~= "table" then task[lastkey] = {} end
+                    table.insert(task[lastkey], parse_yaml_value(item))
+                else
+                    local key, value = line:match("^([%w_]+):%s*(.*)$")
+                    if key then
+                        task[key] = (value == "[]") and {} or parse_yaml_value(value)
+                        lastkey = key
+                    end
                 end
             end
             task.vexbody = body

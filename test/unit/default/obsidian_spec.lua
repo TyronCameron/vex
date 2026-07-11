@@ -84,4 +84,45 @@ describe("obsidian", function()
         os.remove(tmp)
     end)
 
+    -- ==================== List fields (fix-list-field-roundtrip-1) ====================
+
+    it("round-trips a non-empty list field", function()
+        local tmp = os.tmpname()
+        obsidian.write(tmp, to_iter({children = {"[[a]]", "[[b]]"}}), nil)
+
+        local task = obsidian.read(tmp)
+        assert.equal("table", type(task.children))
+        assert.same({"[[a]]", "[[b]]"}, task.children)
+
+        os.remove(tmp)
+    end)
+
+    it("round-trips an empty list field as an empty table, not an empty string", function()
+        local tmp = os.tmpname()
+        obsidian.write(tmp, to_iter({children = {}}), nil)
+
+        local task = obsidian.read(tmp)
+        assert.equal("table", type(task.children))
+        assert.equal(0, #task.children)
+
+        os.remove(tmp)
+    end)
+
+    it("round-trips a list field alongside scalar fields", function()
+        local tmp = os.tmpname()
+        obsidian.write(tmp, to_iter({
+            vexid = "ship-v02-1",
+            children = {"[[write-release-notes-1]]"},
+            status = "todo",
+        }), "Body text")
+
+        local task = obsidian.read(tmp)
+        assert.equal("ship-v02-1", task.vexid)
+        assert.equal("todo", task.status)
+        assert.same({"[[write-release-notes-1]]"}, task.children)
+        assert.equal("Body text", task.vexbody)
+
+        os.remove(tmp)
+    end)
+
 end)

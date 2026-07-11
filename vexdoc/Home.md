@@ -50,8 +50,8 @@ vex view all kanban --field status
 
 ...to see everything grouped into columns by status, or `vex view all overview` for a scope/quality/structure/movement summary across the whole backlog. None of this needed a project management tool with logins and a database — it's a folder of markdown files you can grep, diff, and commit.
 
-> [!WARNING] The dependency-graph story isn't real yet
-> vex is *designed* so `abstract` tasks group children, `atom`s declare `dependencies`, and the `singular` view draws the resulting tree/DAG (see [[03 Vexations (task types)]] and [[04 Views]]) — that's the part of this tool that would really set it apart from a flat todo list. Right now, none of `children`/`dependencies`/`options` survive being written to a file and read back, so that structure can't actually be built yet. Tracked as [[fix-list-field-roundtrip-1]] — worth watching if the graph-based workflow is what drew you here.
+> [!NOTE] The dependency-graph story
+> vex is *designed* so `abstract` tasks group children, `atom`s declare `dependencies`, and the `singular` view draws the resulting tree/DAG (see [[03 Vexations (task types)]] and [[04 Views]]) — that's the part of this tool that would really set it apart from a flat todo list. `children`/`dependencies`/`options` round-trip through disk correctly, but there's no CLI flag to set them directly yet (see [[03 Vexations (task types)]]) — link tasks together by hand-editing the relevant list into the file and running `vex resolve`.
 
 ### 2. Two people "assigning" work to each other
 

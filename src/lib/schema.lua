@@ -456,16 +456,19 @@ Schema.register 'maybe' {
             end 
         end)
     end,
-    prevalidate = function(self, instance, context) 
-        if instance == nil then return nil end 
-        return prevalidate_children(self, instance, context)
+    prevalidate = function(self, instance, context)
+        if instance == nil then return nil end
+        for childschema, childinstance in self:iterate(instance, context) do
+            instance = childschema:prevalidate(childinstance, context)
+        end
+        return instance
     end,
-    validate = function(self, instance, context) 
+    validate = function(self, instance, context)
         if not instance then return true end
         return validate_children(self, instance, context)
     end,
-    postvalidate = function(self, instance, context) 
-        if instance == nil then return nil end 
+    postvalidate = function(self, instance, context)
+        if instance == nil then return nil end
         return postvalidate_children(self, instance, context)
     end
 }
@@ -499,8 +502,14 @@ Schema.register 'vec' {
 -- Type schemas
 -----------------------------------------------
 
--- checks for a number 
+-- checks for a number
 Schema.register 'num' {
+    prevalidate = function(self, instance, context)
+        if type(instance) == "string" then
+            return tonumber(instance) or instance
+        end
+        return instance
+    end,
     validate = function(self, instance)
         return type(instance) == "number", "The instance: `" .. tostring(instance) .. "` is not a number"
     end
