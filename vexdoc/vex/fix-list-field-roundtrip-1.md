@@ -3,17 +3,19 @@ vexid: fix-list-field-roundtrip-1
 vextype: task
 description: List-typed fields never survive a disk round-trip
 created: "2026-07-06 12:00:00"
-modified: "2026-07-06 12:00:00"
-status: todo
+modified: "2026-07-11 22:00:00"
+status: done
 ---
 
-Bigger than `implement-cli-list-fields-1` (which only covers the CLI-flag side): confirmed by testing that `children`, `dependencies`, and `options` don't survive being written to disk and read back **at all**, through any means, not just via a CLI flag. `src/default/obsidian.lua`'s `read` function parses frontmatter one line at a time with `line:match("^([%w_]+):%s*(.*)$")` — it has no support for multi-line YAML lists at all. A written array like:
+Fixed. `src/default/obsidian.lua`'s `read` now tracks the last real key seen while scanning frontmatter lines, and accumulates indented `- item` continuation lines into a table under that key, matching the multi-line array format `to_yaml_value` (the writer, same file) already produced. A written array like:
 
 ```yaml
 children:
   - "[[some-task]]"
 ```
 
-reads back as `children = ""` (the continuation `- item` lines don't match the key:value pattern and are silently dropped). This isn't just "can't set from CLI" — it means an `abstract` task with an (empty, schema-defaulted) `children` list **fails validation the very next time it's resolved from disk**, since the round-tripped value is a string, not a table, and `schema.vec` requires a table. Reproduced with: `vex add X --vextype abstract` (succeeds), then `vex resolve all` again (fails on the same task, every time, from then on).
+now reads back as a real Lua table (`children = {"[[some-task]]"}`), not `children = ""`.
 
-Practical impact: `abstract` and `decision` tasks are currently unusable across more than one resolve pass — including the very common case of `vex resolve all` as a git pre-commit hook (recommended in the wiki's CLI reference), which would fail on any project that has ever created an `abstract` task. `to_yaml_value` (the writer, same file) already handles arrays correctly; only the reader is missing multi-line list support. Fixing the reader to parse its own multi-line array format back into a table would resolve this, `implement-cli-list-fields-1`, and the "not schema-validated" caveat that currently applies to `children`/`dependencies`/`options` in practice.
+Empty lists needed a separate tweak: `to_yaml_value` couldn't previously distinguish an empty array from an empty map (both produced a bare, stray blank line), so a schema-defaulted `children = {}` round-tripped to `""` too. `to_yaml_value` now serializes any empty table as `[]`, and `read` recognises a literal `[]` value as an explicit empty table. `vex add X --vextype abstract` followed by `vex resolve all` — twice in a row — now succeeds both times. Covered by new unit tests in `test/unit/default/obsidian_spec.lua` and an e2e regression in `test/e2e/lifecycle_spec.lua`.
+
+Note: this only fixes the disk round-trip. Setting a list field directly via a CLI flag (`--children`/`--dependencies`/`--options`) is still not implemented — that's tracked separately in `implement-cli-list-fields-1`.

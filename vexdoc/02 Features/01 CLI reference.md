@@ -3,10 +3,7 @@
 In the tables below, `monospaced` values are arguments. Arguments starting with a capital letter (e.g. `Description`) are allowed to be multiple words long — vex joins everything up to the first `--flag` back into one string. A `[focus]` argument is always optional and defaults to `prev` (your last saved focus) when omitted — see [[#Focuses]].
 
 > [!WARNING] Flag values can't contain spaces
-> vex reassembles its own argument list with `table.concat(arg, " ")` and re-splits it on whitespace, so a shell-quoted flag value containing a space (e.g. `--field "two words"`) gets torn back into two tokens internally. There's no quoting convention that survives this today.
-
-> [!WARNING] `due`, `cost`, and `benefit` currently can't be set at all
-> `--due`, `--cost`, and `--benefit` fail resolution unconditionally today — not a formatting issue, a real bug (see [[fix-typed-field-cli-input-1]]). `due` fails the same way even if you hand-edit a correctly-formatted value straight into the file. `cost`/`benefit` fail because a CLI flag value is always a string and nothing converts it to a number. Examples below that reference these fields describe the intended behaviour, not something you can rely on today.
+> vex reassembles its own argument list with `table.concat(arg, " ")` and re-splits it on whitespace, so a shell-quoted flag value containing a space (e.g. `--field "two words"`) gets torn back into two tokens internally. There's no quoting convention that survives this today. This is why `due` examples below use `T` as the date/time separator (`2026-08-01T09:00:00`) instead of a space — the datetime parser accepts either, and only `T` survives as one token.
 
 ## Command list
 
@@ -122,17 +119,13 @@ You'd create new views by adding Lua files to the `views` subdirectory of your `
 ### Resolution
 
 Resolution is what vex does to check data correctness — it runs automatically after `add` and `set`, and on demand via `vex resolve`. It covers:
-- **Data validation.** Fields are checked against their schema — though see the callouts on this page and on [[02 Frontmatter schema]] for fields where that check currently doesn't work as intended (`status` transitions, `due`, `cost`, `benefit`).
+- **Data validation.** Fields are checked against their schema — though see the callout on this page about `status` transitions, the one check that still doesn't work as intended.
 - **Data enrichment.** `created`/`modified` timestamps are stamped in automatically; on `add`, `vextype` defaults to `task` if you didn't set one.
-- **Data normalisation.** The intent is that a `due` value like `2026-07-10 09:00:00` gets parsed into an internal epoch timestamp and reformatted back to a readable string for display, with no natural-language parsing (`tomorrow`, `next week`, etc. are not understood, despite a source comment describing that as a future goal). This step is currently broken — see the callout near the top of this page; `due` fails validation rather than getting normalised.
+- **Data normalisation.** A `due` value like `2026-07-10 09:00:00` (or hand-edited straight into the file) gets parsed into an internal epoch timestamp and reformatted back to a readable string for display; `cost`/`benefit` get coerced from a CLI string to a number the same way. There's no natural-language parsing (`tomorrow`, `next week`, etc. are not understood, despite a source comment describing that as a future goal).
 - **Link checking.** Fields typed as a `vexlink` (like a decision's `options`) are checked to confirm the referenced `vexid` actually exists.
 - **Indexing.** Once a task is resolved, `add`/`set` write it back to disk, and that write also updates its entry in `.vex/vexdex/index.bin` immediately (`TaskManager:write` → `:index` → `vexdex:add`) — see [[The index]]. A single `add` or `set` doesn't need a follow-up `resolve all` to be reflected in `all`/`updated`/other focuses; that full reindex is only needed to discover files created or deleted outside vex.
 
-> [!WARNING] List-typed fields don't survive being written and read back, at all
-> `children`, `dependencies`, and `options` are all list-typed. A CLI flag value is always a single string (tracked as [[implement-cli-list-fields-1]]), so you can't set them that way — but hand-editing the YAML list in the file doesn't work either: `src/default/obsidian.lua`'s frontmatter reader parses one `key: value` line at a time and has no support for multi-line YAML lists, so a written array reads back as an empty string. This means an `abstract` task (whose `children` defaults to an empty list) fails validation the very next time it's resolved from disk — e.g. `vex add X --vextype abstract` works, but the next `vex resolve all` fails on that same task, from then on. `decision` tasks can't be created at all today, since their required `options` field has no default and can never be successfully populated. Tracked as [[fix-list-field-roundtrip-1]].
-
-> [!WARNING] Don't wire `vex resolve all` into a commit hook yet
-> Given the above, `resolve all` will fail on any project that has ever created an `abstract` task, the moment you run it a second time — so a `git pre-commit`/CI gate built on it would block every commit once that happens. Hold off until [[fix-list-field-roundtrip-1]] lands.
+`children`, `dependencies`, and `options` (all list-typed) now survive being written and read back correctly, including the empty list an `abstract` task's `children` defaults to — `vex resolve all` is safe to run repeatedly, including as a `git pre-commit` hook. You still can't set a list field directly via a CLI flag (`--children`/`--dependencies`/`--options`) — that's tracked separately as [[implement-cli-list-fields-1]] — but hand-editing the YAML list into the file and running `vex resolve` works.
 
 Resolution rules would be extended per-project via the `tasks` subdirectory of your `.vex` folder — see [[03 Configuring task types]] for the current (not-yet-implemented) status.
 
@@ -148,7 +141,7 @@ The tagger runs over the description to generate the `vexid` (and filename): it 
 
 Adding a task prints its `vexid` to the screen _**and sets your focus to it**_.
 
-Arbitrary fields can be passed to `add`, and vex writes them straight into the task's frontmatter — most, like `owner` above, are just stored as-is with no validation. `due`, `cost`, and `benefit` are meant to be schema-validated real fields (see [[02 Frontmatter schema]]) but currently fail resolution unconditionally — see the callout near the top of this page.
+Arbitrary fields can be passed to `add`, and vex writes them straight into the task's frontmatter — most, like `owner` above, are just stored as-is with no validation. `due`, `cost`, and `benefit` are schema-validated real fields (see [[02 Frontmatter schema]]) and work the same way: `vex add ... --cost 15 --benefit 40 --due 2026-08-01T09:00:00`.
 
 Passing `--vextype` chooses which task type — and therefore which additional schema — resolution applies to this task. See [[03 Vexations (task types)]].
 

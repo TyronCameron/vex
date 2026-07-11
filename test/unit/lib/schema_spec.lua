@@ -366,4 +366,41 @@ describe("schema", function()
         assert.equal(99, result)
     end)
 
+    -- ==================== CLI input coercion (fix-typed-field-cli-input-1) ====================
+
+    it("`schema.num` coerces a numeric string on prevalidate", function()
+        local result = schema.num:prevalidate("15")
+        assert.equal(15, result)
+    end)
+
+    it("`schema.num` leaves a non-numeric string alone on prevalidate, so validate still reports the error", function()
+        local result = schema.num:prevalidate("hello")
+        assert.equal("hello", result)
+        assert.falsy(schema.num:validate(result))
+    end)
+
+    it("`schema.num` leaves an already-numeric instance unchanged", function()
+        local result = schema.num:prevalidate(42)
+        assert.equal(42, result)
+    end)
+
+    it("`schema.maybe{schema.num}` coerces a CLI-style numeric string end-to-end (covers `cost`/`benefit`)", function()
+        local s = schema.maybe { schema.num }
+        local result = s:prevalidate("15")
+        assert.equal(15, result)
+        assert.truthy(s:validate(result))
+    end)
+
+    it("`schema.maybe{schema.formatted{schema.datetime}}` converts a datetime string end-to-end (covers `due`)", function()
+        local s = schema.maybe { schema.formatted { schema.datetime } }
+        local result = s:prevalidate("2026-07-10 09:00:00")
+        assert.equal("number", type(result))
+        assert.truthy(s:validate(result))
+    end)
+
+    it("`schema.maybe{schema.num}` still validates nil as fine", function()
+        local s = schema.maybe { schema.num }
+        assert.truthy(s:validate(s:prevalidate(nil)))
+    end)
+
 end)
