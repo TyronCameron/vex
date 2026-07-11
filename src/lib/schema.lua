@@ -469,7 +469,10 @@ Schema.register 'maybe' {
     end,
     postvalidate = function(self, instance, context)
         if instance == nil then return nil end
-        return postvalidate_children(self, instance, context)
+        for childschema, childinstance in self:iterate(instance, context) do
+            instance = childschema:postvalidate(childinstance, context)
+        end
+        return instance
     end
 }
 

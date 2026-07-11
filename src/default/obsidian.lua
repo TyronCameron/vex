@@ -12,6 +12,8 @@ local function to_yaml_value(v, indent)
     local t = type(v)
     if t == "boolean" or t == "number" then return tostring(v) end
     if t == "table" then
+        -- An empty Lua table can't tell array from map; every field that round-trips
+        -- through here as one is schema.vec-typed, so "[]" (empty YAML sequence) is correct.
         if next(v) == nil then return "[]" end
         local inner = indent .. "  "
         -- Detect array: all keys are sequential integers
