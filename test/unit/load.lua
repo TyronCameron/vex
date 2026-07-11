@@ -1,5 +1,5 @@
 local script_dir = debug.getinfo(1, "S").source:match("^@(.+[\\/])")
-local src_dir = script_dir .. "../src/"
+local src_dir = script_dir .. "../../src/"
 package.path = src_dir .. "?.lua;" .. src_dir .. "?/init.lua;" .. package.path
 package.cpath = src_dir .. "?.dll;"  .. src_dir .. "?.so;"       .. package.cpath
 

@@ -1,0 +1,33 @@
+name: Tests
+
+on:
+  pull_request:
+
+jobs:
+  test:
+    name: Unit + E2E tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install LuaJIT, LuaRocks and busted
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y luajit luarocks lua5.1 liblua5.1-0-dev
+          sudo luarocks install busted
+          sudo luarocks install luacov
+
+      - name: Ensure vex binary is executable
+        run: chmod +x src/vex
+
+      - name: Run unit tests
+        run: |
+          repo="$(pwd)"
+          tmp=$(mktemp -d)
+          trap 'rm -rf "$tmp"' EXIT
+          (cd "$tmp" && "$repo/src/vex" init)
+          (cd "$tmp" && busted --helper="$repo/test/unit/load.lua" --config-file="$repo/.busted" "$repo/test/unit")
+
+      - name: Run e2e tests
+        run: busted --run=e2e
