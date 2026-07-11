@@ -1,16 +1,23 @@
 return {
   _all = {
-    coverage = true
+    coverage = true,
   },
+
   default = {
     verbose = true,
-    helper = "test/load.lua",
+    helper = "test/unit/load.lua",
     ["suppress-pending"] = true,
-    ROOT = {"test"},
+    ROOT = {"test/unit"},
   },
+
   apiUnit = {
     tags = "api",
-    ROOT = {"test"},
-    verbose = true
-  }
+    ROOT = {"test/unit"},
+    verbose = true,
+  },
+
+  e2e = {
+    verbose = true,
+    ROOT = {"test/e2e"},
+  },
 }
