@@ -10,18 +10,28 @@ local task = require 'core.task'
 require 'core.taskdefinitions'
 
 local function focus_pop_args(args)
-    if type(args[1]) ~= 'table' then 
+    if type(args[1]) ~= 'table' then
         return focus.focus(table.remove(args, 1))
-    end 
+    end
     return focus.focus()
-end 
+end
+
+-- joins accumulated output lines into the verb's return value; nil (rather
+-- than "") when there's nothing to say, so a verb that would previously
+-- have printed nothing still prints nothing
+local function join_lines(lines)
+    if #lines == 0 then return nil end
+    return table.concat(lines, "\n")
+end
 
 cli:verb "show" {
     function(args)
         local f = focus_pop_args(args)
-        f:each(function(vexid) 
-            return print(task:show(vexid)) 
+        local lines = {}
+        f:each(function(vexid)
+            table.insert(lines, task:show(vexid))
         end)
+        return join_lines(lines)
     end,
     doc = "Prints out a task to terminal, highlighting YAML frontmatter and Markdown notes.",
     args = "[focus]",
@@ -30,20 +40,22 @@ cli:verb "show" {
 
 cli:verb "focus" {
     function(args)
-        if #args == 0 then 
+        local lines = {}
+        if #args == 0 then
             local f = focus.read()
-            pretty.print('Current focus')
+            table.insert(lines, pretty.any('Current focus'))
             for _, op in ipairs(f.operations) do
-                pretty.print(pretty.string(op.operation, 'cyan'), pretty.string('args = ', 'green'), op.args) 
+                table.insert(lines, pretty.any(pretty.string(op.operation, 'cyan'), pretty.string('args = ', 'green'), op.args))
             end
-        else 
+        else
             local f = focus.parse(args)
             f:write()
             local vex_cnt = #f:get()
             local ending = " vexes"
-            if vex_cnt == 1 then ending = " vex" end 
-            pretty.print("Focusing on " .. pretty.string(vex_cnt, "bold") .. ending)
-        end 
+            if vex_cnt == 1 then ending = " vex" end
+            table.insert(lines, pretty.any("Focusing on " .. pretty.string(vex_cnt, "bold") .. ending))
+        end
+        return join_lines(lines)
     end,
     doc = "Creates an focus which can be used as a data query against the vex folder. Provide no args to see the current focus.",
     args = "[focus] [--focusflags...]",
@@ -54,13 +66,13 @@ cli:verb "view" {
     function(args)
         local positional_args = args:positional()
 
-        if #positional_args == 0 then 
-            pretty.print('Available views:')
-            for view in pairs(view.views) do 
-                pretty.print('  ' .. view)
-            end 
-            return
-        end 
+        if #positional_args == 0 then
+            local lines = { pretty.any('Available views:') }
+            for view in pairs(view.views) do
+                table.insert(lines, pretty.any('  ' .. view))
+            end
+            return join_lines(lines)
+        end
 
         local focusname
         local viewname
@@ -112,15 +124,17 @@ cli:verb "add" {
 cli:verb "remove" {
     function(args)
         local f = focus_pop_args(args)
+        local lines = {}
         f:each(function(vexid)
             task:delete(vexid)
             task:remove(vexid)
-            pretty.print(vexid)
+            table.insert(lines, pretty.any(vexid))
         end)
         vexdex:setfocus(nil)
         focus.focus('all'):each(function(vexid)
             task:resolve(vexid)
         end)
+        return join_lines(lines)
     end,
     doc = "Deletes tasks in the focus, and drops your focus. Runs resolve on all linked tasks thereafter. Not recommended for regular use.",
     args = "[focus]",
@@ -131,9 +145,11 @@ cli:verb "get" {
     function(args)
         local f = focus_pop_args(args)
         if #args == 0 then args = {{'vexid'}} end
+        local lines = {}
         f:each(function(vexid)
-            pretty.print(task:get(vexid, args))
+            table.insert(lines, pretty.any(task:get(vexid, args)))
         end)
+        return join_lines(lines)
     end,
     doc = "Presents the focus in a tangible data format. Can specify which fields by supplying them as flags",
     args = "[focus] [--fields...]",
@@ -158,23 +174,25 @@ cli:verb "set" {
 cli:verb "recipe" {
     function(args)
         local recipename = table.remove(args, 1)
-        if not recipename then 
-            pretty.print('Available recipes:')
-            for recipename in pairs(recipe.recipes) do 
-                pretty.print('  ' .. recipename)
-            end 
-            return
-        end 
+        if not recipename then
+            local lines = { pretty.any('Available recipes:') }
+            for recipename in pairs(recipe.recipes) do
+                table.insert(lines, pretty.any('  ' .. recipename))
+            end
+            return join_lines(lines)
+        end
 
         local taskproperties = args:flags()
         taskproperties.description = table.concat(args:positional(), " ")
 
         local f = recipe:add(recipename, taskproperties)
+        local lines = {}
         f:each(function(vexid)
             task:write(vexid)
-            pretty.print(vexid)
+            table.insert(lines, pretty.any(vexid))
         end)
         f:write()
+        return join_lines(lines)
     end,
     doc = "Creates a recipe (series of tasks). This outputs and changes the focus",
     args = "[recipe] Description... [--fields...]",
