@@ -78,12 +78,37 @@ end
 -- end
 
 -- registers a transient field which is not stored anywhere
+-- a `tasktypes` list scopes which task types the transient applies to;
+-- omit it (or leave it nil) to apply the transient to every task type
 function TaskManager:transient(name)
     return function(tab)
         assert(type(tab) == "table", "transient: expected a table")
-        assert(tab.derive, "Field definition must include at least a derive function.")        
+        assert(tab.derive, "Field definition must include at least a derive function.")
         self.transients[name] = tab
     end
+end
+
+-- the ordered chain of task type definitions from root ancestor to vextype itself
+function TaskManager:typechain(vextypename)
+    local vextype = self.tasktypes[vextypename]
+    if not vextype then return {} end
+    local chain = {vextype}
+    while chain[1].parent do
+        table.insert(chain, 1, self.tasktypes[chain[1].parent])
+    end
+    return chain
+end
+
+-- whether a transient definition applies to a given task type,
+-- considering that task type's parent chain
+function TaskManager:appliestransient(vextypename, def)
+    if not def.tasktypes then return true end
+    local wanted = {}
+    for _, name in ipairs(def.tasktypes) do wanted[name] = true end
+    for _, vextype in ipairs(self:typechain(vextypename)) do
+        if wanted[vextype.name] then return true end
+    end
+    return false
 end
 
 -- register mod
@@ -193,8 +218,7 @@ end
 
 -- gets data from a task and returns it as a string for the command line
 function TaskManager:get(vexid, fields)
-    local task = self:getsingle(vexid)
-    return task:tostring(fields)
+    return Task.new(self:present(vexid)):tostring(fields)
 end
 
 -- sets task properties for a given focus
@@ -212,8 +236,7 @@ end
 -- shows task, basically cat 'filename'
 function TaskManager:show(vexid)
     assert(vexid, "show() requires an vexid")
-    local task = self:getsingle(vexid)
-    return task:show(self:getabspath(vexid))
+    return Task.new(self:present(vexid)):show(self:getabspath(vexid))
 end
 
 ---------------------------------------------------
@@ -338,6 +361,23 @@ function TaskManager:format(vexid)
     end
 
     return formatted
+end
+
+-- format a task for display/API output, additionally computing every
+-- applicable transient field on top. Transients are computed fresh on
+-- every call and never written back onto the task -- format() (used by
+-- write()) is untouched by this, which is what keeps transients out of
+-- vexdex and off disk.
+function TaskManager:present(vexid)
+    local presented = self:format(vexid)
+    local task = self:getsingle(vexid)
+    local context = {vexid = vexid, taskmanager = self, task = task}
+    for name, def in pairs(self.transients) do
+        if self:appliestransient(task.vextype, def) then
+            presented[name] = def.derive(task, context)
+        end
+    end
+    return presented
 end
 
 -- get the path that a task should live at

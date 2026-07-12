@@ -32,9 +32,17 @@ end
 -- only need one
 local v = View.new()
 
+-- present(t), falling back to t itself when it isn't a task the live
+-- taskmanager actually knows about (e.g. synthetic data in tests)
+local function present(t)
+    local ok, presented = pcall(function() return task:present(t.vexid) end)
+    if ok then return presented end
+    return t
+end
+
 v:view 'csv' {
     display = function(focus, flags)
-        local tasks = focus:get()
+        local tasks = func.imap(focus:get(), present)
         return format.csv(tasks)
     end
 }
@@ -42,12 +50,12 @@ v:view 'csv' {
 v:view 'tabular' {
     display = function(focus, flags)
         local tasks = func.imap(focus:get(), function(t)
-            local formatted = task:format(t.vexid)
+            local presented = present(t)
             local result = {}
             for k, v in pairs(t) do
                 if k ~= 'vexbody' then result[k] = v end
             end
-            for k, v in pairs(formatted) do
+            for k, v in pairs(presented) do
                 if k ~= 'vexbody' then result[k] = v end
             end
             return result
@@ -58,7 +66,7 @@ v:view 'tabular' {
 
 v:view 'json' {
     display = function(focus, flags)
-        local tasks = focus:get()
+        local tasks = func.imap(focus:get(), present)
         return format.json(tasks, 2)
     end
 }
