@@ -67,10 +67,6 @@ A small validation/transformation DSL, not a data-modeling library you'd recogni
 
 Task type schemas live in `src/core/taskdefinitions.lua`: base `task` (has `vexid`, `description`, `vextype`, `created`, `modified`, `status`, optional `due`/`cost`/`benefit`/`dependencies`/`vexbody`), extended by `abstract` (adds `children`), `decision` (adds `options`+`decision`), `exploration` and `atom`. Custom types would extend these via `task:task 'name':extends 'parent' { schema = ... }`, though nothing yet loads user-defined types from a project's `.vex/tasks/` folder.
 
-### Optics (`src/lib/optic.lua`)
-
-A tiny lens/traversal library (cardinality-tracked `get`/`set` over nested data via coroutines) used internally by `Schema:get`/`Schema:set` and by `Focus:tree`/`reversetree` (`Optic.traverse`). Not part of the CLI surface.
-
 ### Focus: the query layer (`src/core/focus.lua`)
 
 A `Focus` is a lazy, composable, **persisted** query over the task index (`.vex/vexdex/focus.bin`). Every operation (`select`, `filter`, `fuzzy`, `between`, `tree`, `reversetree`, set ops) returns a new `Focus` and records itself in `self.operations`, so a focus can be serialized/deserialized and replayed. Named focuses: `all`, `none`, `updated`, `prev` (the default when a verb's `[focus]` arg is omitted), a bare `vexid`, or a file/folder path. `vex focus <name> [--flags]` builds and saves one; most other verbs (`show`, `get`, `set`, `view`, `resolve`, `remove`) read the saved focus back when no argument is given.
@@ -115,7 +111,3 @@ A recipe is a named shortcut producing a task with some fields pre-filled (`Reci
 - Minimal comments; where present they explain a non-obvious *why* (see e.g. the workarounds documented in `test/e2e/helper.lua`), not what the code does.
 - Tests mirror `src/`'s directory structure under `test/unit/` (`test/unit/core/task_spec.lua` tests `src/core/task.lua`, etc.).
 - New CLI verbs go in `src/core/verbs.lua` (or a plugin file) using `cli:verb "name" { ... }`; new user-facing errors go in `src/core/errors.lua` using `cli:error "name" { ... }`.
-
-## vexdoc/ can lag behind the code — verify before trusting a callout
-
-`vexdoc/` is a maintained wiki with explicit `[!NOTE]`/`[!WARNING]` callouts marking known bugs and unimplemented features, and is generally trustworthy for *intent*. But it can go stale: e.g. `vexdoc/vex/fix-init-requires-existing-vex-1.md` and `vexdoc/01 Getting started/01 Installing vex.md` both currently describe `vex init` as broken outside an existing `.vex` tree, but that was actually fixed in commit `4f4b571` — the task file's `status: todo` was never updated. If a wiki page's claim about current behavior matters to your task, check the relevant source (and `git log`) rather than taking the callout at face value. Conversely, several *other* documented gaps are still real and verified against current source as of this writing: `status` transitions aren't actually enforced (`schema.statemachine` in `src/core/taskdefinitions.lua` seeds the state machine's `current` with the *target* status before validating, so any transition trivially succeeds), and list-typed fields (`children`/`dependencies`/`options`) can't be set via a CLI flag directly (only by hand-editing YAML + `vex resolve`).
