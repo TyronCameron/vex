@@ -2,8 +2,8 @@
 
 In the tables below, `monospaced` values are arguments. Arguments starting with a capital letter (e.g. `Description`) are allowed to be multiple words long — vex joins everything up to the first `--flag` back into one string. A `[focus]` argument is always optional and defaults to `prev` (your last saved focus) when omitted — see [[#Focuses]].
 
-> [!WARNING] Flag values can't contain spaces
-> vex reassembles its own argument list with `table.concat(arg, " ")` and re-splits it on whitespace, so a shell-quoted flag value containing a space (e.g. `--field "two words"`) gets torn back into two tokens internally. There's no quoting convention that survives this today. This is why `due` examples below use `T` as the date/time separator (`2026-08-01T09:00:00`) instead of a space — the datetime parser accepts either, and only `T` survives as one token.
+> [!NOTE] Quoting
+> vex reassembles its own argument list with `CLI:rawify(arg)`, which re-quotes any word that needs it, and re-splits that string with a small POSIX-style tokenizer (`lib/cli.lua`) that understands single quotes, double quotes (with `\"`/`\\` escapes), and backslash-escaping outside quotes — the same conventions a shell uses. So a shell-quoted flag value containing a space, e.g. `--field "two words"`, survives as one token, and `--filter status:"not done"` parses as `status:not done`. `due` examples below still use `T` as the date/time separator (`2026-08-01T09:00:00`) since it's the more common convention, but `--due "2026-08-01 09:00:00"` works too.
 
 ## Command list
 

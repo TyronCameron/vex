@@ -31,4 +31,4 @@ if arg[1] ~= 'init' then
     plugin:each(function(plug) end) -- automatically loads them
 end
 
-cli:run(table.concat(arg, " "))
+cli:run(cli:rawify(arg))

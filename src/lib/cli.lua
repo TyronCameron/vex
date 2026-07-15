@@ -33,15 +33,86 @@ CLI.__index = CLI
 -- Internal helpers
 -- ---------------------------------------------------------------------------
 
+-- Splits a raw string into words, honouring single/double quoting the same
+-- way a POSIX shell would: single quotes take everything literally, double
+-- quotes allow \" and \\ (and \$, \`) to escape, a bare backslash escapes
+-- the next character outside quotes, and quoted/unquoted segments glue
+-- together into one word (e.g. status:"not done" => `status:not done`).
+local function tokenize(txt)
+    local tokens = {}
+    local i, n = 1, #txt
+    local buf = {}
+    local in_token = false
+
+    local function flush()
+        if in_token then
+            table.insert(tokens, table.concat(buf))
+            buf = {}
+            in_token = false
+        end
+    end
+
+    while i <= n do
+        local c = txt:sub(i, i)
+        if c:match("%s") then
+            flush()
+            i = i + 1
+        elseif c == "'" then
+            in_token = true
+            local close = txt:find("'", i + 1, true)
+            table.insert(buf, txt:sub(i + 1, (close or (n + 1)) - 1))
+            i = (close or n) + 1
+        elseif c == '"' then
+            in_token = true
+            i = i + 1
+            while i <= n and txt:sub(i, i) ~= '"' do
+                local ch = txt:sub(i, i)
+                if ch == "\\" and i < n then
+                    local nextch = txt:sub(i + 1, i + 1)
+                    if nextch == '"' or nextch == "\\" or nextch == "$" or nextch == "`" then
+                        table.insert(buf, nextch)
+                        i = i + 2
+                    else
+                        table.insert(buf, ch)
+                        i = i + 1
+                    end
+                else
+                    table.insert(buf, ch)
+                    i = i + 1
+                end
+            end
+            i = i + 1
+        elseif c == "\\" then
+            in_token = true
+            if i < n then
+                table.insert(buf, txt:sub(i + 1, i + 1))
+                i = i + 2
+            else
+                i = i + 1
+            end
+        else
+            in_token = true
+            table.insert(buf, c)
+            i = i + 1
+        end
+    end
+    flush()
+    return tokens
+end
+
+-- Escapes a single argv-style word so that `tokenize` will read it back as
+-- exactly one word, even if it contains whitespace or quote characters.
+local function quote_word(word)
+    if word ~= "" and not word:find('[%s"\'\\]') then return word end
+    return '"' .. word:gsub('[\\"]', '\\%0') .. '"'
+end
+
 local function parse_args(txt)
     -- splits a string into positional args and named flags
     -- "query tag --filter --select a --drop b" => {"query", "tag", {"filter"}, {"select","a"}, {"drop", "b"}}
     local args = {}
     local i = 1
-    local tokens = {}
-    for token in txt:gmatch("%S+") do
-        table.insert(tokens, token)
-    end
+    local tokens = tokenize(txt)
     while i <= #tokens do
         local t = tokens[i]
         if t:sub(1, 2) == "--" then
@@ -82,13 +153,14 @@ end
 local function create_help_verb(cli)
     return {
         function(args)
+            local lines = {}
             local target = args[1]
             if target and cli.verbs[target] then
                 -- detailed help for a specific verb
                 local v = cli.verbs[target]
-                print(cli.entrypoint .. " " .. target .. " -- " .. v.doc)
-                if v.args    ~= "" then print("  args:    " .. v.args)    end
-                if v.example ~= "" then print("  example: " .. v.example) end
+                table.insert(lines, cli.entrypoint .. " " .. target .. " -- " .. v.doc)
+                if v.args    ~= "" then table.insert(lines, "  args:    " .. v.args)    end
+                if v.example ~= "" then table.insert(lines, "  example: " .. v.example) end
             else
                 -- general listing, padded
                 local verb_names = {}
@@ -101,14 +173,15 @@ local function create_help_verb(cli)
                 for _, name in ipairs(verb_names) do
                     width = math.max(width, #name)
                 end
-                print("Usage: " .. cli.entrypoint .. " <verb> [args]")
-                print("")
+                table.insert(lines, "Usage: " .. cli.entrypoint .. " <verb> [args]")
+                table.insert(lines, "")
                 for _, name in ipairs(verb_names) do
                     local v = cli.verbs[name]
                     local pad = string.rep(" ", width - #name + 2)
-                    print("  " .. name .. pad .. v.doc)
+                    table.insert(lines, "  " .. name .. pad .. v.doc)
                 end
             end
+            return table.concat(lines, "\n")
         end,
         doc     = "Print help. Pass a verb name for detailed help.",
         args    = "[verb]",
@@ -193,10 +266,24 @@ function CLI:error(errtype)
     end
 end
 
+-- Joins an argv-style array (e.g. Lua's `arg`) into a single raw string,
+-- quoting any word that needs it so `run`/`parse_args` reads back exactly
+-- the same words the shell already split out - this is what lets a value
+-- like `--field "two words"` survive the round trip as one argument.
+function CLI:rawify(argv)
+    local words = {}
+    for _, word in ipairs(argv) do
+        table.insert(words, quote_word(word))
+    end
+    return table.concat(words, " ")
+end
+
 -- Run from a raw arg string (or pass arg table directly).
 function CLI:run(input)
     local args
+    local raw
     if type(input) == "string" then
+        raw = input
         args = parse_args(input)
     elseif type(input) == "table" then
         args = setmetatable(input, Arguments)
@@ -212,10 +299,14 @@ function CLI:run(input)
         self:throw("usage", "unknown verb '" .. verbname .. "'")
     end
 
+    -- the raw string vex was invoked with (before splitting/quote-parsing),
+    -- unused by any built-in verb today but available for verbs that want it
+    args.raw = raw
+
     local result = self:call(verbname, args)
-    if result and type(result) == "string" or type(result) == "number" then 
+    if result ~= nil and (type(result) == "string" or type(result) == "number") then
         print(result)
-    end 
+    end
 end
 
 -- Call a verb by name with a pre-parsed args table.
