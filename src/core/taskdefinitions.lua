@@ -4,6 +4,7 @@ local func = require 'lib.func'
 local pretty = require 'lib.pretty'
 local statemachine = require 'lib.statemachine'
 local schema = require 'lib.schema'
+require 'core.orderfield'
 
 schema.register 'words' {
     validate = function(self, instance, context)
@@ -142,6 +143,12 @@ recipe:recipe 'abstract' {
         return task:add(taskproperties)
     end 
 }
+
+-- an ordering/rank field: unique within task type (ties = false), gaps
+-- allowed by default (compaction only kicks in with gaps = false)
+-- rank = schema.maybe {
+--     schema.order { ties = false, gaps = true, partition = 'vextype' }
+-- },
 
 -- task:field 'due' {
 --     normalise = function(value, context)
