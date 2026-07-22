@@ -90,4 +90,27 @@ describe("Focus", function()
         assert.equal(2, #result)
     end)
 
+    it("select computes a registered transient by name, right alongside vexid", function()
+        local taskmanager = require 'core.task'
+        taskmanager:transient '__spec_triple' {
+            derive = function(t) return (t.n or 0) * 3 end
+        }
+        local f = Focus.new("test", function(t) return t end)
+        local result = f:select('__spec_triple'):get({{vexid = "tt1", n = 2}})
+        assert.equal(1, #result)
+        assert.equal("tt1", result[1].vexid)
+        assert.equal(6, result[1].__spec_triple)
+    end)
+
+    it("select only computes the transients it was actually asked for", function()
+        local taskmanager = require 'core.task'
+        local called = {}
+        taskmanager:transient '__spec_a' { derive = function() called.a = true; return 1 end }
+        taskmanager:transient '__spec_b' { derive = function() called.b = true; return 2 end }
+        local f = Focus.new("test", function(t) return t end)
+        f:select('__spec_a'):get({{vexid = "tt2"}})
+        assert.truthy(called.a)
+        assert.falsy(called.b)
+    end)
+
 end)

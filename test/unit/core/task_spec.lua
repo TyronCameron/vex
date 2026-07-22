@@ -51,6 +51,19 @@ describe("task", function()
         task:remove(vexid)
     end)
 
+    it("withtransients only computes the transients named, when names are given", function()
+        local called = {}
+        task:transient '__spec_x' { derive = function() called.x = true; return 1 end }
+        task:transient '__spec_y' { derive = function() called.y = true; return 2 end }
+        local vexid = task:add({description = "task for selective transient spec"})
+        local merged = task:withtransients(task.tasks[vexid], {"__spec_x"})
+        assert.equal(1, merged.__spec_x)
+        assert.is_nil(merged.__spec_y)
+        assert.truthy(called.x)
+        assert.falsy(called.y)
+        task:remove(vexid)
+    end)
+
     it("descendants counts all tasks transitively reachable via children", function()
         local grandchild = task:add({description = "spec grandchild task", vextype = "atom"})
         task:resolve(grandchild)

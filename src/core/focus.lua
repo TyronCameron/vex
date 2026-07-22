@@ -5,6 +5,7 @@ local lfs = require 'lib.lfs'
 local cli = require 'lib.cli'
 local pretty = require 'lib.pretty'
 local vexdex = require 'core.vexdex'
+local taskmanager = require 'core.task'
 
 local Focus = {
     named = {}
@@ -264,6 +265,9 @@ end
 -----------------------------------------
 
 -- select comma,sep,values
+-- fields may name transients as well as raw fields; transients are computed on demand
+-- (only the ones actually selected), so the returned tasks carry them right on hand
+-- alongside vexid, the same way normal focus iteration always does
 function Focus:select(...)
     local fields = {...}
     table.insert(fields, 'vexid') -- can't remove this one
@@ -271,14 +275,25 @@ function Focus:select(...)
         local tasklist = {}
         for _, task in ipairs(tasks) do
             local newtask = {}
+            local transientnames = {}
             for _, field in ipairs(fields) do
-                newtask[field] = task[field]
+                if taskmanager.transients[field] then
+                    table.insert(transientnames, field)
+                else
+                    newtask[field] = task[field]
+                end
+            end
+            if #transientnames > 0 then
+                local enriched = taskmanager:withtransients(task, transientnames)
+                for _, name in ipairs(transientnames) do
+                    newtask[name] = enriched[name]
+                end
             end
             table.insert(tasklist, newtask)
         end
         return tasklist
     end, ...)
-end 
+end
 
 -- filter key:value
 function Focus:filter(field, value)

@@ -86,14 +86,17 @@ function TaskManager:transient(name)
     end
 end
 
--- returns a copy of a task with all registered transient fields computed and merged in
--- never mutates the canonical stored task, so transients never reach write()/format()
-function TaskManager:withtransients(task)
+-- returns a copy of a task with registered transient fields computed and merged in.
+-- names restricts which transients to compute (some may be expensive); omit to compute all.
+-- never mutates the canonical stored task or self.tasks/index - it just gives you a copy
+-- of the task with a few more fields added in
+function TaskManager:withtransients(task, names)
     if not task then return task end
     local copy = {}
     for k, v in pairs(task) do copy[k] = v end
-    for name, def in pairs(self.transients) do
-        copy[name] = def.derive(copy, {taskmanager = self})
+    for _, name in ipairs(names or func.keys(self.transients)) do
+        local def = self.transients[name]
+        if def then copy[name] = def.derive(copy, {taskmanager = self}) end
     end
     return Task.new(copy)
 end
@@ -205,7 +208,8 @@ end
 
 -- gets data from a task and returns it as a string for the command line
 function TaskManager:get(vexid, fields)
-    local task = self:withtransients(self:getsingle(vexid))
+    local names = func.imap(func.ifilter(fields, function(word) return type(word) == "table" end), function(pair) return pair[1] end)
+    local task = self:withtransients(self:getsingle(vexid), names)
     return task:tostring(fields)
 end
 

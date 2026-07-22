@@ -170,4 +170,35 @@ describe("vex CLI lifecycle (e2e, subprocess)", function()
     local on_disk = helper.read_file(parent_path)
     assert.is_nil(on_disk:find("descendants", 1, true))
   end)
+
+  it("focus --select can select a transient field, alongside vexid", function()
+    helper.run_vex(dir, {"init"})
+
+    local child_id = helper.trim(
+      helper.run_vex(dir, {"add", "Write", "changelog", "--vextype", "atom"}).stdout
+    )
+    local parent_path = dir .. "/parent-task-1.md"
+    local f = assert(io.open(parent_path, "w"))
+    f:write(table.concat({
+      "---",
+      "vexid: parent-task-1",
+      "vextype: abstract",
+      "description: Parent task",
+      "children:",
+      '  - "[[' .. child_id .. ']]"',
+      'created: "2026-07-22 12:00:00"',
+      'modified: "2026-07-22 12:00:00"',
+      "status: todo",
+      "---",
+      "",
+    }, "\n"))
+    f:close()
+
+    assert.are.equal(0, helper.run_vex(dir, {"resolve", "all"}).code)
+    assert.are.equal(0, helper.run_vex(dir, {"focus", "all", "--select", "descendants"}).code)
+
+    local csv_result = helper.strip_ansi(helper.run_vex(dir, {"view", "prev", "csv"}).stdout)
+    assert.is_not_nil(csv_result:find("vexid,descendants", 1, true))
+    assert.is_not_nil(csv_result:find("parent-task-1,1", 1, true))
+  end)
 end)

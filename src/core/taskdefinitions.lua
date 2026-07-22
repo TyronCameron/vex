@@ -4,6 +4,7 @@ local func = require 'lib.func'
 local pretty = require 'lib.pretty'
 local statemachine = require 'lib.statemachine'
 local schema = require 'lib.schema'
+local Focus = require 'core.focus'
 
 schema.register 'words' {
     validate = function(self, instance, context)
@@ -143,22 +144,29 @@ recipe:recipe 'abstract' {
     end
 }
 
+-- looks a task up by vexid via a focus (not taskmanager internals), so custom transients
+-- never need to dig into TaskManager's caches. Filter, unlike Focus.focus(vexid), doesn't
+-- throw for a vexid that isn't indexed yet (e.g. added but not yet resolved)
+local function get_task(vexid)
+    return Focus.named['all']:filter('vexid', vexid):get()[1]
+end
+
 -- counts all tasks transitively reachable via `children`, not just direct children
-local function count_descendants(vexid, taskmanager, visited)
+local function count_descendants(vexid, visited)
     if visited[vexid] then return 0 end
     visited[vexid] = true
-    local t = taskmanager:getsingle(vexid)
+    local t = get_task(vexid)
     if not t or type(t.children) ~= "table" then return 0 end
     local count = 0
     for _, childid in ipairs(t.children) do
-        count = count + 1 + count_descendants(childid, taskmanager, visited)
+        count = count + 1 + count_descendants(childid, visited)
     end
     return count
 end
 
 task:transient 'descendants' {
     derive = function(t, context)
-        return count_descendants(t.vexid, context.taskmanager, {})
+        return count_descendants(t.vexid, {})
     end
 }
 
