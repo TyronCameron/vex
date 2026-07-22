@@ -34,7 +34,7 @@ local v = View.new()
 
 v:view 'csv' {
     display = function(focus, flags)
-        local tasks = focus:get()
+        local tasks = func.imap(focus:get(), function(t) return task:withtransients(t) end)
         return format.csv(tasks)
     end
 }
@@ -44,7 +44,7 @@ v:view 'tabular' {
         local tasks = func.imap(focus:get(), function(t)
             local formatted = task:format(t.vexid)
             local result = {}
-            for k, v in pairs(t) do
+            for k, v in pairs(task:withtransients(t)) do
                 if k ~= 'vexbody' then result[k] = v end
             end
             for k, v in pairs(formatted) do
@@ -58,14 +58,14 @@ v:view 'tabular' {
 
 v:view 'json' {
     display = function(focus, flags)
-        local tasks = focus:get()
+        local tasks = func.imap(focus:get(), function(t) return task:withtransients(t) end)
         return format.json(tasks, 2)
     end
 }
 
 v:view 'kanban' {
     display = function(focus, flags)
-        local tasks = focus:get()
+        local tasks = func.imap(focus:get(), function(t) return task:withtransients(t) end)
         local field = flags.field or 'status'
 
         local statuses = {}
@@ -98,7 +98,7 @@ v:view 'kanban' {
 
 v:view 'overview' {
     display = function(focus, flags)
-        local tasks = focus:get()
+        local tasks = func.imap(focus:get(), function(t) return task:withtransients(t) end)
         local lines = {}
         local function add(s) table.insert(lines, s) end
 
@@ -346,8 +346,8 @@ end
 
 v:view 'singular' {
     display = function(focus, flags)
-        local tasks = focus:get()
-        if #tasks > 1 then cli:throw('usage', 'The view of singular only accepts focuses which have a single task in them.') end 
+        local tasks = func.imap(focus:get(), function(t) return task:withtransients(t) end)
+        if #tasks > 1 then cli:throw('usage', 'The view of singular only accepts focuses which have a single task in them.') end
         local task = tasks[1]
         
         local lines = {}

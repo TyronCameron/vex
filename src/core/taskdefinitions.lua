@@ -140,7 +140,26 @@ recipe:recipe 'abstract' {
     add = function(task, taskproperties)
         taskproperties.vextype = 'abstract'
         return task:add(taskproperties)
-    end 
+    end
+}
+
+-- counts all tasks transitively reachable via `children`, not just direct children
+local function count_descendants(vexid, taskmanager, visited)
+    if visited[vexid] then return 0 end
+    visited[vexid] = true
+    local t = taskmanager:getsingle(vexid)
+    if not t or type(t.children) ~= "table" then return 0 end
+    local count = 0
+    for _, childid in ipairs(t.children) do
+        count = count + 1 + count_descendants(childid, taskmanager, visited)
+    end
+    return count
+end
+
+task:transient 'descendants' {
+    derive = function(t, context)
+        return count_descendants(t.vexid, context.taskmanager, {})
+    end
 }
 
 -- task:field 'due' {

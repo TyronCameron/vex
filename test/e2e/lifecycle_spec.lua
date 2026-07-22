@@ -126,4 +126,48 @@ describe("vex CLI lifecycle (e2e, subprocess)", function()
     assert.are.equal(0, helper.run_vex(dir, {"resolve", "all"}).code)
     assert.are.equal(0, helper.run_vex(dir, {"resolve", "all"}).code)
   end)
+
+  it("descendants transient field appears in show/get/view but never on disk", function()
+    helper.run_vex(dir, {"init"})
+
+    local child_id = helper.trim(
+      helper.run_vex(dir, {"add", "Write", "changelog", "--vextype", "atom"}).stdout
+    )
+
+    -- setting a list field (children) via CLI flag isn't implemented yet
+    -- (see implement-cli-list-fields-1), so wire up the parent's children
+    -- directly on disk in the same multi-line array format the writer uses.
+    local parent_path = dir .. "/parent-task-1.md"
+    local f = assert(io.open(parent_path, "w"))
+    f:write(table.concat({
+      "---",
+      "vexid: parent-task-1",
+      "vextype: abstract",
+      "description: Parent task",
+      "children:",
+      '  - "[[' .. child_id .. ']]"',
+      'created: "2026-07-22 12:00:00"',
+      'modified: "2026-07-22 12:00:00"',
+      "status: todo",
+      "---",
+      "",
+    }, "\n"))
+    f:close()
+
+    assert.are.equal(0, helper.run_vex(dir, {"resolve", "all"}).code)
+
+    local show_result = helper.strip_ansi(helper.run_vex(dir, {"show", "parent-task-1"}).stdout)
+    assert.is_not_nil(show_result:find("descendants: 1", 1, true))
+
+    local get_result = helper.strip_ansi(
+      helper.run_vex(dir, {"get", "parent-task-1", "--descendants"}).stdout
+    )
+    assert.is_not_nil(get_result:find("1", 1, true))
+
+    local csv_result = helper.strip_ansi(helper.run_vex(dir, {"view", "all", "csv"}).stdout)
+    assert.is_not_nil(csv_result:find("descendants", 1, true))
+
+    local on_disk = helper.read_file(parent_path)
+    assert.is_nil(on_disk:find("descendants", 1, true))
+  end)
 end)

@@ -81,9 +81,21 @@ end
 function TaskManager:transient(name)
     return function(tab)
         assert(type(tab) == "table", "transient: expected a table")
-        assert(tab.derive, "Field definition must include at least a derive function.")        
+        assert(tab.derive, "Field definition must include at least a derive function.")
         self.transients[name] = tab
     end
+end
+
+-- returns a copy of a task with all registered transient fields computed and merged in
+-- never mutates the canonical stored task, so transients never reach write()/format()
+function TaskManager:withtransients(task)
+    if not task then return task end
+    local copy = {}
+    for k, v in pairs(task) do copy[k] = v end
+    for name, def in pairs(self.transients) do
+        copy[name] = def.derive(copy, {taskmanager = self})
+    end
+    return Task.new(copy)
 end
 
 -- register mod
@@ -193,7 +205,7 @@ end
 
 -- gets data from a task and returns it as a string for the command line
 function TaskManager:get(vexid, fields)
-    local task = self:getsingle(vexid)
+    local task = self:withtransients(self:getsingle(vexid))
     return task:tostring(fields)
 end
 
@@ -212,7 +224,7 @@ end
 -- shows task, basically cat 'filename'
 function TaskManager:show(vexid)
     assert(vexid, "show() requires an vexid")
-    local task = self:getsingle(vexid)
+    local task = self:withtransients(self:getsingle(vexid))
     return task:show(self:getabspath(vexid))
 end
 
