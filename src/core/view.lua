@@ -165,7 +165,7 @@ v:view 'overview' {
         local nil_parent = 0
         local nil_deps = 0
         for _, task in ipairs(tasks) do
-            local lineage = Focus.new(task.vexid, function() return {task} end):reversetree('children'):get()
+            local lineage = Focus.focus(task.vexid):reversetree('children'):get()
             if #lineage == 1 then nil_parent = nil_parent + 1 end
             if not task.dependencies then nil_deps = nil_deps + 1 end
         end

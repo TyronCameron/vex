@@ -27,15 +27,22 @@ schema.register 'vextype' {
 
 schema.register 'statemachine' {
     prevalidate = function(self, instance, context)
+        self.extra.statemachine = statemachine.new(self.specification.states, context.previous.status)
         return instance or self.specification.initial
     end,
     validate = function(self, instance, context)
-        local previous = context.persisted.status
-        return statemachine.new(self.specification.states, previous):isvalid(instance), "Cannot transition status from " .. tostring(previous) .. " to " .. tostring(instance)
-    end
+        return self.extra.statemachine:isvalid(instance), "Cannot transition status from " .. tostring(self.extra.statemachine.current) .. " to " .. tostring(instance)
+    end,
+    postvalidate = function(self, instance, context)
+        self.extra.statemachine:transition(instance)
+        return instance
+    end 
 }
 
 schema.register 'vexlink' {
+    prevalidate = function(self, vexid)
+        if task:getsingle(vexid) then return vexid end
+    end,
     validate = function(self, vexid)
         return type(vexid) == "string" and task:getsingle(vexid), "Cannot find " .. tostring(vexid) .. " in the task manager "
     end,
@@ -48,7 +55,11 @@ schema.register 'vexlink' {
                 return "[[" .. vexid .. "]]"
             end,
         }
-    }
+    },
+    postvalidate = function(self, vexid, context)
+        table.insert(context.links, vexid)
+        return vexid
+    end
 }
 
 local function singleparent(child, context)
@@ -63,8 +74,7 @@ local function singleparent(child, context)
 end
 
 local function acyclic(dependency, context)
-    local dependencies = focus.new(dependency, function() return {task:getsingle(dependency)} end):tree('dependencies')
-    for _, reachable in ipairs(dependencies:get()) do
+    for _, reachable in ipairs(focus.focus(dependency):tree('dependencies'):get()) do
         if reachable.vexid == context.vexid then cli:throw('dependency-cycle', context.vexid, dependency) end
     end
     return true

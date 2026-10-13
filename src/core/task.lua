@@ -200,13 +200,15 @@ end
 -- sets task properties for a given focus
 function TaskManager:set(vexid, tab)
     assert(tab and type(tab) == "table", "set() requires a table")
-    local task = self:getsingle(vexid) 
+    local task = {}
+    for k, v in pairs(self:getsingle(vexid)) do task[k] = v end
     for k,v in pairs(tab) do 
         assert(k ~= "vexid", "Cannot change the vexid with set")
         task[k] = v
     end
     task.modified = os.time()
-    return task 
+    self.tasks[vexid] = Task.new(task)
+    return self.tasks[vexid] 
 end
 
 -- shows task, basically cat 'filename'
@@ -286,12 +288,12 @@ function TaskManager:resolve(vexid)
     local vextype = self.tasktypes[task.vextype]
     if not vextype then cli:throw('unknown-vextype', vextype, func.keys(self.tasktypes)) end 
 
-    local ok, persisted = pcall(taskformat.read, self:getabspath(vexid))
     local context = {
         vexid = vexid,
         taskmanager = self, 
         task = task, 
-        persisted = ok and persisted or {},
+        previous = vexdex:get(vexid) or {},
+        links = {},
     }
 
     local parents = {vextype} 
@@ -308,27 +310,13 @@ function TaskManager:resolve(vexid)
     end 
 
     self.tasks[vexid] = task
+    vexdex:unsafe_link(vexid, context.links)
     self:index(vexid)
 end
 
 ---------------------------------------------------
 -- File I/O
 ---------------------------------------------------
-
-local function formatvalue(schema, instance)
-    local iso_owner = schema:findiso('format', instance)
-    if iso_owner and iso_owner:validate(instance) then
-        return schema:apply('format', instance)
-    end
-    if type(instance) ~= "table" or not schema._iterate then return instance end
-    local formatted = {}
-    for k, v in pairs(instance) do formatted[k] = v end
-    for subschema, subinstance, schemakey, instancekey in schema:iterate(instance) do
-        if instancekey == nil then return formatvalue(subschema, subinstance) end
-        formatted[instancekey] = formatvalue(subschema, subinstance)
-    end
-    return formatted
-end
 
 -- format a task 
 function TaskManager:format(vexid)
@@ -340,17 +328,10 @@ function TaskManager:format(vexid)
         table.insert(parents, 1, self.tasktypes[parents[1].parent])
     end
 
-    local formatted = {}
-    for k, v in pairs(task) do formatted[k] = v end
-
+    local formatted = task
     for _, parent in ipairs(parents) do
-        for subschema, instance, schemakey, instancekey in parent.schema:iterate(task) do
-            if instancekey and instance ~= nil then
-                formatted[instancekey] = formatvalue(subschema, instance)
-            end
-        end
+        formatted = parent.schema:apply('format', formatted)
     end
-
     return formatted
 end
 

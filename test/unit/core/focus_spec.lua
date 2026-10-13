@@ -134,6 +134,15 @@ describe("Focus", function()
             assert.same({"other", "mid"}, vexids(f:reversetree('dependencies'):get(linked)))
         end)
 
+        it("backlinks collects the tasks that link to each task", function()
+            local vexdex = require 'core.vexdex'
+            vexdex:unsafe_link("mid", {"other"})
+            local f = Focus.new("other", function() return {other} end)
+            local result = vexids(f:backlinks():get(linked))
+            vexdex:unsafe_remove("mid")
+            assert.same({"mid"}, result)
+        end)
+
     end)
 
 end)

@@ -29,6 +29,17 @@ describe("task", function()
         task:remove(vexid)
     end)
 
+    it("set leaves the indexed version of a task untouched", function()
+        local vexdex = require 'core.vexdex'
+        local vexid = task:add({description = "indexed task for set"})
+        task:resolve(vexid)
+        task:set(vexid, {status = "doing"})
+        assert.equal("todo", vexdex:get(vexid).status)
+        assert.equal("doing", task.tasks[vexid].status)
+        vexdex:unsafe_remove(vexid)
+        task:remove(vexid)
+    end)
+
     it("remove deletes the task entry from memory", function()
         local vexid = task:add({description = "task to be removed by spec"})
         task:remove(vexid)

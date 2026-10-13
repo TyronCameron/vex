@@ -7,12 +7,12 @@ modified: "2026-10-13 08:49:05"
 status: done
 ---
 
-Fixed. `children` on an abstract stays the single source of truth for parent links; there is still no stored `parent` field.
+Fixed. `children` on an abstract stays the single source of truth for parent links; there is no stored `parent` field.
 
-- `--tree`/`--reversetree` (`core/focus.lua`) look tasks up by vexid, skip tasks that don't have the field, and collect each focused task plus everything reachable from it.
-- `children` entries are checked so that a task appears in at most one abstract's `children` (`multiple-parents` error). `dependencies` entries are checked for cycles (`dependency-cycle` error). Both errors live in `core/errors.lua`. To support this, `schema.all` now runs each subschema's prevalidate.
-- `TaskManager:format` now formats list elements, so both `children` and `dependencies` are written as `[[links]]`. Before this change `children` was being written back as bare ids too.
-- `vex remove` strips the removed vexids from every other task's `children`/`dependencies` and rewrites the tasks it changed.
+- `--tree`/`--reversetree` (`core/focus.lua`) look tasks up by vexid, tolerate missing fields, and run `optic.traverse` from each focused task.
+- `children` entries fail with `multiple-parents` when a task is already another abstract's child, and `dependencies` entries fail with `dependency-cycle` on a cycle (`core/errors.lua`).
+- `schema.lua`'s `apply`/`unapply` run isos through container schemas, so `TaskManager:format` is `schema:apply('format', ...)`, and `children` and `dependencies` are written as `[[links]]`. `all` runs every subschema's prevalidate/postvalidate, postvalidate now reaches through wrapper schemas, and `vec` drops elements that normalise to nil.
+- `vexlink` records each link during resolve, and the vexdex keeps them as backlinks (`vexdex/backlinks.bin`), exposed as `Focus:backlinks()`. `vexlink` drops links to vexids that no longer exist, so `vex remove` resolves everything and rewrites the tasks that linked to the removed ones.
 - The `singular` view lists the parent chain, children, what the task depends on and what depends on it. The overview's "nil parent" stat uses `reversetree('children')`.
 
-Covered by unit tests in `test/unit/core/focus_spec.lua`, `test/unit/core/taskdefinitions_spec.lua` and `test/unit/lib/schema_spec.lua`, plus `test/e2e/linking_spec.lua`.
+Covered by unit tests in `test/unit/core/{focus,task,taskdefinitions,vexdex}_spec.lua` and `test/unit/lib/schema_spec.lua`, plus `test/e2e/linking_spec.lua`.

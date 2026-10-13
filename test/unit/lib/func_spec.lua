@@ -52,6 +52,37 @@ describe("func", function()
         assert.equal(15, func.ifold({5}, function(a, b) return a + b end, 10))
     end)
 
+    -- ==================== reduce / ireduce ====================
+
+    it("`func.ireduce` reduces with an initial value", function()
+        local result = func.ireduce({1, 2, 3, 4}, function(acc, v) return acc + v end, 0)
+        assert.equal(10, result)
+    end)
+
+    it("`func.ireduce` uses first element as seed when no init given", function()
+        local result = func.ireduce({1, 2, 3, 4}, function(acc, v) return acc + v end)
+        assert.equal(10, result)
+    end)
+
+    it("`func.ireduce` passes the index as third argument", function()
+        local result = func.ireduce({"a", "b"}, function(acc, v, i) return acc .. v .. i end, "")
+        assert.equal("a1b2", result)
+    end)
+
+    it("`func.reduce` reduces over every value of a table", function()
+        local result = func.reduce({a = 1, b = 2, c = 3}, function(acc, v) return acc + v end, 0)
+        assert.equal(6, result)
+    end)
+
+    it("`func.reduce` uses the first value seen as seed when no init given", function()
+        local result = func.reduce({a = 2, b = 3}, function(acc, v) return acc * v end)
+        assert.equal(6, result)
+    end)
+
+    it("`func.reduce` returns init for an empty table", function()
+        assert.equal(7, func.reduce({}, function(acc, v) return acc + v end, 7))
+    end)
+
     -- ==================== keys / values ====================
 
     it("`func.keys` returns all keys of a table", function()

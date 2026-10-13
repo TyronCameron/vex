@@ -1,5 +1,6 @@
 
 local func = require 'lib.func'
+local optic = require 'lib.optic'
 local lfs = require 'lib.lfs'
 local cli = require 'lib.cli'
 local pretty = require 'lib.pretty'
@@ -354,26 +355,18 @@ local function links(task, field)
     return {}
 end
 
-local function walk(tasks, step)
-    local found = {}
-    local seen = {}
-    local function visit(task)
-        if seen[task] then return end
-        seen[task] = true
-        table.insert(found, task)
-        for _, nexttask in ipairs(step(task)) do visit(nexttask) end
-    end
-    for _, task in ipairs(tasks) do visit(task) end
-    return found
+local function byvexid()
+    local tasks = {}
+    for _, task in ipairs(Focus.getalltasks()) do tasks[task.vexid] = task end
+    return tasks
 end
 
 local function get_children(field)
-    local byvexid = {}
-    for _, task in ipairs(Focus.getalltasks()) do byvexid[task.vexid] = task end
+    local tasks = byvexid()
     return function(task) 
         local children = {}
         for _, child in ipairs(links(task, field)) do
-            table.insert(children, byvexid[child])
+            table.insert(children, tasks[child])
         end 
         return children
     end 
@@ -381,7 +374,7 @@ end
 
 function Focus:tree(field)
     return self:chain('tree', function(tasks) 
-        return walk(tasks, get_children(field))
+        return optic.chain(optic.ipairs(), optic.traverse(get_children(field))):get(tasks)
     end, field)
 end
 
@@ -400,8 +393,22 @@ end
 
 function Focus:reversetree(field)
     return self:chain('reversetree', function(tasks) 
-        return walk(tasks, get_parents(field))
+        return optic.chain(optic.ipairs(), optic.traverse(get_parents(field))):get(tasks)
     end, field)
+end
+
+-- backlinks
+function Focus:backlinks()
+    return self:chain('backlinks', function(tasks) 
+        local indexed = byvexid()
+        local linked = {}
+        for _, task in ipairs(tasks) do
+            for vexid in pairs(vexdex.backlinks[task.vexid] or {}) do
+                table.insert(linked, indexed[vexid])
+            end
+        end
+        return linked
+    end)
 end
 
 -----------------------------------------

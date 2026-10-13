@@ -7,7 +7,6 @@ local view = require 'core.view'
 local recipe = require 'core.recipe'
 local vexdex = require 'core.vexdex'
 local task = require 'core.task'
-local schema = require 'lib.schema'
 require 'core.taskdefinitions'
 
 local function focus_pop_args(args)
@@ -125,30 +124,20 @@ cli:verb "add" {
 cli:verb "remove" {
     function(args)
         local f = focus_pop_args(args)
+        local linked = f:backlinks():notin(f):get()
         local lines = {}
-        local removed = {}
         f:each(function(vexid)
             task:delete(vexid)
             task:remove(vexid)
-            removed[vexid] = true
             table.insert(lines, pretty.any(vexid))
         end)
         vexdex:setfocus(nil)
         focus.focus('all'):each(function(vexid)
-            local linked = task:getsingle(vexid)
-            local unlinked = false
-            for _, field in ipairs({'children', 'dependencies'}) do
-                if type(linked[field]) == "table" then
-                    local kept = func.ifilter(linked[field], function(link)
-                        return not removed[schema.vexlink:unapply('format', link)]
-                    end)
-                    unlinked = unlinked or #kept < #linked[field]
-                    linked[field] = kept
-                end
-            end
             task:resolve(vexid)
-            if unlinked then task:write(vexid) end
         end)
+        for _, linkedtask in ipairs(linked) do
+            task:write(linkedtask.vexid)
+        end
         return join_lines(lines)
     end,
     doc = "Deletes tasks in the focus, and drops your focus. Runs resolve on all linked tasks thereafter. Not recommended for regular use.",

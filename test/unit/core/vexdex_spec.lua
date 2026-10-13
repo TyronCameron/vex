@@ -44,6 +44,31 @@ describe("vexdex", function()
         end)
     end)
 
+    it("unsafe_link records the linking vexid against each target", function()
+        vexdex:unsafe_link("__source", {"__a", "__b"})
+        assert.truthy(vexdex.backlinks["__a"]["__source"])
+        assert.truthy(vexdex.backlinks["__b"]["__source"])
+        vexdex:unsafe_link("__source", {"__a"})
+        assert.is_nil(vexdex.backlinks["__b"])
+        vexdex:unsafe_remove("__source")
+        assert.is_nil(vexdex.backlinks["__a"])
+    end)
+
+    it("unsafe_remove drops a task's backlinks", function()
+        vexdex:unsafe_link("__linker", {"__linked"})
+        vexdex:unsafe_remove("__linked")
+        assert.is_nil(vexdex.backlinks["__linked"])
+        vexdex:unsafe_remove("__linker")
+    end)
+
+    it("writeindex persists backlinks alongside the index", function()
+        local binser = require 'lib.binser'
+        vexdex:unsafe_link("__persisted", {"__target"}):writeindex()
+        local saved = binser.readFile(vexdex:vexpath("vexdex/backlinks.bin"))[1]
+        assert.truthy(saved["__target"]["__persisted"])
+        vexdex:remove("__persisted")
+    end)
+
     it("index is clean after add then remove", function()
         vexdex:unsafe_add("__clean-test", "/tmp/clean.md")
         vexdex:unsafe_remove("__clean-test")

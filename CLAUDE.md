@@ -56,20 +56,20 @@ Everything swappable in vex — id generation, file path layout, serialization f
 ### Data flow: add → resolve → write
 
 1. **`TaskManager:add`** (`src/core/task.lua`) generates a `vexid` via the active `tagger` plugin (`default.canonicalvexid`: lowercase, strip filler words, keep first 4 remaining words, hyphenate, append a uniqueness counter — e.g. "Make coffee for wife" → `make-coffee-wife-1`) and holds the task in memory only.
-2. **`TaskManager:resolve`** walks the task's `vextype` parent chain (registered in `src/core/taskdefinitions.lua`) and runs each ancestor schema's `prevalidate` (normalise/derive defaults) → `validate` → `postvalidate` (derive computed fields) in order, via `src/lib/schema.lua`. Throws a named CLI error (`resolution-failed-*`) on any failure.
-3. **`TaskManager:write`** formats the task (applying any schema `iso`s, e.g. epoch timestamp ↔ `YYYY-MM-DD HH:MM:SS`), writes it through the active `taskformat` plugin, and indexes it. Writes go through `VexDex:atomic` (write to `.vex/tmp/<random>.txt`, then `os.rename`) to avoid partial writes.
+2. **`TaskManager:resolve`** walks the task's `vextype` parent chain (registered in `src/core/taskdefinitions.lua`) and runs each ancestor schema's `prevalidate` (normalise/derive defaults) → `validate` → `postvalidate` (derive computed fields) in order, via `src/lib/schema.lua`. Throws a named CLI error (`resolution-failed-*`) on any failure. The schema context carries `previous` (the task as last indexed, which `TaskManager:set` leaves untouched; the status state machine checks transitions against it) and `links` (every `vexlink` the task holds, recorded by `vexlink`'s `postvalidate` and stored as backlinks in the vexdex). `vexlink`'s `prevalidate` drops links to vexids that no longer exist, so resolving cleans up after `vex remove`.
+3. **`TaskManager:write`** formats the task with each ancestor schema's `apply('format', ...)` (e.g. epoch timestamp ↔ `YYYY-MM-DD HH:MM:SS`, vexid ↔ `[[vexid]]`), writes it through the active `taskformat` plugin, and indexes it. Writes go through `VexDex:atomic` (write to `.vex/tmp/<random>.txt`, then `os.rename`) to avoid partial writes.
 
 `vex add`/`vex set` (in `src/core/verbs.lua`) call resolve+write automatically; `vex resolve all` does a full filesystem reindex first (`TaskManager:reindexall`, walks `taskfolder` from disk).
 
 ### Schema system (`src/lib/schema.lua`)
 
-A small validation/transformation DSL, not a data-modeling library you'd recognize from elsewhere. Schemas are registered once by name (`Schema.register 'str' { validate = ... }`) and instantiated with a specification (`schema.atleast { field = schema.str, ... }`). Each schema type can define `prevalidate`/`validate`/`postvalidate`/`iterate`/`isos`. Composable primitives: `atleast`/`exactly`/`atmost` (table shape), `maybe`/`default`/`derive` (optionality), `vec` (arrays), `any`/`all`/`none` (union-style combinators), `formatted`/`serialized` (apply an iso before validating). `iterate` is what lets a container schema recurse into children — see `Context:descend` for how the validation path/type-stack is tracked for error messages.
+A small validation/transformation DSL, not a data-modeling library you'd recognize from elsewhere. Schemas are registered once by name (`Schema.register 'str' { validate = ... }`) and instantiated with a specification (`schema.atleast { field = schema.str, ... }`). Each schema type can define `prevalidate`/`validate`/`postvalidate`/`iterate`/`isos`. Composable primitives: `atleast`/`exactly`/`atmost` (table shape), `maybe`/`default`/`derive` (optionality), `vec` (arrays), `any`/`all`/`none` (union-style combinators), `formatted`/`serialized` (apply an iso before validating). `iterate` is what lets a container schema recurse into children — see `Context:descend` for how the validation path/type-stack is tracked for error messages. `apply`/`unapply` run an iso through containers the same way (e.g. formatting every element of a `vec`), only ever transform values through an iso, and only format values the iso's owner validates — so anything formatted can always be unformatted again.
 
 Task type schemas live in `src/core/taskdefinitions.lua`: base `task` (has `vexid`, `description`, `vextype`, `created`, `modified`, `status`, optional `due`/`cost`/`benefit`/`dependencies`/`vexbody`), extended by `abstract` (adds `children`), `decision` (adds `options`+`decision`), `exploration` and `atom`. Custom types would extend these via `task:task 'name':extends 'parent' { schema = ... }`, though nothing yet loads user-defined types from a project's `.vex/tasks/` folder.
 
 ### Focus: the query layer (`src/core/focus.lua`)
 
-A `Focus` is a lazy, composable, **persisted** query over the task index (`.vex/vexdex/focus.bin`). Every operation (`select`, `filter`, `fuzzy`, `between`, `tree`, `reversetree`, set ops) returns a new `Focus` and records itself in `self.operations`, so a focus can be serialized/deserialized and replayed. Named focuses: `all`, `none`, `updated`, `prev` (the default when a verb's `[focus]` arg is omitted), a bare `vexid`, or a file/folder path. `vex focus <name> [--flags]` builds and saves one; most other verbs (`show`, `get`, `set`, `view`, `resolve`, `remove`) read the saved focus back when no argument is given.
+A `Focus` is a lazy, composable, **persisted** query over the task index (`.vex/vexdex/focus.bin`). Every operation (`select`, `filter`, `fuzzy`, `between`, `tree`, `reversetree`, `backlinks`, set ops) returns a new `Focus` and records itself in `self.operations`, so a focus can be serialized/deserialized and replayed. Named focuses: `all`, `none`, `updated`, `prev` (the default when a verb's `[focus]` arg is omitted), a bare `vexid`, or a file/folder path. `vex focus <name> [--flags]` builds and saves one; most other verbs (`show`, `get`, `set`, `view`, `resolve`, `remove`) read the saved focus back when no argument is given.
 
 Known-broken: the binary set-op flags (`--union`/`--intersect`/`--xor`/`--notin`/`--onlyin`) crash through the CLI because `Focus.parse` passes the flag's raw string value straight into e.g. `Focus:union(focus)`, which expects a `Focus` object, not a name to resolve.
 
@@ -87,7 +87,7 @@ A from-scratch verb/error registry, not a wrapper around an existing arg-parsing
 
 ### Storage (`.vex/` and `src/core/vexdex.lua`)
 
-`vex init` creates: `vexdex/` (index + focus, real), `config.lua` (the one file actually read every run, real), and `tasks/`, `recipes/`, `focuses/`, `views/`, `events/` (scaffolded extension points — folders exist, nothing reads them yet), plus `tmp/` for atomic writes. The index and focus are each persisted twice per write: a `binser`-serialized `.bin` (what's actually read back) and a human-readable `pretty`-printed `.lua` mirror (debugging aid only, never read). `VexDex.new()` walks up from cwd looking for `.vex` and throws `not-vexed` if none is found — this happens at **module load time**, which is why plugin loading is skipped during `init` (see above).
+`vex init` creates: `vexdex/` (index + focus, real), `config.lua` (the one file actually read every run, real), and `tasks/`, `recipes/`, `focuses/`, `views/`, `events/` (scaffolded extension points — folders exist, nothing reads them yet), plus `tmp/` for atomic writes. The vexdex also keeps `backlinks` (`backlinks[target][source] = true` for every `vexlink` from source to target), saved with the index. The index, backlinks and focus are each persisted twice per write: a `binser`-serialized `.bin` (what's actually read back) and a human-readable `pretty`-printed `.lua` mirror (debugging aid only, never read). `VexDex.new()` walks up from cwd looking for `.vex` and throws `not-vexed` if none is found — this happens at **module load time**, which is why plugin loading is skipped during `init` (see above).
 
 ### Config (`src/core/config.lua` / `src/lib/config.lua`)
 
@@ -105,14 +105,40 @@ A recipe is a named shortcut producing a task with some fields pre-filled (`Reci
 
 `src/lib/tree.lua`, `dag.lua`, `event.lua`, and `state.lua` are currently **empty files** (0 bytes) — reserved names from the original code plan (see `vexdoc/Vex.md`) that nothing requires yet. Don't assume they contain anything.
 
+## Where code goes
+
+Putting code in the right place matters more here than anywhere else. Each module owns one concern, and new code uses that module's existing machinery rather than rebuilding a smaller copy of it somewhere else. If the machinery for a common need isn't there or isn't easy to use, say so and ask — don't build it from scratch unless that is the assignment.
+
+- **Getting tasks → `src/core/focus.lua`.** Any "which tasks?" question (by vexid, all of them, children, parents, dependencies, backlinks) is a focus: `focus.focus(name)`, `Focus:tree`, `Focus:backlinks`, etc. Don't loop over `vexdex.index` or call `task:getsingle` to assemble task lists elsewhere; add a focus operation if one is missing.
+- **Managing tasks → `src/core/task.lua`.** Adding, setting, removing, resolving, reading and writing tasks, and how changes to one task cascade into others, belong to the `TaskManager`.
+- **Validating, normalising, deriving and formatting values → `src/lib/schema.lua`** (generic) and `src/core/taskdefinitions.lua` (vex's task types). Formatting is only ever an iso: whatever is formatted must unformat back. Never format values by hand or by walking a schema from outside `schema.lua`; if the schema machinery can't do something it should, fix `schema.lua` itself.
+- **Storage → `src/core/vexdex.lua`.** The index, backlinks and focus, and how they are persisted.
+- **Verbs → `src/core/verbs.lua`.** Thin orchestration of the modules above. Verbs don't know about field names, link formats or other details.
+- **Display → `src/core/view.lua`.** Views only present tasks they get from a focus.
+- **User-facing errors → `src/core/errors.lua`.**
+- **Generic helpers → `src/lib/func.lua`** (and the other `src/lib` modules). Check what exists (e.g. `func.ifilter`, `func.ireduce`, `optic.traverse`) before writing a loop.
+
+If a new concept appears and it isn't clear which of these it belongs to, stop and discuss it with the user before writing code.
+
 ## Conventions
 
 - Metatable-based "OO": `Module.new()` + `Module.__index = Module`, methods as `function Module:method(...)`.
-- Minimal comments; where present they explain a non-obvious *why* (see e.g. the workarounds documented in `test/e2e/helper.lua`), not what the code does.
+- No explanatory comments. Code should read clearly on its own; the few existing comments (e.g. the workarounds in `test/e2e/helper.lua`) only record a non-obvious *why*.
 - Tests mirror `src/`'s directory structure under `test/unit/` (`test/unit/core/task_spec.lua` tests `src/core/task.lua`, etc.).
 - New CLI verbs go in `src/core/verbs.lua` (or a plugin file) using `cli:verb "name" { ... }`; new user-facing errors go in `src/core/errors.lua` using `cli:error "name" { ... }`.
 
-## Working practices
+## Repo preferences
+
+- **Track work with vex.** This repo's backlog is vex tasks in `vexdoc/vex/`. When new work or a new bug comes up, raise it with `./src/vex add <description>`, then give the task a body that fully describes it.
+- **Close out vex tasks** that a change addresses: move the status through `doing` to `done` with `./src/vex set <vexid> --status ...` and replace the body with a short "Fixed." summary.
+- **Design before writing code.** Work out which module each piece belongs to (see "Where code goes"), then write the code.
+- **Tests come first.** Before starting, make sure the existing tests are enough to validate the change. If they aren't, design and write the tests that need to pass, and see them fail.
+- **No explanatory comments.**
+- **Ask about new concepts.** If something new appears and it isn't clear where it belongs in the codebase, stop, ask, and discuss it with the user.
+
+## Working practices (Andrej Karpathy's guidelines)
+
+These are Andrej Karpathy's guidelines for coding agents. They matter especially here: this is Lua, the public Lua code models learn from is uneven in quality, and this codebase should still read as pristine, simple and easy to follow.
 
 ### 1. Think before coding
 
