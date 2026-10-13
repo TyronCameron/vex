@@ -1,6 +1,5 @@
 
 local func = require 'lib.func'
-local optic = require 'lib.optic'
 local lfs = require 'lib.lfs'
 local cli = require 'lib.cli'
 local pretty = require 'lib.pretty'
@@ -349,12 +348,32 @@ function Focus:between(field, start, finish)
 end 
 
 -- tree field
+local function links(task, field)
+    if type(task[field]) == "string" then return {task[field]} end
+    if type(task[field]) == "table" then return task[field] end
+    return {}
+end
+
+local function walk(tasks, step)
+    local found = {}
+    local seen = {}
+    local function visit(task)
+        if seen[task] then return end
+        seen[task] = true
+        table.insert(found, task)
+        for _, nexttask in ipairs(step(task)) do visit(nexttask) end
+    end
+    for _, task in ipairs(tasks) do visit(task) end
+    return found
+end
+
 local function get_children(field)
+    local byvexid = {}
+    for _, task in ipairs(Focus.getalltasks()) do byvexid[task.vexid] = task end
     return function(task) 
-        if type(task[field]) == "string" then return {Focus.getalltasks()[task[field]]} end
         local children = {}
-        for _, child in ipairs(task[field]) do
-            table.insert(children, Focus.getalltasks()[child])
+        for _, child in ipairs(links(task, field)) do
+            table.insert(children, byvexid[child])
         end 
         return children
     end 
@@ -362,32 +381,26 @@ end
 
 function Focus:tree(field)
     return self:chain('tree', function(tasks) 
-        return optic.traverse(get_children(field)):get(tasks)
+        return walk(tasks, get_children(field))
     end, field)
 end
 
 -- reversetree
 local function get_parents(field)
+    local alltasks = Focus.getalltasks()
     return function(task) 
-        local parents = {}
-        for _, parent in pairs(Focus.getalltasks()) do
-            if type(parent[field]) == "string" and parent[field] == task.vexid then 
-                table.insert(parents, parent)
-            else 
-                for _, parentschild in ipairs(parent[field]) do
-                    if parentschild == task.vexid then 
-                        table.insert(parents, parent)
-                    end
-                end 
-            end 
-        end
-        return parents
+        return func.ifilter(alltasks, function(parent)
+            for _, child in ipairs(links(parent, field)) do
+                if child == task.vexid then return true end
+            end
+            return false
+        end)
     end 
 end
 
 function Focus:reversetree(field)
     return self:chain('reversetree', function(tasks) 
-        return optic.traverse(get_parents(field)):get(tasks)
+        return walk(tasks, get_parents(field))
     end, field)
 end
 

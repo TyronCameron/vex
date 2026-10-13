@@ -419,6 +419,12 @@ Schema.register 'all' {
             end
         end)
     end,
+    prevalidate = function(self, instance, context)
+        for childschema in self:iterate(instance, context) do
+            instance = childschema:prevalidate(instance, context)
+        end
+        return instance
+    end,
     validate = function(self, instance, context) 
         if self.specification == nil or func.isempty(self.specification) then 
             return false, "All schema is empty -- so trivially nothing can match"

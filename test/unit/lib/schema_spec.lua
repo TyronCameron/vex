@@ -398,6 +398,11 @@ describe("schema", function()
         assert.truthy(s:validate(result))
     end)
 
+    it("`schema.all` prevalidates through each of its subschemas", function()
+        local s = schema.all { schema.num, schema.rng {0, 20} }
+        assert.equal(15, s:prevalidate("15"))
+    end)
+
     it("`schema.maybe{schema.num}` still validates nil as fine", function()
         local s = schema.maybe { schema.num }
         assert.truthy(s:validate(s:prevalidate(nil)))

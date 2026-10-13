@@ -67,4 +67,39 @@ describe("taskdefinitions", function()
 
     end)
 
+    describe("links", function()
+
+        it("writes children and dependencies as links", function()
+            local child = create({description = "formatted link child"})
+            local parent = create({description = "formatted link parent", vextype = 'abstract', children = {child}})
+            local dependent = create({description = "formatted link dependent", dependencies = {child}})
+            assert.same({"[[" .. child .. "]]"}, task:format(parent).children)
+            assert.same({"[[" .. child .. "]]"}, task:format(dependent).dependencies)
+        end)
+
+        it("lets a parent resolve again with its own children", function()
+            local child = create({description = "only child task"})
+            local parent = create({description = "only parent abstract", vextype = 'abstract', children = {child}})
+            task:resolve(parent)
+            assert.stub(cli.throw).was_not.called()
+        end)
+
+        it("rejects a task in two abstracts' children", function()
+            local child = create({description = "shared child task"})
+            create({description = "first parent abstract", vextype = 'abstract', children = {child}})
+            local second = task:add({description = "second parent abstract", vextype = 'abstract', children = {child}})
+            assert.has_error(function() task:resolve(second) end)
+            assert.stub(cli.throw).was.called_with(cli, 'multiple-parents', child, second, match._)
+        end)
+
+        it("rejects dependency cycles", function()
+            local first = create({description = "cycle first task"})
+            local second = create({description = "cycle second task", dependencies = {first}})
+            task:set(first, {dependencies = {second}})
+            assert.has_error(function() task:resolve(first) end)
+            assert.stub(cli.throw).was.called_with(cli, 'dependency-cycle', first, second)
+        end)
+
+    end)
+
 end)

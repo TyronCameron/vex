@@ -315,6 +315,21 @@ end
 -- File I/O
 ---------------------------------------------------
 
+local function formatvalue(schema, instance)
+    local iso_owner = schema:findiso('format', instance)
+    if iso_owner and iso_owner:validate(instance) then
+        return schema:apply('format', instance)
+    end
+    if type(instance) ~= "table" or not schema._iterate then return instance end
+    local formatted = {}
+    for k, v in pairs(instance) do formatted[k] = v end
+    for subschema, subinstance, schemakey, instancekey in schema:iterate(instance) do
+        if instancekey == nil then return formatvalue(subschema, subinstance) end
+        formatted[instancekey] = formatvalue(subschema, subinstance)
+    end
+    return formatted
+end
+
 -- format a task 
 function TaskManager:format(vexid)
     local task = self:getsingle(vexid)
@@ -331,10 +346,7 @@ function TaskManager:format(vexid)
     for _, parent in ipairs(parents) do
         for subschema, instance, schemakey, instancekey in parent.schema:iterate(task) do
             if instancekey and instance ~= nil then
-                local iso_owner = subschema:findiso('format', instance)
-                if iso_owner and iso_owner:validate(instance) then
-                    formatted[instancekey] = subschema:apply('format', instance)
-                end
+                formatted[instancekey] = formatvalue(subschema, instance)
             end
         end
     end
