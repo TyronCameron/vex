@@ -1,12 +1,10 @@
 ---
 vexid: fix-status-transition-enforcement-1
 vextype: task
-description: Status state machine doesn't actually reject invalid transitions
+description: "Status state machine doesn't actually reject invalid transitions"
 created: "2026-07-06 12:00:00"
-modified: "2026-07-06 12:00:00"
-status: todo
+modified: "2026-10-13 08:44:38"
+status: done
 ---
 
-Confirmed by testing while writing the wiki: `vex set <task> --status done` succeeds with no error on a task whose status is `todo`, jumping straight past `doing`. Likewise `doing` back to `todo` succeeds silently. The `status` field is documented (and clearly intended, per `lib/statemachine.lua` and the states table in `core/taskdefinitions.lua`) to only allow `todo → doing → done`, but nothing actually blocks an out-of-order transition today.
-
-Likely cause: `schema.statemachine`'s `prevalidate` (`lib/schema.lua`) returns `self.extra.statemachine.current` rather than the instance being set, and/or `self.extra.statemachine` is cached on the schema definition itself rather than per-task, so the same machine object (and its `current` pointer) may be getting reused/stale across different tasks and calls. Needs a proper look — this silently defeats the one piece of built-in workflow enforcement vex has.
+Fixed. The `statemachine` schema (`core/taskdefinitions.lua`) no longer caches one machine on `self.extra` shared by every task. `TaskManager:resolve` now reads the task's file as it is on disk and passes it to the schemas as `context.persisted`; `validate` builds a fresh machine from that persisted status and checks the new one against it, so `todo -> done` and `doing -> todo` fail with `resolution-failed-validation`. An unchanged status is always valid, so `vex resolve all` accepts whatever status is on disk, and a new task with no status defaults to `todo`. `lib/statemachine.lua`'s `preprocess` now copies the state definitions rather than mutating them, so a machine can be built more than once from the same table. `version-01-1` now has `children: []` so `vex resolve all` completes. Covered by `test/unit/core/taskdefinitions_spec.lua` and an e2e test in `test/e2e/lifecycle_spec.lua`.

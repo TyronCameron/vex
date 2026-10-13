@@ -25,16 +25,12 @@ schema.register 'vextype' {
 
 schema.register 'statemachine' {
     prevalidate = function(self, instance, context)
-        self.extra.statemachine = self.extra.statemachine or statemachine.new(self.specification.states, context.task.status or self.specification.initial)
-        return self.extra.statemachine.current 
+        return instance or self.specification.initial
     end,
     validate = function(self, instance, context)
-        return self.extra.statemachine:isvalid(instance), "Cannot transition status from " .. tostring(self.extra.statemachine.current) .. " to " .. tostring(instance)
-    end,
-    postvalidate = function(self, instance, context)
-        self.extra.statemachine:transition(instance)
-        return instance
-    end 
+        local previous = context.persisted.status
+        return statemachine.new(self.specification.states, previous):isvalid(instance), "Cannot transition status from " .. tostring(previous) .. " to " .. tostring(instance)
+    end
 }
 
 schema.register 'vexlink' {

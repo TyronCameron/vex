@@ -9,7 +9,10 @@ end
 
 -- Normalise valid/invalid declarations into a single `valid` set per state
 local function preprocess(def)
-    for name, state in pairs(def) do
+    local states = {}
+    for name, original in pairs(def) do
+        local state = {}
+        for k, v in pairs(original) do state[k] = v end
         assert(not (state.valid and state.invalid),
             "state '" .. name .. "': specify valid OR invalid, not both")
 
@@ -25,8 +28,9 @@ local function preprocess(def)
         else
             state.valid = {} -- nothing valid 
         end
+        states[name] = state
     end
-    return def
+    return states
 end
 
 function StateMachine.new(def, currentstate)

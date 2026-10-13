@@ -286,10 +286,12 @@ function TaskManager:resolve(vexid)
     local vextype = self.tasktypes[task.vextype]
     if not vextype then cli:throw('unknown-vextype', vextype, func.keys(self.tasktypes)) end 
 
+    local ok, persisted = pcall(taskformat.read, self:getabspath(vexid))
     local context = {
         vexid = vexid,
         taskmanager = self, 
         task = task, 
+        persisted = ok and persisted or {},
     }
 
     local parents = {vextype} 
