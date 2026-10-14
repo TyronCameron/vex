@@ -87,7 +87,7 @@ A from-scratch verb/error registry, not a wrapper around an existing arg-parsing
 
 ### Storage (`.vex/` and `src/core/vexdex.lua`)
 
-`vex init` creates: `vexdex/` (index + focus, real), `config.lua` (the one file actually read every run, real), `tasks/`, `recipes/` (extensions, see below), `focuses/`, `views/`, `events/` (scaffolded extension points — folders exist, nothing reads them yet), plus `tmp/` for atomic writes. The vexdex also keeps `backlinks` (`backlinks[target][source] = true` for every `vexlink` from source to target), saved with the index. The index, backlinks and focus are each persisted twice per write: a `binser`-serialized `.bin` (what's actually read back) and a human-readable `pretty`-printed `.lua` mirror (debugging aid only, never read). `VexDex.new()` walks up from cwd looking for `.vex` and throws `not-vexed` if none is found — this happens at **module load time**, which is why plugin loading is skipped during `init` (see above).
+`vex init` creates: `vexdex/` (index + focus, real), `config.lua` (the one file actually read every run, real), `tasks/`, `recipes/`, `focuses/` (extensions, see below), `views/`, `events/` (scaffolded extension points — folders exist, nothing reads them yet), plus `tmp/` for atomic writes. The vexdex also keeps `backlinks` (`backlinks[target][source] = true` for every `vexlink` from source to target), saved with the index. The index, backlinks and focus are each persisted twice per write: a `binser`-serialized `.bin` (what's actually read back) and a human-readable `pretty`-printed `.lua` mirror (debugging aid only, never read). `VexDex.new()` walks up from cwd looking for `.vex` and throws `not-vexed` if none is found — this happens at **module load time**, which is why plugin loading is skipped during `init` (see above).
 
 ### Config (`src/core/config.lua` / `src/lib/config.lua`)
 
@@ -95,7 +95,7 @@ A from-scratch verb/error registry, not a wrapper around an existing arg-parsing
 
 ### Extensions (`src/core/extensions.lua`)
 
-Required at the end of `core.verbs`, once every manager exists. It runs each `.lua` file in the project's `.vex/tasks/` then `.vex/recipes/` (each sorted by path) through `loadfile` + `setfenv`, in an environment that exposes `task`, `recipe` and `schema` on top of `_G`, so a file registers things directly (`task:task 'bug':extends 'task' { ... }`) without any `require`. A file that fails to load throws `bad-extension`.
+Required at the end of `core.verbs`, once every manager exists. It runs each `.lua` file in the project's `.vex/tasks/`, `.vex/recipes/` then `.vex/focuses/` (each sorted by path) through `loadfile` + `setfenv`, in an environment that exposes `task`, `recipe`, `focus` (the `Focus` class: `focus.register_focus(name, get)`) and `schema` on top of `_G`, so a file registers things directly (`task:task 'bug':extends 'task' { ... }`) without any `require`. A file that fails to load throws `bad-extension`.
 
 ### Recipes (`src/core/recipe.lua`)
 

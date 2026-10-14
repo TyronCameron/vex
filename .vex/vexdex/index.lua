@@ -238,11 +238,9 @@ Fix: added the `num` coercion, and rewrote `maybe`'s `prevalidate` to use an unc
   implement-focus-loader-1 = {
     created = 1783339200,
     description = "Load custom named focuses from .vex/focuses",
-    modified = 1792016116,
-    status = "todo",
-    vexbody = "\
-`.vex/focuses` is created by `vex init` but nothing reads it — only the 4 hardcoded named focuses in `core/focus.lua` (all, none, updated, prev) exist. Auto-register a Lua file per named focus, following the same shape as `Focus.register_focus`.\
-",
+    modified = 1792016261,
+    status = "done",
+    vexbody = "Fixed. core/extensions.lua also runs .vex/focuses/*.lua with focus (the Focus class) in scope, so a file just calls focus.register_focus('name', function() ... end). Saved focuses replay by name, so they keep working.",
     vexid = "implement-focus-loader-1",
     vextype = "task"
   },
