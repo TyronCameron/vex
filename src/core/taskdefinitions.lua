@@ -1,5 +1,7 @@
 local task = require "core.task"
 local recipe = require 'core.recipe'
+local focus = require 'core.focus'
+local cli = require 'lib.cli'
 local func = require 'lib.func'
 local pretty = require 'lib.pretty'
 local statemachine = require 'lib.statemachine'
@@ -25,8 +27,8 @@ schema.register 'vextype' {
 
 schema.register 'statemachine' {
     prevalidate = function(self, instance, context)
-        self.extra.statemachine = self.extra.statemachine or statemachine.new(self.specification.states, context.task.status or self.specification.initial)
-        return self.extra.statemachine.current 
+        self.extra.statemachine = statemachine.new(self.specification.states, context.previous.status)
+        return instance or self.specification.initial
     end,
     validate = function(self, instance, context)
         return self.extra.statemachine:isvalid(instance), "Cannot transition status from " .. tostring(self.extra.statemachine.current) .. " to " .. tostring(instance)
@@ -50,8 +52,30 @@ schema.register 'vexlink' {
                 return "[[" .. vexid .. "]]"
             end,
         }
-    }
+    },
+    postvalidate = function(self, vexid, context)
+        table.insert(context.links, vexid)
+        return vexid
+    end
 }
+
+local function singleparent(child, context)
+    for _, parent in ipairs(focus.getalltasks()) do
+        if parent.vexid ~= context.vexid and type(parent.children) == "table" then
+            for _, other in ipairs(parent.children) do
+                if other == child then cli:throw('multiple-parents', child, context.vexid, parent.vexid) end
+            end
+        end
+    end
+    return true
+end
+
+local function acyclic(dependency, context)
+    for _, reachable in ipairs(focus.focus(dependency):tree('dependencies'):get()) do
+        if reachable.vexid == context.vexid then cli:throw('dependency-cycle', context.vexid, dependency) end
+    end
+    return true
+end
 
 task:task 'task' {
     schema = schema.atleast {
@@ -85,7 +109,14 @@ task:task 'task' {
             initial = 'todo'
         },
         vexbody = schema.maybe {schema.str},
-        dependencies = schema.maybe {schema.vec {schema.vexlink}},
+        dependencies = schema.maybe {
+            schema.vec {
+                schema.all {
+                    schema.formatted {schema.vexlink},
+                    schema.constraint {acyclic}
+                }
+            }
+        },
         due = schema.maybe {schema.formatted {schema.datetime}},
         cost = schema.maybe {schema.num},
         benefit = schema.maybe {schema.num},
@@ -97,7 +128,10 @@ task:task 'abstract':extends 'task' {
         vexbody = schema.maybe {schema.empty},
         children = schema.default {
             schema.vec {
-                schema.formatted {schema.vexlink}
+                schema.all {
+                    schema.formatted {schema.vexlink},
+                    schema.constraint {singleparent}
+                }
             },
             default = function() return {} end 
         }

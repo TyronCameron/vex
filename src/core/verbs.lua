@@ -126,8 +126,8 @@ cli:verb "remove" {
         local f = focus_pop_args(args)
         local lines = {}
         f:each(function(vexid)
-            task:delete(vexid)
             task:remove(vexid)
+            task:delete(vexid)
             table.insert(lines, pretty.any(vexid))
         end)
         vexdex:setfocus(nil)

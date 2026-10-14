@@ -126,4 +126,17 @@ describe("vex CLI lifecycle (e2e, subprocess)", function()
     assert.are.equal(0, helper.run_vex(dir, {"resolve", "all"}).code)
     assert.are.equal(0, helper.run_vex(dir, {"resolve", "all"}).code)
   end)
+
+  it("status only moves todo -> doing -> done (fix-status-transition-enforcement-1)", function()
+    helper.run_vex(dir, {"init"})
+    local vexid = helper.trim(helper.run_vex(dir, {"add", "Water", "the", "plants"}).stdout)
+
+    local skipped = helper.run_vex(dir, {"set", vexid, "--status", "done"})
+    assert.are.not_equal(0, skipped.code)
+    assert.is_not_nil(helper.strip_ansi(skipped.stderr):find("validation step failed", 1, true))
+
+    assert.are.equal(0, helper.run_vex(dir, {"set", vexid, "--status", "doing"}).code)
+    assert.are.equal(0, helper.run_vex(dir, {"set", vexid, "--status", "done"}).code)
+    assert.is_not_nil(helper.read_file(dir .. "/" .. vexid .. ".md"):find("status: done", 1, true))
+  end)
 end)

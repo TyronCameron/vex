@@ -178,35 +178,36 @@ function Schema:postvalidate(value, context)
     return res 
 end
 
-function Schema:findiso(isoname, instance, context)
+local function transform(self, isoname, direction, value, context)
+    if value == nil then return nil end
     if self._isos and self._isos[isoname] then
-        return self, self._isos[isoname]
+        if direction == 'forward' and not self:validate(value) then return value end
+        local ok, res = pcall(self._isos[isoname][direction], self, value, context)
+        if not ok then self:error(value, context, "Iso failed " .. direction .. " transformation: " .. tostring(res)) end
+        return res
     end
-    if self._iterate then 
-        for lowerschema in self:iterate(instance, context) do
-            local found_schema, found_iso = lowerschema:findiso(isoname)
-            if found_iso then return found_schema, found_iso end
+    if not self._iterate then return value end
+    local result = value
+    if type(value) == "table" then
+        result = {}
+        for k, v in pairs(value) do result[k] = v end
+    end
+    for childschema, childvalue, schemakey, instancekey in self:iterate(value, context) do
+        if instancekey == nil then
+            result = transform(childschema, isoname, direction, result, context)
+        else
+            result[instancekey] = transform(childschema, isoname, direction, childvalue, context)
         end
-    end 
-    return nil, nil
+    end
+    return result
 end
 
 function Schema:apply(isoname, value, context)
-    context = Context.new(self, value, context)
-    local owner, iso = self:findiso(isoname)
-    assert(iso, "No iso of name " .. tostring(isoname) .. " found.")
-    local ok, res = pcall(iso.forward, owner, value, context)
-    if not ok then self:error(value, context, "Iso failed forward transformation: " .. tostring(res)) end
-    return res
+    return transform(self, isoname, 'forward', value, Context.new(self, value, context))
 end
 
 function Schema:unapply(isoname, value, context)
-    context = Context.new(self, value, context)
-    local owner, iso = self:findiso(isoname)
-    assert(iso, "No iso of name " .. tostring(isoname) .. " found.")
-    local ok, res = pcall(iso.backward, owner, value, context)
-    if not ok then self:error(value, context, "Iso failed backward transformation: " .. tostring(res)) end
-    return res
+    return transform(self, isoname, 'backward', value, Context.new(self, value, context))
 end
 
 function Schema:get(data, path, isoname, context)
@@ -292,11 +293,11 @@ Schema.register 'constant' {
 -----------------------------------------------
 ---
 local function prevalidate_children(self, instance, context)
-    if type(instance) == "table" then 
-        for childschema, childinstance, schemakey, instancekey in self:iterate(instance, context) do 
-            if instancekey ~= nil then 
-                instance[instancekey] = childschema:prevalidate(childinstance, context) 
-            end 
+    for childschema, childinstance, schemakey, instancekey in self:iterate(instance, context) do 
+        if instancekey == nil then 
+            instance = childschema:prevalidate(instance, context) 
+        elseif type(instance) == "table" then 
+            instance[instancekey] = childschema:prevalidate(childinstance, context) 
         end 
     end 
     return instance
@@ -312,11 +313,11 @@ local function validate_children(self, instance, context)
 end 
 
 local function postvalidate_children(self, instance, context)
-    if type(instance) == "table" then 
-        for childschema, childinstance, schemakey, instancekey in self:iterate(instance, context) do 
-            if instancekey ~= nil then 
-                instance[instancekey] = childschema:postvalidate(childinstance, context) 
-            end 
+    for childschema, childinstance, schemakey, instancekey in self:iterate(instance, context) do 
+        if instancekey == nil then 
+            instance = childschema:postvalidate(instance, context) 
+        elseif type(instance) == "table" then 
+            instance[instancekey] = childschema:postvalidate(childinstance, context) 
         end 
     end
     return instance
@@ -419,12 +420,14 @@ Schema.register 'all' {
             end
         end)
     end,
+    prevalidate = prevalidate_children,
     validate = function(self, instance, context) 
         if self.specification == nil or func.isempty(self.specification) then 
             return false, "All schema is empty -- so trivially nothing can match"
         end
         return validate_children(self, instance, context)
-    end
+    end,
+    postvalidate = postvalidate_children
 }
 
 -- nil is always true, 

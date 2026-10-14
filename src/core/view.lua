@@ -165,7 +165,8 @@ v:view 'overview' {
         local nil_parent = 0
         local nil_deps = 0
         for _, task in ipairs(tasks) do
-            if not task.parent then nil_parent = nil_parent + 1 end
+            local lineage = Focus.focus(task.vexid):reversetree('children'):get()
+            if #lineage == 1 then nil_parent = nil_parent + 1 end
             if not task.dependencies then nil_deps = nil_deps + 1 end
         end
         add("  Tasks with nil parent:    " .. string.format("%.1f%%", nil_parent / #tasks * 100))
@@ -204,146 +205,6 @@ v:view 'overview' {
     end
 }
 
--- ===== HELPER FUNCTIONS =====
-
--- Build a top-to-bottom tree diagram showing parents -> current -> children
--- Shows critical path from top parent to current, then all children
--- "aunts/uncles" shown as "..."
-local function build_tree_diagram(parents, current_id, field)
-    local lines = {}
-    
-    -- Find root parents (those with no parents themselves)
-    local roots = {}
-    for _, p in ipairs(parents) do
-        local pparents = Focus.getalltasks()[p.vexid] and 
-            (function()
-                local pp = {}
-                for _, gp in pairs(Focus.getalltasks()) do
-                    if type(gp[field]) == "string" and gp[field] == p.vexid then
-                        table.insert(pp, gp)
-                    end
-                end
-                return pp
-            end)()
-        if not pparents or #pparents == 0 then
-            table.insert(roots, p)
-        end
-    end
-    
-    -- Walk down from roots to current
-    local function walk_down(node, path, depth)
-        table.insert(path, node)
-        if node.vexid == current_id then
-            return path
-        end
-        -- Find children of this node
-        local children = {}
-        for _, child_id in ipairs(node[field] or {}) do
-            local child = Focus.getalltasks()[child_id]
-            if child then table.insert(children, child) end
-        end
-        for _, child in ipairs(children) do
-            local result = walk_down(child, table.copy(path), depth + 1)
-            if result then return result end
-        end
-        return nil
-    end
-    
-    for _, root in ipairs(roots) do
-        local path = walk_down(root, {}, 0)
-        if path then
-            for i, node in ipairs(path) do
-                local prefix = ""
-                for j = 1, i - 1 do
-                    prefix = prefix .. "    "
-                end
-                if node.vexid == current_id then
-                    table.insert(lines, pretty.string(prefix .. "▼ " .. tostring(node.vexid), 'bold', 'bright_yellow'))
-                else
-                    table.insert(lines, prefix .. "├── " .. tostring(node.vexid))
-                end
-            end
-            break
-        end
-    end
-    
-    -- Show children of current
-    local children = focus:tree(field)
-    if #children > 0 then
-        for _, child in ipairs(children) do
-            table.insert(lines, "    └── " .. tostring(child.vexid))
-        end
-    end
-    
-    return lines
-end
-
--- Build a left-to-right DAG diagram showing dependency chain
--- Shows: furthest parents -> ... -> immediate parents -> current -> immediate children -> ... -> furthest children
-local function build_dag_diagram(immediate_parents, current_id)
-    local lines = {}
-    
-    -- Collect all ancestor levels
-    local levels = {}  -- levels[0] = furthest parents, levels[-1] = immediate parents
-    local visited = {}
-    
-    local function collect_ancestors(node, level)
-        if visited[node.vexid] then return end
-        visited[node.vexid] = true
-        levels[level] = levels[level] or {}
-        table.insert(levels[level], node)
-        
-        -- Find this node's parents
-        for _, gp in pairs(Focus.getalltasks()) do
-            if type(gp.dependencies) == "table" then
-                for _, dep in ipairs(gp.dependencies) do
-                    if dep == node.vexid then
-                        collect_ancestors(gp, level - 1)
-                    end
-                end
-            end
-        end
-    end
-    
-    for _, p in ipairs(immediate_parents) do
-        collect_ancestors(p, -1)
-    end
-    
-    -- Find min level for furthest ancestors
-    local min_level = 0
-    for level, nodes in pairs(levels) do
-        if level < min_level then min_level = level end
-    end
-    
-    -- Print levels left to right
-    for level = min_level, -1 do
-        local nodes = levels[level]
-        if nodes then
-            for _, node in ipairs(nodes) do
-                if node.vexid == current_id then
-                    table.insert(lines, pretty.string("  " .. tostring(node.vexid) .. "  ", 'bold', 'bright_yellow'))
-                else
-                    table.insert(lines, "  " .. tostring(node.vexid) .. "  ")
-                end
-            end
-        end
-    end
-    
-    -- Current
-    table.insert(lines, pretty.string("  ▼ " .. current_id .. "  ", 'bold', 'bright_yellow'))
-    
-    -- Children
-    local children = focus:tree('dependencies')
-    if #children > 0 then
-        for _, child in ipairs(children) do
-            table.insert(lines, "  " .. tostring(child.vexid) .. "  ")
-        end
-    end
-    
-    return lines
-end
-
-
 v:view 'singular' {
     display = function(focus, flags)
         local tasks = focus:get()
@@ -364,32 +225,23 @@ v:view 'singular' {
         end
         add("")
 
-        -- ===== TREE DIAGRAM (top-to-bottom: parents -> task -> children) =====
-        add(pretty.string("PARENTS", 'bold', 'bright_cyan'))
-        add("")
-        local parents = focus:reversetree('children')
-        if #parents > 0 then
-            local tree_lines = build_tree_diagram(focus, parents, task.vexid, "children")
-            for _, l in ipairs(tree_lines) do
-                add(l)
+        local function related(f)
+            return func.ifilter(f:get(), function(t) return t.vexid ~= task.vexid end)
+        end
+        local function section(title, colour, tasks, nested)
+            add(pretty.string(title, 'bold', colour))
+            add("")
+            if #tasks == 0 then add("  (none)") end
+            for i, t in ipairs(tasks) do
+                add(string.rep("  ", nested and i or 1) .. tostring(t.vexid))
             end
-        else
-            add("  (no parents)")
+            add("")
         end
 
-        -- ===== DAG DIAGRAM (left-to-right: dependencies) =====
-        add("")
-        add(pretty.string("DEPENDENCIES", 'bold', 'bright_green'))
-        add("")
-        local deps = focus:reversetree('dependencies')
-        if #deps > 0 then
-            local dag_lines = build_dag_diagram(focus, deps, task.vexid)
-            for _, l in ipairs(dag_lines) do
-                add(l)
-            end
-        else
-            add("  (no dependencies)")
-        end
+        section("PARENTS", 'bright_cyan', func.reverse(related(focus:reversetree('children'))), true)
+        section("CHILDREN", 'bright_cyan', related(focus:tree('children')))
+        section("DEPENDS ON", 'bright_green', related(focus:tree('dependencies')))
+        section("DEPENDED ON BY", 'bright_green', related(focus:reversetree('dependencies')))
 
         return table.concat(lines, "\n")
     end

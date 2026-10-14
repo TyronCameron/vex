@@ -49,6 +49,32 @@ function func.ifold(arr, f, init)
 	return acc
 end
 
+function func.ireduce(arr, f, init)
+	local acc = init
+	for i, v in ipairs(arr) do
+		if init == nil and i == 1 then 
+			acc = v
+		else 
+			acc = f(acc, v, i)
+		end 
+	end
+	return acc
+end
+
+function func.reduce(tab, f, init)
+	local acc = init
+	local seeded = init ~= nil
+	for k, v in pairs(tab) do
+		if seeded then 
+			acc = f(acc, v, k)
+		else 
+			acc = v
+			seeded = true
+		end 
+	end
+	return acc
+end
+
 function func.keys(tab)
 	local keys = {}
 	for key in pairs(tab) do

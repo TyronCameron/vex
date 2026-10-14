@@ -125,6 +125,20 @@ cli:error 'resolution-failed-linking' {
     hint = "Ensure that data is correct and that the tasktype definitions in `config.lua` are sound."
 }
 
+cli:error 'multiple-parents' {
+    function(vexid, parent, otherparent)
+        return 'Task `' .. tostring(vexid) .. '` cannot be a child of both `' .. tostring(parent) .. '` and `' .. tostring(otherparent) .. '`.'
+    end,
+    hint = "A task may appear in at most one abstract's `children`. Remove it from one of them."
+}
+
+cli:error 'dependency-cycle' {
+    function(vexid, dependency)
+        return 'Task `' .. tostring(vexid) .. '` cannot depend on `' .. tostring(dependency) .. '`, which already depends on it directly or indirectly.'
+    end,
+    hint = "Dependencies must not form a cycle. Remove one of the dependencies."
+}
+
 cli:error "unknown-view" {
     function(viewname)
         return 'A view of name `' .. tostring(viewname) .. '` does not exist.'

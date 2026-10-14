@@ -398,9 +398,55 @@ describe("schema", function()
         assert.truthy(s:validate(result))
     end)
 
+    it("`schema.all` prevalidates through each of its subschemas", function()
+        local s = schema.all { schema.num, schema.rng {0, 20} }
+        assert.equal(15, s:prevalidate("15"))
+    end)
+
     it("`schema.maybe{schema.num}` still validates nil as fine", function()
         local s = schema.maybe { schema.num }
         assert.truthy(s:validate(s:prevalidate(nil)))
+    end)
+
+    it("`apply` formats every element of a vec through its element's iso", function()
+        local s = schema.maybe { schema.vec { schema.formatted { schema.datetime } } }
+        assert.same({os.date("%Y-%m-%d %H:%M:%S", 0), os.date("%Y-%m-%d %H:%M:%S", 60)}, s:apply('format', {0, 60}))
+    end)
+
+    it("`unapply` unformats every element of a vec through its element's iso", function()
+        local s = schema.vec { schema.formatted { schema.datetime } }
+        local formatted = s:apply('format', {0, 60})
+        assert.same({0, 60}, s:unapply('format', formatted))
+    end)
+
+    it("`apply` only formats the fields of a table schema that have the iso", function()
+        local s = schema.atleast { at = schema.formatted { schema.datetime }, name = schema.str }
+        local result = s:apply('format', {at = 0, name = "x", extra = 1})
+        assert.same({at = os.date("%Y-%m-%d %H:%M:%S", 0), name = "x", extra = 1}, result)
+    end)
+
+    it("`apply` leaves nil and its input untouched", function()
+        local s = schema.atleast { at = schema.maybe { schema.formatted { schema.datetime } } }
+        local input = {at = nil}
+        assert.same({}, s:apply('format', input))
+        local list = {0}
+        schema.vec { schema.formatted { schema.datetime } }:apply('format', list)
+        assert.same({0}, list)
+    end)
+
+    it("`apply` leaves values its iso owner does not validate untouched", function()
+        local s = schema.atleast { at = schema.formatted { schema.datetime } }
+        assert.same({at = "2026-07-10 09:00:00"}, s:apply('format', {at = "2026-07-10 09:00:00"}))
+    end)
+
+    it("postvalidate passes through wrapper schemas to their subschema", function()
+        schema.register '__spec_double' {
+            postvalidate = function(self, instance) return instance * 2 end,
+            validate = function() return true end
+        }
+        assert.equal(4, schema.formatted { schema.__spec_double }:postvalidate(2))
+        assert.equal(4, schema.all { schema.__spec_double, schema.num }:postvalidate(2))
+        assert.same({4}, schema.vec { schema.formatted { schema.__spec_double } }:postvalidate({2}))
     end)
 
 end)

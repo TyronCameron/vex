@@ -12,6 +12,7 @@ local lfs = require 'lib.lfs'
 local lfsext = require 'lib.lfsext'
 local pretty = require 'lib.pretty'
 local vexdex = require 'core.vexdex'
+local focus = require 'core.focus'
 local config = require 'core.config'
 
 ------------------------------------------------
@@ -187,6 +188,20 @@ end
 -- removes task by id or focus
 function TaskManager:remove(vexid)
     assert(vexid, "remove() requires an id or focus")
+    if vexdex:get(vexid) then
+        focus.focus(vexid):backlinks():each_task(function(linker)
+            for field, value in pairs(linker) do
+                if value == vexid then
+                    linker[field] = nil
+                elseif type(value) == "table" then
+                    linker[field] = func.ifilter(value, function(link) return link ~= vexid end)
+                end
+            end
+            self.tasks[linker.vexid] = linker
+            self:resolve(linker.vexid)
+            self:write(linker.vexid)
+        end)
+    end
     self.tasks[vexid] = nil
     return vexid
 end
@@ -200,13 +215,15 @@ end
 -- sets task properties for a given focus
 function TaskManager:set(vexid, tab)
     assert(tab and type(tab) == "table", "set() requires a table")
-    local task = self:getsingle(vexid) 
+    local task = {}
+    for k, v in pairs(self:getsingle(vexid)) do task[k] = v end
     for k,v in pairs(tab) do 
         assert(k ~= "vexid", "Cannot change the vexid with set")
         task[k] = v
     end
     task.modified = os.time()
-    return task 
+    self.tasks[vexid] = Task.new(task)
+    return self.tasks[vexid] 
 end
 
 -- shows task, basically cat 'filename'
@@ -290,6 +307,8 @@ function TaskManager:resolve(vexid)
         vexid = vexid,
         taskmanager = self, 
         task = task, 
+        previous = vexdex:get(vexid) or {},
+        links = {},
     }
 
     local parents = {vextype} 
@@ -306,6 +325,7 @@ function TaskManager:resolve(vexid)
     end 
 
     self.tasks[vexid] = task
+    vexdex:unsafe_link(vexid, context.links)
     self:index(vexid)
 end
 
@@ -323,20 +343,10 @@ function TaskManager:format(vexid)
         table.insert(parents, 1, self.tasktypes[parents[1].parent])
     end
 
-    local formatted = {}
-    for k, v in pairs(task) do formatted[k] = v end
-
+    local formatted = task
     for _, parent in ipairs(parents) do
-        for subschema, instance, schemakey, instancekey in parent.schema:iterate(task) do
-            if instancekey and instance ~= nil then
-                local iso_owner = subschema:findiso('format', instance)
-                if iso_owner and iso_owner:validate(instance) then
-                    formatted[instancekey] = subschema:apply('format', instance)
-                end
-            end
-        end
+        formatted = parent.schema:apply('format', formatted)
     end
-
     return formatted
 end
 

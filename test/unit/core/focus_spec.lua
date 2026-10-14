@@ -90,4 +90,59 @@ describe("Focus", function()
         assert.equal(2, #result)
     end)
 
+    describe("tree and reversetree", function()
+
+        local root = {vexid = "root", children = {"mid"}}
+        local mid = {vexid = "mid", children = {"leaf"}, dependencies = {"other"}}
+        local leaf = {vexid = "leaf"}
+        local other = {vexid = "other"}
+        local linked = {root, mid, leaf, other}
+        local orig
+
+        local function vexids(tasks)
+            local ids = {}
+            for _, task in ipairs(tasks) do table.insert(ids, task.vexid) end
+            return ids
+        end
+
+        before_each(function()
+            orig = Focus.getalltasks
+            Focus.getalltasks = function() return linked end
+        end)
+
+        after_each(function()
+            Focus.getalltasks = orig
+        end)
+
+        it("tree collects each task and everything below it", function()
+            local f = Focus.new("root", function() return {root} end)
+            assert.same({"root", "mid", "leaf"}, vexids(f:tree('children'):get(linked)))
+        end)
+
+        it("tree tolerates tasks without the field", function()
+            local f = Focus.new("leaf", function() return {leaf, other} end)
+            assert.same({"leaf", "other"}, vexids(f:tree('children'):get(linked)))
+        end)
+
+        it("reversetree collects each task and everything above it", function()
+            local f = Focus.new("leaf", function() return {leaf} end)
+            assert.same({"leaf", "mid", "root"}, vexids(f:reversetree('children'):get(linked)))
+        end)
+
+        it("reversetree tolerates tasks without the field", function()
+            local f = Focus.new("other", function() return {other} end)
+            assert.same({"other", "mid"}, vexids(f:reversetree('dependencies'):get(linked)))
+        end)
+
+        it("backlinks collects the tasks that link to each task", function()
+            local vexdex = require 'core.vexdex'
+            vexdex:unsafe_link("mid", {"other"})
+            local f = Focus.new("other", function() return {other} end)
+            local result = vexids(f:backlinks():get(linked))
+            vexdex:unsafe_remove("mid")
+            assert.same({"mid"}, result)
+        end)
+
+    end)
+
 end)
