@@ -28,7 +28,7 @@ schema.register 'vextype' {
 
 schema.register 'statemachine' {
     prevalidate = function(self, instance, context)
-        self.extra.statemachine = statemachine.new(self.specification.states, context.previous.status)
+        self.extra.statemachine = statemachine.new(self.specification.states, context.previous.status, self.specification.initial)
         return instance or self.specification.initial
     end,
     validate = function(self, instance, context)
@@ -178,6 +178,20 @@ recipe:recipe 'abstract' {
         return task:add(taskproperties)
     end 
 }
+
+local function statusphase(phase)
+    return function()
+        return func.ifilter(focus.getalltasks(), function(t)
+            local status = task:schemaof(t.vextype, 'status').specification
+            local machine = statemachine.new(status.states, t.status, status.initial)
+            return machine[phase](machine)
+        end)
+    end
+end
+
+focus.register_focus('initial', statusphase 'isinitial')
+focus.register_focus('interim', statusphase 'isinterim')
+focus.register_focus('final', statusphase 'isfinal')
 
 -- task:field 'due' {
 --     normalise = function(value, context)

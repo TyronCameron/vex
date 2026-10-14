@@ -145,6 +145,15 @@ end
 -- Tasks and focuses
 ---------------------------------------------------
 
+function TaskManager:schemaof(vextype, field)
+    local tasktype = self.tasktypes[vextype]
+    while tasktype do
+        local _, fieldschema = tasktype.schema:get({}, {field})
+        if fieldschema then return fieldschema end
+        tasktype = self.tasktypes[tasktype.parent]
+    end
+end
+
 -- Get a table of tasks 
 function TaskManager:gettasks(focus)
     

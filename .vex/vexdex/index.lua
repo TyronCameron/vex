@@ -2,7 +2,7 @@
   cli-pass-raw-args-1 = {
     created = 1779228684,
     description = "CLI should pass raw args",
-    modified = 1792016116,
+    modified = 1783815043,
     status = "done",
     vexbody = "Fixed. `CLI:run` now keeps the original raw string it was invoked with (before verb-name removal or tokenizing) and stashes it as `args.raw` on the parsed `Arguments` table it passes to the verb - so any verb can reach the exact, unsplit text a user typed after `vex`, alongside the already-tokenized positional/flag view. No built-in verb consumes it yet; it's there for verbs (built-in or user-defined) that want to do their own parsing. Covered by a new test in `test/unit/lib/cli_spec.lua`.",
     vexid = "cli-pass-raw-args-1",
@@ -20,9 +20,9 @@
     vextype = "task"
   },
   create-linking-including-fixing-1 = {
-    created = 1783721154,
+    created = "2026-07-10 22:05:54",
     description = "Create linking, including fixing children and parent fields",
-    modified = 1792016116,
+    modified = "2026-10-13 08:49:05",
     status = "done",
     vexbody = "\
 Fixed. `children` on an abstract stays the single source of truth for parent links; there is no stored `parent` field.\
@@ -87,7 +87,7 @@ It should use the description fields, not the actual bodies.\
   ensure-verbs-return-data-1 = {
     created = 1779226066,
     description = "Ensure all verbs return data and do not print",
-    modified = 1792016116,
+    modified = 1783815043,
     status = "done",
     vexbody = "Fixed. Every verb (`show`, `focus`, `view`, `remove`, `get`, `recipe` in `core/verbs.lua`, plus the built-in `help` verb in `lib/cli.lua`) previously called `print`/`pretty.print` directly, mid-verb, instead of returning a value. They now build up a list of output lines and `return table.concat(lines, \"\\n\")` (via a small `join_lines` helper that returns `nil` rather than `\"\"` when there's nothing to say, so a verb that produced no output before still produces none). `CLI:run` already printed a verb's string/number return value once at the top level - that single `print` call reproduces the exact same terminal output as the old per-line `print`/`pretty.print` calls, since each of those always emitted its own trailing newline.\
 \
@@ -107,27 +107,27 @@ Confirmed by testing: `vex focus all --union all`, `--intersect all`, and (by th
     vextype = "task"
   },
   fix-func-map-any-1 = {
-    created = 1791929695,
+    created = "2026-10-13 22:14:55",
     description = "Fix func map and any helpers",
-    modified = 1792016116,
+    modified = "2026-10-14 22:13:55",
     status = "done",
     vexbody = "Fixed. func.map writes res[i]. count, any and all name their predicate f, so the func module is no longer shadowed. any and all are seeded with false and true, so empty tables work. count counts the values of the sparse filter result.",
     vexid = "fix-func-map-any-1",
     vextype = "task"
   },
   fix-init-requires-existing-vex-1 = {
-    created = 1783339200,
+    created = "2026-07-06 12:00:00",
     description = "Fix vex init crashing outside an existing .vex tree",
-    modified = 1792016116,
+    modified = "2026-10-14 22:13:17",
     status = "done",
     vexbody = "Fixed. src/vex.lua already skips loading plugins for init, so vex init works in a fresh directory with no .vex above it (checked by hand).",
     vexid = "fix-init-requires-existing-vex-1",
     vextype = "task"
   },
   fix-list-field-roundtrip-1 = {
-    created = 1783339200,
+    created = "2026-07-06 12:00:00",
     description = "List-typed fields never survive a disk round-trip",
-    modified = 1792016116,
+    modified = "2026-07-11 22:00:00",
     status = "done",
     vexbody = "\
 Fixed. `src/default/obsidian.lua`'s `read` now tracks the last real key seen while scanning frontmatter lines, and accumulates indented `- item` continuation lines into a table under that key, matching the multi-line array format `to_yaml_value` (the writer, same file) already produced. A written array like:\
@@ -147,18 +147,18 @@ Note: this only fixes the disk round-trip. Setting a list field directly via a C
     vextype = "task"
   },
   fix-lux-entry-point-1 = {
-    created = 1783339200,
+    created = "2026-07-06 12:00:00",
     description = "Fix lux.toml entry point mismatch",
-    modified = 1792016116,
+    modified = "2026-10-14 22:13:13",
     status = "done",
     vexbody = "Fixed. lux.toml now runs src/vex.lua, the real entry point.",
     vexid = "fix-lux-entry-point-1",
     vextype = "task"
   },
   fix-status-transition-enforcement-1 = {
-    created = 1783339200,
+    created = "2026-07-06 12:00:00",
     description = "Status state machine doesn't actually reject invalid transitions",
-    modified = 1792016116,
+    modified = "2026-10-13 08:44:38",
     status = "done",
     vexbody = "\
 Fixed. The `statemachine` schema (`core/taskdefinitions.lua`) used to cache one machine on `self.extra`, shared by every task, and seed it from `context.task.status`, which `TaskManager:set` had already overwritten. Now `set` builds a new task instead of changing the indexed one, `resolve` passes the indexed version as `context.previous`, and `prevalidate` builds a fresh `statemachine.new` from that previous status. `todo -> done` and `doing -> todo` now fail with `resolution-failed-validation`. An unchanged status is always valid, so `vex resolve all` accepts whatever is on disk, and a new task with no status gets `todo`. `lib/statemachine.lua`'s `preprocess` copies state definitions instead of mutating them, so a machine can be built more than once from the same definition. `version-01-1` got `children: []` so `vex resolve all` completes. Covered by `test/unit/core/taskdefinitions_spec.lua`, `test/unit/core/task_spec.lua` and an e2e test in `test/e2e/lifecycle_spec.lua`.\
@@ -167,9 +167,9 @@ Fixed. The `statemachine` schema (`core/taskdefinitions.lua`) used to cache one 
     vextype = "task"
   },
   fix-typed-field-cli-input-1 = {
-    created = 1783339200,
+    created = "2026-07-06 12:00:00",
     description = "Fix numeric and datetime fields failing validation from the CLI",
-    modified = 1792016116,
+    modified = "2026-07-11 22:00:00",
     status = "done",
     vexbody = "\
 Fixed. Two independent bugs were stacked here:\
@@ -185,18 +185,18 @@ Fix: added the `num` coercion, and rewrote `maybe`'s `prevalidate` to use an unc
     vextype = "task"
   },
   implement-categorical-variables-1 = {
-    created = 1783721588,
+    created = "2026-07-10 22:13:08",
     description = "Implement categorical variables",
-    modified = 1792016116,
+    modified = "2026-10-14 22:14:35",
     status = "done",
     vexbody = "Closed: no new machinery needed. A categorical variable is schema.any over constants, e.g. schema.any {'low', 'medium', 'high'}; covered by a test in schema_spec.lua. The owner field is the first one that uses it.",
     vexid = "implement-categorical-variables-1",
     vextype = "task"
   },
   implement-cli-list-fields-1 = {
-    created = 1783339200,
+    created = "2026-07-06 12:00:00",
     description = "Support list-typed fields as CLI flags",
-    modified = 1792016163,
+    modified = "2026-10-14 22:16:03",
     status = "done",
     vexbody = "Fixed for focuses: vex focus a,b,c works. from_comma_sep called a function that doesn't exist, and is now saved under its own name, so the prev focus replays it. Comma-separated list flags like --dependencies a,b are split out into their own task.",
     vexid = "implement-cli-list-fields-1",
@@ -236,9 +236,9 @@ Fix: added the `num` coercion, and rewrote `maybe`'s `prevalidate` to use an unc
     vextype = "task"
   },
   implement-focus-loader-1 = {
-    created = 1783339200,
+    created = "2026-07-06 12:00:00",
     description = "Load custom named focuses from .vex/focuses",
-    modified = 1792016261,
+    modified = "2026-10-14 22:17:41",
     status = "done",
     vexbody = "Fixed. core/extensions.lua also runs .vex/focuses/*.lua with focus (the Focus class) in scope, so a file just calls focus.register_focus('name', function() ... end). Saved focuses replay by name, so they keep working.",
     vexid = "implement-focus-loader-1",
@@ -256,9 +256,9 @@ Fix: added the `num` coercion, and rewrote `maybe`'s `prevalidate` to use an unc
     vextype = "task"
   },
   implement-owner-assignment-1 = {
-    created = 1783339200,
+    created = "2026-07-06 12:00:00",
     description = "Make owner a real, validated field",
-    modified = 1792016120,
+    modified = "2026-10-14 22:15:20",
     status = "done",
     vexbody = "Fixed. owner is an optional field on the base task type: schema.maybe {schema.any(config.users)}. List the allowed owners under users in .vex/config.lua (vex init writes users = {}). With no users configured, every owner is rejected; to make that work, schema.any over an empty list now matches nothing.",
     vexid = "implement-owner-assignment-1",
@@ -280,18 +280,18 @@ Fix: added the `num` coercion, and rewrote `maybe`'s `prevalidate` to use an unc
     vextype = "task"
   },
   implement-recipe-loader-1 = {
-    created = 1783339200,
+    created = "2026-07-06 12:00:00",
     description = "Load custom recipes from .vex/recipes",
-    modified = 1792016236,
+    modified = "2026-10-14 22:17:16",
     status = "done",
     vexbody = "Fixed. core/extensions.lua also runs .vex/recipes/*.lua with recipe in scope, so a file just calls recipe:recipe 'name' { add = function(task, taskproperties) ... end }.",
     vexid = "implement-recipe-loader-1",
     vextype = "task"
   },
   implement-task-type-loader-1 = {
-    created = 1783339200,
+    created = "2026-07-06 12:00:00",
     description = "Load custom task types from .vex/tasks",
-    modified = 1792016213,
+    modified = "2026-10-14 22:16:53",
     status = "done",
     vexbody = "Fixed. The new core/extensions.lua runs every .lua file in .vex/tasks with task and schema in scope (via setfenv), so a file just calls task:task 'bug':extends 'task' { schema = ... }. Files load in path order, so a parent type must sort before its children. A broken file throws bad-extension.",
     vexid = "implement-task-type-loader-1",
@@ -309,9 +309,9 @@ Fix: added the `num` coercion, and rewrote `maybe`'s `prevalidate` to use an unc
     vextype = "task"
   },
   implement-view-loader-1 = {
-    created = 1783339200,
+    created = "2026-07-06 12:00:00",
     description = "Load custom views from .vex/views",
-    modified = 1792016286,
+    modified = "2026-10-14 22:18:06",
     status = "done",
     vexbody = "Fixed. core/extensions.lua also runs .vex/views/*.lua with view in scope, so a file just calls view:view 'name' { display = function(focus, flags) ... end }.",
     vexid = "implement-view-loader-1",
@@ -327,9 +327,9 @@ Fix: added the `num` coercion, and rewrote `maybe`'s `prevalidate` to use an unc
     vextype = "task"
   },
   make-cli-understand-quoting-1 = {
-    created = 1783721534,
+    created = "2026-07-10 22:12:14",
     description = "make CLI understand quoting",
-    modified = 1792016116,
+    modified = "2026-07-12 00:10:43",
     status = "done",
     vexbody = "\
 Fixed. `lib/cli.lua`'s `parse_args` used to split on bare whitespace (`%S+`), so a shell-quoted flag value containing a space (e.g. `--filter status:\"not done\"`) got torn back into two tokens the moment `vex.lua` rejoined `arg` with `table.concat(arg, \" \")` and handed it back to the parser. It now tokenizes with a small POSIX-style scanner: single quotes are fully literal, double quotes allow `\\\"`/`\\\\`/`\\$`/`` \\` `` escapes, a bare backslash escapes the next character outside quotes, and a quoted segment glues onto adjacent unquoted text into one word (so `status:\"not done\"` reads back as `status:not done`, and the classic `don'\\''t` idiom reads back as `don't`).\
@@ -351,7 +351,7 @@ That alone wasn't enough, since `vex.lua` was reassembling `arg` with a plain sp
   put-normalise-validate-derive-1 = {
     created = 1779449388,
     description = "Put normalise, validate, and derive into lib.schema",
-    modified = 1792016116,
+    modified = 1779449388,
     status = "done",
     vexbody = "",
     vexid = "put-normalise-validate-derive-1",
@@ -369,25 +369,25 @@ That alone wasn't enough, since `vex.lua` was reassembling `arg` with a plain sp
   status-resolution-ensure-there-1 = {
     created = 1779228653,
     description = "Status resolution: ensure there is a way to check which statuses are complete or not",
-    modified = 1792016116,
-    status = "todo",
-    vexbody = "",
+    modified = 1792016351,
+    status = "done",
+    vexbody = "Fixed. StateMachine has isinitial, isinterim and isfinal; each defaults to the current state. Final means a sink: no transition to another state. Initial is the machine's initial state. Interim is neither. vex focus initial, interim and final apply these to each task's status, using the status machine of that task's own type (TaskManager:schemaof). They replace the unused, broken isdone.",
     vexid = "status-resolution-ensure-there-1",
     vextype = "task"
   },
   stop-optic-get-swallowing-1 = {
-    created = 1791929695,
+    created = "2026-10-13 22:14:55",
     description = "Stop optic get swallowing errors",
-    modified = 1792016116,
+    modified = "2026-10-14 22:14:24",
     status = "done",
     vexbody = "Fixed. Optic:get re-raises the coroutine's error instead of returning a partial result. Optic:set has the same problem and is tracked separately.",
     vexid = "stop-optic-get-swallowing-1",
     vextype = "task"
   },
   track-vex-tmp-folder-1 = {
-    created = 1791929695,
+    created = "2026-10-13 22:14:55",
     description = "Track vex tmp folder in git",
-    modified = 1792016116,
+    modified = "2026-10-14 22:12:55",
     status = "done",
     vexbody = "Fixed. .vex/tmp is now tracked through .vex/tmp/.gitignore, which ignores everything else in the folder.",
     vexid = "track-vex-tmp-folder-1",
