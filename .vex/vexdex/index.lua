@@ -422,13 +422,9 @@ That alone wasn't enough, since `vex.lua` was reassembling `arg` with a plain sp
   track-vex-tmp-folder-1 = {
     created = 1791929695,
     description = "Track vex tmp folder in git",
-    modified = 1792011358,
-    status = "todo",
-    vexbody = "\
-`VexDex:atomic` writes every index, focus and task update to `.vex/tmp/<random>.txt` and then renames it into place. Git doesn't track empty folders, so a fresh clone of this repo has no `.vex/tmp/`, and the first write fails with \"Could not write file intended for .../index.bin\". It looks like a write error but is only a missing folder.\
-\
-Options: track the folder with a `.gitkeep` (plus a `.gitignore` for its contents), or have `VexDex:atomic` (or `VexDex.new`) create `tmp/` when it's missing. The second option also protects user projects whose `.vex` was copied without it.\
-",
+    modified = 1792015975,
+    status = "done",
+    vexbody = "Fixed. .vex/tmp is now tracked through .vex/tmp/.gitignore, which ignores everything else in the folder.",
     vexid = "track-vex-tmp-folder-1",
     vextype = "task"
   },
