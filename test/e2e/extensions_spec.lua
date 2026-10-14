@@ -57,6 +57,20 @@ describe("vex extensions in .vex (e2e, subprocess)", function()
     assert.is_not_nil(helper.strip_ansi(result.stdout):find("Focusing on 1 vex", 1, true))
   end)
 
+  it("loads custom views from .vex/views", function()
+    extension("views/count.lua", [[
+      view:view 'count' {
+        display = function(focus, flags)
+          return #focus:get() .. ' tasks'
+        end
+      }
+    ]])
+    helper.run_vex(dir, {"add", "Only", "task"})
+    local result = helper.run_vex(dir, {"view", "all", "count"})
+    assert.are.equal(0, result.code)
+    assert.are.equal("1 tasks", helper.trim(result.stdout))
+  end)
+
   it("reports an extension that fails to load", function()
     extension("tasks/broken.lua", "this is not lua")
     local result = helper.run_vex(dir, {"focus", "all"})

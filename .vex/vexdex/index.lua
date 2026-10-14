@@ -311,11 +311,9 @@ Fix: added the `num` coercion, and rewrote `maybe`'s `prevalidate` to use an unc
   implement-view-loader-1 = {
     created = 1783339200,
     description = "Load custom views from .vex/views",
-    modified = 1792016116,
-    status = "todo",
-    vexbody = "\
-`.vex/views` is created by `vex init` but nothing reads it — the 6 built-in views (csv, tabular, json, kanban, overview, singular) are only registered in `core/view.lua`. Auto-register a view per file using the `{ display = function(focus, flags) ... end }` shape `View:view` already expects.\
-",
+    modified = 1792016286,
+    status = "done",
+    vexbody = "Fixed. core/extensions.lua also runs .vex/views/*.lua with view in scope, so a file just calls view:view 'name' { display = function(focus, flags) ... end }.",
     vexid = "implement-view-loader-1",
     vextype = "task"
   },
