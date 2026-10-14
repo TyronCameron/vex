@@ -187,9 +187,9 @@ Fix: added the `num` coercion, and rewrote `maybe`'s `prevalidate` to use an unc
   implement-categorical-variables-1 = {
     created = 1783721588,
     description = "Implement categorical variables",
-    modified = 1792011358,
-    status = "todo",
-    vexbody = "",
+    modified = 1792016075,
+    status = "done",
+    vexbody = "Closed: no new machinery needed. A categorical variable is schema.any over constants, e.g. schema.any {'low', 'medium', 'high'}; covered by a test in schema_spec.lua. The owner field is the first one that uses it.",
     vexid = "implement-categorical-variables-1",
     vextype = "task"
   },

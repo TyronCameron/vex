@@ -242,6 +242,12 @@ describe("schema", function()
         assert.falsy(s:validate(true))
     end)
 
+    it("`schema.any` of constants is a categorical variable", function()
+        local s = schema.any { 'low', 'medium', 'high' }
+        assert.truthy(s:validate('medium'))
+        assert.falsy(s:validate('urgent'))
+    end)
+
     it("`schema.all` validates when all subschemas match", function()
         local s = schema.all { schema.num, schema.rng { lower = 0, upper = 100 } }
         assert.truthy(s:validate(50))
