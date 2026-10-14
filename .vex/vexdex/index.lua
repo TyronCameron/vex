@@ -284,11 +284,9 @@ Fix: added the `num` coercion, and rewrote `maybe`'s `prevalidate` to use an unc
   implement-recipe-loader-1 = {
     created = 1783339200,
     description = "Load custom recipes from .vex/recipes",
-    modified = 1792016116,
-    status = "todo",
-    vexbody = "\
-`.vex/recipes` is created by `vex init` but nothing reads it — the only recipe that exists (`abstract`) is registered directly in `core/taskdefinitions.lua`. Auto-register a recipe per file, following the `{ add = function(task, taskproperties) ... end }` shape `Recipe:recipe` already expects.\
-",
+    modified = 1792016236,
+    status = "done",
+    vexbody = "Fixed. core/extensions.lua also runs .vex/recipes/*.lua with recipe in scope, so a file just calls recipe:recipe 'name' { add = function(task, taskproperties) ... end }.",
     vexid = "implement-recipe-loader-1",
     vextype = "task"
   },

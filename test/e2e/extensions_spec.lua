@@ -30,6 +30,20 @@ describe("vex extensions in .vex (e2e, subprocess)", function()
     assert.are_not.equal(0, helper.run_vex(dir, {"add", "Typo", "in", "docs", "--vextype", "bug", "--severity", "meh"}).code)
   end)
 
+  it("loads custom recipes from .vex/recipes", function()
+    extension("recipes/chore.lua", [[
+      recipe:recipe 'chore' {
+        add = function(task, taskproperties)
+          taskproperties.vextype = 'atom'
+          return task:add(taskproperties)
+        end
+      }
+    ]])
+    local result = helper.run_vex(dir, {"recipe", "chore", "Take", "out", "bins"})
+    assert.are.equal(0, result.code)
+    assert.is_not_nil(helper.read_file(dir .. "/" .. helper.trim(helper.strip_ansi(result.stdout)) .. ".md"):find("vextype: atom", 1, true))
+  end)
+
   it("reports an extension that fails to load", function()
     extension("tasks/broken.lua", "this is not lua")
     local result = helper.run_vex(dir, {"focus", "all"})
