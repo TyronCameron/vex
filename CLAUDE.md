@@ -65,7 +65,7 @@ Everything swappable in vex — id generation, file path layout, serialization f
 
 A small validation/transformation DSL, not a data-modeling library you'd recognize from elsewhere. Schemas are registered once by name (`Schema.register 'str' { validate = ... }`) and instantiated with a specification (`schema.atleast { field = schema.str, ... }`). Each schema type can define `prevalidate`/`validate`/`postvalidate`/`iterate`/`isos`. Composable primitives: `atleast`/`exactly`/`atmost` (table shape), `maybe`/`default`/`derive` (optionality), `vec` (arrays), `any`/`all`/`none` (union-style combinators), `formatted`/`serialized` (apply an iso before validating). `iterate` is what lets a container schema recurse into children — see `Context:descend` for how the validation path/type-stack is tracked for error messages. `apply`/`unapply` run an iso through containers the same way (e.g. formatting every element of a `vec`), only ever transform values through an iso, and only format values the iso's owner validates — so anything formatted can always be unformatted again.
 
-Task type schemas live in `src/core/taskdefinitions.lua`: base `task` (has `vexid`, `description`, `vextype`, `created`, `modified`, `status`, optional `due`/`cost`/`benefit`/`dependencies`/`owner`/`vexbody`; `owner` must be one of the config's `users`), extended by `abstract` (adds `children`), `decision` (adds `options`+`decision`), `exploration` and `atom`. Custom types would extend these via `task:task 'name':extends 'parent' { schema = ... }`, though nothing yet loads user-defined types from a project's `.vex/tasks/` folder.
+Task type schemas live in `src/core/taskdefinitions.lua`: base `task` (has `vexid`, `description`, `vextype`, `created`, `modified`, `status`, optional `due`/`cost`/`benefit`/`dependencies`/`owner`/`vexbody`; `owner` must be one of the config's `users`), extended by `abstract` (adds `children`), `decision` (adds `options`+`decision`), `exploration` and `atom`. A project adds its own types in `.vex/tasks/*.lua` with `task:task 'name':extends 'parent' { schema = ... }` (see Extensions below).
 
 ### Focus: the query layer (`src/core/focus.lua`)
 
@@ -87,11 +87,15 @@ A from-scratch verb/error registry, not a wrapper around an existing arg-parsing
 
 ### Storage (`.vex/` and `src/core/vexdex.lua`)
 
-`vex init` creates: `vexdex/` (index + focus, real), `config.lua` (the one file actually read every run, real), and `tasks/`, `recipes/`, `focuses/`, `views/`, `events/` (scaffolded extension points — folders exist, nothing reads them yet), plus `tmp/` for atomic writes. The vexdex also keeps `backlinks` (`backlinks[target][source] = true` for every `vexlink` from source to target), saved with the index. The index, backlinks and focus are each persisted twice per write: a `binser`-serialized `.bin` (what's actually read back) and a human-readable `pretty`-printed `.lua` mirror (debugging aid only, never read). `VexDex.new()` walks up from cwd looking for `.vex` and throws `not-vexed` if none is found — this happens at **module load time**, which is why plugin loading is skipped during `init` (see above).
+`vex init` creates: `vexdex/` (index + focus, real), `config.lua` (the one file actually read every run, real), `tasks/` (extensions, see below), `recipes/`, `focuses/`, `views/`, `events/` (scaffolded extension points — folders exist, nothing reads them yet), plus `tmp/` for atomic writes. The vexdex also keeps `backlinks` (`backlinks[target][source] = true` for every `vexlink` from source to target), saved with the index. The index, backlinks and focus are each persisted twice per write: a `binser`-serialized `.bin` (what's actually read back) and a human-readable `pretty`-printed `.lua` mirror (debugging aid only, never read). `VexDex.new()` walks up from cwd looking for `.vex` and throws `not-vexed` if none is found — this happens at **module load time**, which is why plugin loading is skipped during `init` (see above).
 
 ### Config (`src/core/config.lua` / `src/lib/config.lua`)
 
 `config.lua`'s `Config:loadall()` `dofile`s each registered path (currently just `.vex/config.lua`) and merges the returned table into `properties`, later paths overwriting earlier ones — there's no inheritance chain wired up yet despite that being a stated design goal. Access via metatable fallthrough (`config.taskfolder`, etc.), not a getter method.
+
+### Extensions (`src/core/extensions.lua`)
+
+Required at the end of `core.verbs`, once every manager exists. It runs each `.lua` file in the project's `.vex/tasks/` (sorted by path) through `loadfile` + `setfenv`, in an environment that exposes `task` and `schema` on top of `_G`, so a file registers things directly (`task:task 'bug':extends 'task' { ... }`) without any `require`. A file that fails to load throws `bad-extension`.
 
 ### Recipes (`src/core/recipe.lua`)
 

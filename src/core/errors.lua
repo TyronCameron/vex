@@ -166,3 +166,10 @@ cli:error "task-creation-failed" {
     end,
     hint = "Ensure that you are calling the task adding function correctly."
 }
+
+cli:error "bad-extension" {
+    function(path, err)
+        return 'Could not load the vex extension at `' .. tostring(path) .. '`: ' .. tostring(err)
+    end,
+    hint = "Fix or remove this file in your `.vex` folder."
+}
