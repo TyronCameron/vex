@@ -12,7 +12,7 @@ end
 function func.map(arr, f)
 	local res = {}
 	for i, v in pairs(arr) do
-		res[1] = f(v, i)
+		res[i] = f(v, i)
 	end
 	return res
 end
@@ -114,22 +114,22 @@ function func.prod(tab)
 	return func.reduce(tab, function(a,b) return a * b end)
 end
 
-function func.count(tab, func)
-	if not func and type(tab) == "function" then return function(x) return func.count(x, tab) end end
-	local func = func or function(x) return true end
-	return #func.filter(tab, func)
+function func.count(tab, f)
+	if not f and type(tab) == "function" then return function(x) return func.count(x, tab) end end
+	local f = f or function(x) return true end
+	return #func.values(func.filter(tab, f))
 end
 
-function func.any(tab, func)
-	if not func and type(tab) == "function" then return function(x) return func.any(x, tab) end end
-	local func = func or function(x) return x end
-	return func.reduce(func.map(tab, func), function(a,b) return a or b end)
+function func.any(tab, f)
+	if not f and type(tab) == "function" then return function(x) return func.any(x, tab) end end
+	local f = f or function(x) return x end
+	return func.reduce(func.map(tab, f), function(a,b) return a or b end, false)
 end
 
 function func.all(tab, f)
-	if not func and type(tab) == "function" then return function(x) return func.all(x, tab) end end
+	if not f and type(tab) == "function" then return function(x) return func.all(x, tab) end end
 	local f = f or function(x) return x end
-	return func.reduce(func.map(tab, f), function(a,b) return a and b end)
+	return func.reduce(func.map(tab, f), function(a,b) return a and b end, true)
 end
 
 function func.reverse(tab)

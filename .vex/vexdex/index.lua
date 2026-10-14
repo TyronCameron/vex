@@ -109,17 +109,9 @@ Confirmed by testing: `vex focus all --union all`, `--intersect all`, and (by th
   fix-func-map-any-1 = {
     created = 1791929695,
     description = "Fix func map and any helpers",
-    modified = 1792011358,
-    status = "todo",
-    vexbody = "\
-`src/lib/func.lua` has three broken helpers:\
-\
-- `func.map` writes every result to `res[1]` instead of `res[i]`, so it returns a single-element table holding the last mapped value.\
-- `func.any` and `func.all` name their predicate parameter `func`, which shadows the module, so `func.reduce(...)` inside them calls the predicate instead. `func.all` also tests `not func` before `f` is set up, which checks the module rather than the argument.\
-- `func.count` has the same `func` shadowing problem.\
-\
-`func.reduce`/`func.ireduce` now exist, so `func.sum`/`func.prod` work. Once `map` and the shadowing are fixed, `any`/`all`/`count` should work too. The `decision` task type's constraint (`core/taskdefinitions.lua`) relies on `func.any`. Needs tests in `test/unit/lib/func_spec.lua` for `map`, `any`, `all` and `count` first.\
-",
+    modified = 1792016035,
+    status = "done",
+    vexbody = "Fixed. func.map writes res[i]. count, any and all name their predicate f, so the func module is no longer shadowed. any and all are seeded with false and true, so empty tables work. count counts the values of the sparse filter result.",
     vexid = "fix-func-map-any-1",
     vextype = "task"
   },

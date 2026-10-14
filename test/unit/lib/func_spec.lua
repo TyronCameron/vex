@@ -106,6 +106,35 @@ describe("func", function()
         assert.equal(4, result[4])
     end)
 
+    -- ==================== map ====================
+
+    it("`func.map` maps every value, keeping its key", function()
+        local result = func.map({a = 1, b = 2, 3}, function(v) return v * 10 end)
+        assert.same({a = 10, b = 20, 30}, result)
+    end)
+
+    -- ==================== count / any / all ====================
+
+    it("`func.count` counts the values matching a predicate", function()
+        assert.equal(2, func.count({1, 2, 3, 4}, function(v) return v % 2 == 0 end))
+        assert.equal(3, func.count({1, 2, 3}))
+        assert.equal(1, func.count(function(v) return v > 2 end)({1, 2, 3}))
+    end)
+
+    it("`func.any` is true when some value matches", function()
+        assert.is_true(func.any({1, 2, 3}, function(v) return v == 2 end))
+        assert.is_false(func.any({1, 2, 3}, function(v) return v == 4 end))
+        assert.is_false(func.any({}, function(v) return true end))
+        assert.is_true(func.any(function(v) return v == 3 end)({1, 2, 3}))
+    end)
+
+    it("`func.all` is true when every value matches", function()
+        assert.is_true(func.all({2, 4}, function(v) return v % 2 == 0 end))
+        assert.is_false(func.all({2, 3}, function(v) return v % 2 == 0 end))
+        assert.is_true(func.all({}, function(v) return false end))
+        assert.is_false(func.all(function(v) return v > 1 end)({1, 2, 3}))
+    end)
+
     -- ==================== reverse ====================
 
     it("`func.reverse` reverses an array", function()
