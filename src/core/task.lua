@@ -12,6 +12,7 @@ local lfs = require 'lib.lfs'
 local lfsext = require 'lib.lfsext'
 local pretty = require 'lib.pretty'
 local vexdex = require 'core.vexdex'
+local focus = require 'core.focus'
 local config = require 'core.config'
 
 ------------------------------------------------
@@ -187,6 +188,20 @@ end
 -- removes task by id or focus
 function TaskManager:remove(vexid)
     assert(vexid, "remove() requires an id or focus")
+    if vexdex:get(vexid) then
+        focus.focus(vexid):backlinks():each_task(function(linker)
+            for field, value in pairs(linker) do
+                if value == vexid then
+                    linker[field] = nil
+                elseif type(value) == "table" then
+                    linker[field] = func.ifilter(value, function(link) return link ~= vexid end)
+                end
+            end
+            self.tasks[linker.vexid] = linker
+            self:resolve(linker.vexid)
+            self:write(linker.vexid)
+        end)
+    end
     self.tasks[vexid] = nil
     return vexid
 end

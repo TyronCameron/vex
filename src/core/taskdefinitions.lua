@@ -40,9 +40,6 @@ schema.register 'statemachine' {
 }
 
 schema.register 'vexlink' {
-    prevalidate = function(self, vexid)
-        if task:getsingle(vexid) then return vexid end
-    end,
     validate = function(self, vexid)
         return type(vexid) == "string" and task:getsingle(vexid), "Cannot find " .. tostring(vexid) .. " in the task manager "
     end,

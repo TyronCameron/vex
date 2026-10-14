@@ -124,20 +124,16 @@ cli:verb "add" {
 cli:verb "remove" {
     function(args)
         local f = focus_pop_args(args)
-        local linked = f:backlinks():notin(f):get()
         local lines = {}
         f:each(function(vexid)
-            task:delete(vexid)
             task:remove(vexid)
+            task:delete(vexid)
             table.insert(lines, pretty.any(vexid))
         end)
         vexdex:setfocus(nil)
         focus.focus('all'):each(function(vexid)
             task:resolve(vexid)
         end)
-        for _, linkedtask in ipairs(linked) do
-            task:write(linkedtask.vexid)
-        end
         return join_lines(lines)
     end,
     doc = "Deletes tasks in the focus, and drops your focus. Runs resolve on all linked tasks thereafter. Not recommended for regular use.",

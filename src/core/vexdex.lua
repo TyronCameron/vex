@@ -56,6 +56,11 @@ function VexDex:unsafe_link(vexid, links)
     return self
 end
 
+function VexDex:link(vexid, links)
+    self:unsafe_link(vexid, links)
+    return self:writeindex()
+end
+
 function VexDex:get(vexid)
     return self.index[vexid]
 end

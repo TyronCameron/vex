@@ -439,14 +439,6 @@ describe("schema", function()
         assert.same({at = "2026-07-10 09:00:00"}, s:apply('format', {at = "2026-07-10 09:00:00"}))
     end)
 
-    it("`schema.vec` drops elements that prevalidate to nil", function()
-        schema.register '__spec_dropodd' {
-            prevalidate = function(self, instance) if instance % 2 == 0 then return instance end end,
-            validate = function() return true end
-        }
-        assert.same({2, 4}, schema.vec { schema.__spec_dropodd }:prevalidate({1, 2, 3, 4, 5}))
-    end)
-
     it("postvalidate passes through wrapper schemas to their subschema", function()
         schema.register '__spec_double' {
             postvalidate = function(self, instance) return instance * 2 end,

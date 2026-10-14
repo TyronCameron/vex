@@ -489,15 +489,7 @@ Schema.register 'vec' {
             end
         end)
     end,
-    prevalidate = function(self, instance, context)
-        if type(instance) ~= "table" then return instance end
-        local result = {}
-        for childschema, childinstance in self:iterate(instance, context) do
-            local value = childschema:prevalidate(childinstance, context)
-            if value ~= nil then table.insert(result, value) end
-        end
-        return result
-    end,
+    prevalidate = prevalidate_children,
     validate = function(self, instance, context)
         if type(instance) ~= "table" then 
             return false, "Instance is not a table so also not a vec"

@@ -63,7 +63,7 @@ describe("vexdex", function()
 
     it("writeindex persists backlinks alongside the index", function()
         local binser = require 'lib.binser'
-        vexdex:unsafe_link("__persisted", {"__target"}):writeindex()
+        vexdex:link("__persisted", {"__target"})
         local saved = binser.readFile(vexdex:vexpath("vexdex/backlinks.bin"))[1]
         assert.truthy(saved["__target"]["__persisted"])
         vexdex:remove("__persisted")
