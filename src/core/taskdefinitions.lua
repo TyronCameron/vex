@@ -1,6 +1,7 @@
 local task = require "core.task"
 local recipe = require 'core.recipe'
 local focus = require 'core.focus'
+local config = require 'core.config'
 local cli = require 'lib.cli'
 local func = require 'lib.func'
 local pretty = require 'lib.pretty'
@@ -120,6 +121,7 @@ task:task 'task' {
         due = schema.maybe {schema.formatted {schema.datetime}},
         cost = schema.maybe {schema.num},
         benefit = schema.maybe {schema.num},
+        owner = schema.maybe {schema.any(config.users)},
     }
 }
 

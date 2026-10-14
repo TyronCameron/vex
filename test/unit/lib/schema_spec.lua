@@ -248,6 +248,11 @@ describe("schema", function()
         assert.falsy(s:validate('urgent'))
     end)
 
+    it("`schema.any` of nothing matches nothing", function()
+        assert.falsy(schema.any {}:validate('anything'))
+        assert.falsy(schema.any(nil):validate('anything'))
+    end)
+
     it("`schema.all` validates when all subschemas match", function()
         local s = schema.all { schema.num, schema.rng { lower = 0, upper = 100 } }
         assert.truthy(s:validate(50))

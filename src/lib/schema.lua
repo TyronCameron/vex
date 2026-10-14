@@ -403,7 +403,9 @@ Schema.register 'any' {
         end)
     end,
     validate = function(self, instance, context) 
-        if self.specification == nil or func.isempty(self.specification) then return true end
+        if self.specification == nil or func.isempty(self.specification) then 
+            return false, "Any schema is empty -- so trivially nothing can match"
+        end
         for childschema, childinstance in self:iterate(instance, context) do 
             if childschema:validate(childinstance, context) then return true end 
         end 

@@ -14,7 +14,8 @@ local default_config = {
     plugins = {
         vexations = true,
         inline = true
-    }
+    },
+    users = {}
 }
 
 local function setup_vex_dir(path)

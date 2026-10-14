@@ -10,5 +10,6 @@ return {
     inline = true,
     vexations = true
   },
-  taskfolder = "vexdoc/vex"
+  taskfolder = "vexdoc/vex",
+  users = {}
 }
