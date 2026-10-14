@@ -178,13 +178,13 @@ local namedfocus = {}
 function namedfocus.from_comma_sep(focusname)
     local focuses = {}
     for name in focusname:gmatch("([^,]+)") do
-        table.insert(focuses, namedfocus.get_named_focus(name:match("^%s*(.-)%s*$")))
+        table.insert(focuses, namedfocus.focus(name:match("^%s*(.-)%s*$")))
     end
     local result = table.remove(focuses, 1)
     for _, f in ipairs(focuses) do
         result = result:union(f)
     end
-    return result
+    return Focus.new(focusname, function(tasks) return result:get(tasks) end)
 end 
 
 function namedfocus.from_name(focusname)

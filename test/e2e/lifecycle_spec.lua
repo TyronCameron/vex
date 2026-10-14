@@ -84,6 +84,22 @@ describe("vex CLI lifecycle (e2e, subprocess)", function()
     assert.is_not_nil(helper.strip_ansi(view_result.stdout):find("milk", 1, true))
   end)
 
+  it("vex focus takes a comma-separated list of vexids and saves it (implement-cli-list-fields-1)", function()
+    helper.run_vex(dir, {"init"})
+    local milk = helper.trim(helper.run_vex(dir, {"add", "Buy", "milk"}).stdout)
+    local eggs = helper.trim(helper.run_vex(dir, {"add", "Buy", "eggs"}).stdout)
+    helper.run_vex(dir, {"add", "Buy", "bread"})
+
+    local focus_result = helper.run_vex(dir, {"focus", milk .. "," .. eggs})
+    assert.are.equal(0, focus_result.code)
+    assert.is_not_nil(helper.strip_ansi(focus_result.stdout):find("Focusing on 2 vexes", 1, true))
+
+    local shown = helper.strip_ansi(helper.run_vex(dir, {"get"}).stdout)
+    assert.is_not_nil(shown:find(milk, 1, true))
+    assert.is_not_nil(shown:find(eggs, 1, true))
+    assert.is_nil(shown:find("bread", 1, true))
+  end)
+
   it("vex recipe abstract creates linked tasks", function()
     helper.run_vex(dir, {"init"})
     local result = helper.run_vex(

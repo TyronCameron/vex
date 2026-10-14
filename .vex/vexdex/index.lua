@@ -196,11 +196,9 @@ Fix: added the `num` coercion, and rewrote `maybe`'s `prevalidate` to use an unc
   implement-cli-list-fields-1 = {
     created = 1783339200,
     description = "Support list-typed fields as CLI flags",
-    modified = 1792016116,
-    status = "todo",
-    vexbody = "\
-`children`, `dependencies`, and `options` are all `schema.vec` fields, but a CLI flag value from `lib.cli`'s `Arguments:flags()` is always a plain string. Since `vec`'s validate requires an actual table, `vex add/set ... --dependencies some-task` currently fails resolution instead of creating a link. Found while writing the CLI reference and Frontmatter schema wiki pages, which currently have to tell people to edit the YAML list by hand instead. Needs some parsing convention (repeated flags? colon or comma separated?) that turns a flag value into a list before validation runs.\
-",
+    modified = 1792016163,
+    status = "done",
+    vexbody = "Fixed for focuses: vex focus a,b,c works. from_comma_sep called a function that doesn't exist, and is now saved under its own name, so the prev focus replays it. Comma-separated list flags like --dependencies a,b are split out into their own task.",
     vexid = "implement-cli-list-fields-1",
     vextype = "task"
   },
