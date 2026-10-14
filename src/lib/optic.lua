@@ -417,7 +417,8 @@ function Optic:get(data, func)
     end)
     while true do
         local ok, val = coroutine.resume(co)
-        if not ok or coroutine.status(co) == "dead" then break end
+        if not ok then error(val, 0) end
+        if coroutine.status(co) == "dead" then break end
         table.insert(results, val)
     end
     return results

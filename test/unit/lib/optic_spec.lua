@@ -131,4 +131,11 @@ describe("Optic", function()
         assert.equal(0, #result)
     end)
 
+    -- ==================== errors ====================
+
+    it("`Optic:get` re-raises an error from inside the optic", function()
+        local broken = Optic.traverse(function() error("boom", 0) end)
+        assert.has_error(function() broken:get({}) end, "boom")
+    end)
+
 end)
