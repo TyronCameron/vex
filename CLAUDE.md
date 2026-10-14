@@ -19,7 +19,7 @@ just test-e2e                    # busted --run=e2e (black-box, shells out to sr
 
 There is no build step (LuaJIT runs `.lua` sources directly) and no linter configured.
 
-`lux.toml`'s `[run] args = ["src/main.lua"]` is **stale** — that file doesn't exist. The real entrypoint is `src/vex.lua`, launched through the `src/vex` shell wrapper (`src/vex.bat` on Windows), which resolves its own directory and sets `package.path`/`package.cpath` before `require 'vex'`. Use `./src/vex`, not `lux run`.
+The entrypoint is `src/vex.lua` (also `lux.toml`'s `[run] args`), launched through the `src/vex` shell wrapper (`src/vex.bat` on Windows), which resolves its own directory and sets `package.path`/`package.cpath` before `require 'vex'`.
 
 ### Running a single test
 

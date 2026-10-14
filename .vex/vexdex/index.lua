@@ -163,11 +163,9 @@ Note: this only fixes the disk round-trip. Setting a list field directly via a C
   fix-lux-entry-point-1 = {
     created = 1783339200,
     description = "Fix lux.toml entry point mismatch",
-    modified = 1792011358,
-    status = "todo",
-    vexbody = "\
-`lux.toml`'s `[run] args = [\"src/main.lua\"]` points at a file that doesn't exist. The real entry point is `src/vex.lua` (invoked through the `src/vex` wrapper). Update `lux.toml` so `lux run` works, or document why it deliberately doesn't yet.\
-",
+    modified = 1792015993,
+    status = "done",
+    vexbody = "Fixed. lux.toml now runs src/vex.lua, the real entry point.",
     vexid = "fix-lux-entry-point-1",
     vextype = "task"
   },
