@@ -195,6 +195,17 @@ describe("func", function()
         assert.equal(10, result[1])
     end)
 
+    -- ==================== last ====================
+
+    it("`func.last` returns the last n elements", function()
+        assert.same({20, 30}, func.last({10, 20, 30}, 2))
+        assert.same({10, 20, 30}, func.last({10, 20, 30}, 5))
+    end)
+
+    it("`func.last` defaults to 1 element", function()
+        assert.same({30}, func.last({10, 20, 30}))
+    end)
+
     -- ==================== rep ====================
 
     it("`func.rep` repeats a table n times", function()

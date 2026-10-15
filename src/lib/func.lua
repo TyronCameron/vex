@@ -182,7 +182,7 @@ end
 function func.last(tab, n)
 	if not n and type(tab) == "function" then return function(x) return func.last(x, tab) end end
 	n = n or 1 
-	return func.slice(tab, #tab - n, #tab)
+	return func.slice(tab, #tab - n + 1, #tab)
 end
 
 function func.rep(tab, n)

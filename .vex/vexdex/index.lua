@@ -127,8 +127,8 @@ Confirmed by testing: `vex focus all --union all`, `--intersect all`, and (by th
   fix-func-last-off-1 = {
     created = 1792016374,
     description = "Fix func last off by one",
-    modified = 1792055801,
-    status = "todo",
+    modified = 1792056713,
+    status = "done",
     vexbody = "`func.last(tab, n)` (`src/lib/func.lua`) slices from `#tab - n`, returning `n + 1` elements (e.g. `func.last({1,2,3})` gives `{2,3}`). It should start at `#tab - n + 1`. Needs a test in `func_spec.lua`.",
     vexid = "fix-func-last-off-1",
     vextype = "task"
