@@ -112,4 +112,33 @@ describe("vex grouped task paths (e2e, subprocess)", function()
     assert.is_true(exists("todo/" .. top .. ".md"))
     assert.is_true(exists(top .. "/todo/" .. leaf .. ".md"))
   end)
+
+  it("finds a file that was moved by hand", function()
+    local task = add("Dragged", "by", "hand")
+    os.execute("mkdir " .. helper.shell_escape(dir .. "/elsewhere") .. " && mv " .. helper.shell_escape(dir .. "/" .. task .. ".md") .. " " .. helper.shell_escape(dir .. "/elsewhere/"))
+
+    local res = helper.run_vex(dir, {"show", task})
+    assert.are.equal(0, res.code, res.stderr)
+    assert.truthy(helper.strip_ansi(res.stdout):find(task, 1, true))
+    assert.are.equal(0, helper.run_vex(dir, {"set", task, "--status", "doing"}).code)
+  end)
+
+  it("finds files with no recorded path once groupby is switched on", function()
+    local task = add("Recorded", "before", "grouping")
+    os.remove(dir .. "/.vex/vexdex/paths.bin")
+    groupby {"status"}
+
+    local res = helper.run_vex(dir, {"show", task})
+    assert.are.equal(0, res.code, res.stderr)
+    assert.truthy(helper.strip_ansi(res.stdout):find(task, 1, true))
+  end)
+
+  it("focuses on the tasks in a folder or file", function()
+    groupby {"status"}
+    local first = add("First", "todo", "task")
+    add("Second", "todo", "task")
+
+    assert.truthy(helper.strip_ansi(helper.run_vex(dir, {"focus", "todo/"}).stdout):find("Focusing on 2 vexes", 1, true))
+    assert.truthy(helper.strip_ansi(helper.run_vex(dir, {"focus", "todo/" .. first .. ".md"}).stdout):find("Focusing on 1 vex", 1, true))
+  end)
 end)

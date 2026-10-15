@@ -384,9 +384,17 @@ function TaskManager:getrelpath(vexid)
     return taskpath.path(self, config, vexid)
 end
 
+-- finds a task's file anywhere in the taskfolder by its filename
+function TaskManager:find(vexid)
+    local filename = self:getrelpath(vexid):match("[^/]*$")
+    for _, path in ipairs(lfsext.walk(taskroot())) do
+        if path:match("[^/]*$") == filename then return path end
+    end
+end
+
 -- reads a file from disk and adds it to memory
 function TaskManager:read(vexid)
-    return self:readfrompath(self:getcurrentpath(vexid))
+    return self:readfrompath(self:getcurrentpath(vexid)) or self:readfrompath(self:find(vexid))
 end
 
 -- reads a file from disk and adds it to memory by path
@@ -425,7 +433,8 @@ function TaskManager:move(vexid)
         os.rename(from, to)
         tidy(from)
     end
-    vexdex:locate(vexid, self:getrelpath(vexid))
+    local relpath = self:getrelpath(vexid)
+    if vexdex.paths[vexid] ~= relpath then vexdex:locate(vexid, relpath) end
     return vexid
 end
 

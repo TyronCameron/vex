@@ -2,6 +2,7 @@
 local func = require 'lib.func'
 local optic = require 'lib.optic'
 local lfs = require 'lib.lfs'
+local lfsext = require 'lib.lfsext'
 local cli = require 'lib.cli'
 local pretty = require 'lib.pretty'
 local vexdex = require 'core.vexdex'
@@ -195,33 +196,17 @@ function namedfocus.from_vexid(vexid)
     return Focus.new(vexid, function() return {vexdex.index[vexid]} end)
 end 
 
-function namedfocus.from_file_path(path)
-    local vexid = path:gsub(".*/", "")
-    return Focus.new(path, function() return {vexdex.index[vexid]} end)
-end 
-
-local function recursive_dir_walk(path, paths)
-    paths = paths or {}
-    local files = lfs.readdir(path)
-    for _, file in ipairs(files) do 
-        if lfs.attributes(file, "mode") == "file" then 
-            table.insert(paths, file)
-        elseif lfs.attributes(file, "mode") == "directory" then 
-            recursive_dir_walk(file, paths)
-        end 
-    end 
-    return paths
+local function indexed(path)
+    return vexdex.index[path:match("([^/]+)%.[^./]*$")]
 end
+
+function namedfocus.from_file_path(path)
+    return Focus.new(path, function() return {indexed(path)} end)
+end 
 
 function namedfocus.from_folder_path(path)
     return Focus.new(path, function() 
-        local tasks = {}
-        -- walk through path recursively 
-        local files = recursive_dir_walk(path)
-        for _, file in ipairs(files) do 
-            table.insert(tasks, namedfocus.from_file_path(path))
-        end 
-        return tasks
+        return func.imap(lfsext.walk(path), indexed)
     end)
 end 
 
