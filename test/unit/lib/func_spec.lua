@@ -180,6 +180,15 @@ describe("func", function()
         assert.equal(0, #result)
     end)
 
+    it("`func.slice` with one index slices from the start", function()
+        assert.same({1, 2}, func.slice({1, 2, 3}, 2))
+    end)
+
+    it("`func.slice` understands 'begin' and 'end'", function()
+        assert.same({2, 3}, func.slice({1, 2, 3}, 2, "end"))
+        assert.same({1, 2}, func.slice({1, 2, 3}, "begin", 2))
+    end)
+
     -- ==================== first ====================
 
     it("`func.first` returns the first n elements", function()

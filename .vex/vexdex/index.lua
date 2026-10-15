@@ -145,8 +145,8 @@ Confirmed by testing: `vex focus all --union all`, `--intersect all`, and (by th
   fix-func-slice-default-1 = {
     created = 1792016374,
     description = "Fix func slice default end",
-    modified = 1792055801,
-    status = "todo",
+    modified = 1792056736,
+    status = "done",
     vexbody = "`func.slice(tab, n)` (`src/lib/func.lua`) is meant to default `end_idx` to `start_idx` (and `start_idx` to 1). But it compares `end_idx < start_idx` before that, so a nil `end_idx` raises \"attempt to compare nil with number\". The `\"end\"`/`\"begin\"` string forms also hit numeric comparisons. Move the defaulting first and add tests.",
     vexid = "fix-func-slice-default-1",
     vextype = "task"

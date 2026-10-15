@@ -159,13 +159,13 @@ end
 
 function func.slice(tab, start_idx, end_idx)
 	if not end_idx and type(tab) == "number" then return function(x) return func.slice(x, tab, start_idx) end end
-	if end_idx < start_idx then return {} end 
 	if not end_idx then 
 		end_idx = start_idx
 		start_idx = 1
 	end
 	if end_idx == "end" or end_idx > #tab then end_idx = #tab end 
 	if start_idx == "begin" or start_idx < 1 then start_idx = 1 end 
+	if end_idx < start_idx then return {} end 
 	local new_tab = {}
 	for i=start_idx,end_idx do
 		table.insert(new_tab, tab[i])
