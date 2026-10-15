@@ -82,7 +82,7 @@ Pluggable display formats over a focus's task list: `csv`, `tabular`, `json`, `k
 A from-scratch verb/error registry, not a wrapper around an existing arg-parsing library:
 - `cli:verb "name" { fn, doc = ..., args = ..., example = ... }` registers a command.
 - `cli:error "name" { fn, hint = ... }` registers a named error type; `cli:throw('name', ...)` prints the formatted message + hint to stderr and `os.exit(1)`. All of vex's user-facing errors go through this (see `src/core/errors.lua` for the full catalog) — prefer adding a new named error over an ad hoc `assert`/`error` when something is a user-facing failure rather than a bug.
-- Argument parsing (`parse_args`) splits `"verb --flag value positional"` into a mixed array/hash `Arguments` table; `--flag` with no following value (or one starting with `--`) becomes a boolean-ish presence flag. **Flag values can't contain spaces** — the CLI reassembles `arg` with `table.concat(arg, " ")` and re-splits on whitespace, so shell-quoted multi-word flag values get torn apart. This is why `due` uses `T` as a date/time separator instead of a space.
+- Argument parsing (`parse_args`) splits `"verb --flag value positional"` into a mixed array/hash `Arguments` table; `--flag` with no following value (or one starting with `--`) becomes a boolean-ish presence flag. `CLI:rawify` re-quotes each shell word and `tokenize` honours that quoting, so a quoted value with spaces (`--due "2026-08-01 09:00:00"`, `--vexbody "two words"`) stays one value; `due` also accepts `T` as the date/time separator.
 - `cli:call` wraps every verb body in `xpcall`, converting any Lua error into a `bug` CLI error with a traceback — a verb function crashing doesn't need its own top-level pcall.
 
 ### Storage (`.vex/` and `src/core/vexdex.lua`)
@@ -134,7 +134,8 @@ If a new concept appears and it isn't clear which of these it belongs to, stop a
 ## Repo preferences
 
 - **Track work with vex.** This repo's backlog is vex tasks in `vexdoc/vex/`. When new work or a new bug comes up, raise it with `./src/vex add <description>`, then give the task a body that fully describes it.
-- **Close out vex tasks** that a change addresses: move the status through `doing` to `done` with `./src/vex set <vexid> --status ...` and replace the body with a short "Fixed." summary.
+- **Close out vex tasks** that a change addresses: move the status through `doing` to `done` with `./src/vex set <vexid> --status ...`. Append to a task's body rather than overwriting it, and only when there is something worth adding: a `done` status already says the task was fixed.
+- **Fix docs directly.** When documentation (e.g. this file) is stale or wrong, fix it in place instead of raising a vex task for it.
 - **Design before writing code.** Work out which module each piece belongs to (see "Where code goes"), then write the code.
 - **Tests come first.** Before starting, make sure the existing tests are enough to validate the change. If they aren't, design and write the tests that need to pass, and see them fail.
 - **No explanatory comments.**

@@ -145,7 +145,6 @@ describe("vex CLI lifecycle (e2e, subprocess)", function()
   it("vex add resolves --due/--cost/--benefit instead of failing validation (fix-typed-field-cli-input-1)", function()
     helper.run_vex(dir, {"init"})
 
-    -- "T" separator avoids the CLI's separately-tracked space-splitting flag bug.
     local add_result = helper.run_vex(dir, {
       "add", "Buy", "new", "mug",
       "--cost", "15", "--benefit", "40", "--due", "2026-08-01T09:00:00",
