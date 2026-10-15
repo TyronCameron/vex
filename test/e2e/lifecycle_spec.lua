@@ -84,6 +84,48 @@ describe("vex CLI lifecycle (e2e, subprocess)", function()
     assert.is_not_nil(helper.strip_ansi(view_result.stdout):find("milk", 1, true))
   end)
 
+  it("vex focus takes a comma-separated list of vexids and saves it (implement-cli-list-fields-1)", function()
+    helper.run_vex(dir, {"init"})
+    local milk = helper.trim(helper.run_vex(dir, {"add", "Buy", "milk"}).stdout)
+    local eggs = helper.trim(helper.run_vex(dir, {"add", "Buy", "eggs"}).stdout)
+    helper.run_vex(dir, {"add", "Buy", "bread"})
+
+    local focus_result = helper.run_vex(dir, {"focus", milk .. "," .. eggs})
+    assert.are.equal(0, focus_result.code)
+    assert.is_not_nil(helper.strip_ansi(focus_result.stdout):find("Focusing on 2 vexes", 1, true))
+
+    local shown = helper.strip_ansi(helper.run_vex(dir, {"get"}).stdout)
+    assert.is_not_nil(shown:find(milk, 1, true))
+    assert.is_not_nil(shown:find(eggs, 1, true))
+    assert.is_nil(shown:find("bread", 1, true))
+  end)
+
+  it("vex focus initial/interim/final split tasks by status phase (status-resolution-ensure-there-1)", function()
+    helper.run_vex(dir, {"init"})
+    helper.run_vex(dir, {"add", "Not", "started"})
+    local doing = helper.trim(helper.run_vex(dir, {"add", "In", "progress"}).stdout)
+    local done = helper.trim(helper.run_vex(dir, {"add", "All", "finished"}).stdout)
+    helper.run_vex(dir, {"add", "Also", "not", "started"})
+    helper.run_vex(dir, {"set", doing, "--status", "doing"})
+    helper.run_vex(dir, {"set", done, "--status", "doing"})
+    helper.run_vex(dir, {"set", done, "--status", "done"})
+
+    local function phase(name)
+      local result = helper.run_vex(dir, {"focus", name})
+      assert.are.equal(0, result.code)
+      return helper.strip_ansi(result.stdout), helper.strip_ansi(helper.run_vex(dir, {"get"}).stdout)
+    end
+
+    local initial = phase("initial")
+    assert.is_not_nil(initial:find("Focusing on 2 vexes", 1, true))
+    local interim, interimids = phase("interim")
+    assert.is_not_nil(interim:find("Focusing on 1 vex", 1, true))
+    assert.is_not_nil(interimids:find(doing, 1, true))
+    local final, finalids = phase("final")
+    assert.is_not_nil(final:find("Focusing on 1 vex", 1, true))
+    assert.is_not_nil(finalids:find(done, 1, true))
+  end)
+
   it("vex recipe abstract creates linked tasks", function()
     helper.run_vex(dir, {"init"})
     local result = helper.run_vex(
@@ -103,7 +145,6 @@ describe("vex CLI lifecycle (e2e, subprocess)", function()
   it("vex add resolves --due/--cost/--benefit instead of failing validation (fix-typed-field-cli-input-1)", function()
     helper.run_vex(dir, {"init"})
 
-    -- "T" separator avoids the CLI's separately-tracked space-splitting flag bug.
     local add_result = helper.run_vex(dir, {
       "add", "Buy", "new", "mug",
       "--cost", "15", "--benefit", "40", "--due", "2026-08-01T09:00:00",

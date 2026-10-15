@@ -12,7 +12,7 @@ end
 function func.map(arr, f)
 	local res = {}
 	for i, v in pairs(arr) do
-		res[1] = f(v, i)
+		res[i] = f(v, i)
 	end
 	return res
 end
@@ -114,22 +114,22 @@ function func.prod(tab)
 	return func.reduce(tab, function(a,b) return a * b end)
 end
 
-function func.count(tab, func)
-	if not func and type(tab) == "function" then return function(x) return func.count(x, tab) end end
-	local func = func or function(x) return true end
-	return #func.filter(tab, func)
+function func.count(tab, f)
+	if not f and type(tab) == "function" then return function(x) return func.count(x, tab) end end
+	local f = f or function(x) return true end
+	return #func.values(func.filter(tab, f))
 end
 
-function func.any(tab, func)
-	if not func and type(tab) == "function" then return function(x) return func.any(x, tab) end end
-	local func = func or function(x) return x end
-	return func.reduce(func.map(tab, func), function(a,b) return a or b end)
+function func.any(tab, f)
+	if not f and type(tab) == "function" then return function(x) return func.any(x, tab) end end
+	local f = f or function(x) return x end
+	return func.reduce(func.map(tab, f), function(a,b) return a or b end, false)
 end
 
 function func.all(tab, f)
-	if not func and type(tab) == "function" then return function(x) return func.all(x, tab) end end
+	if not f and type(tab) == "function" then return function(x) return func.all(x, tab) end end
 	local f = f or function(x) return x end
-	return func.reduce(func.map(tab, f), function(a,b) return a and b end)
+	return func.reduce(func.map(tab, f), function(a,b) return a and b end, true)
 end
 
 function func.reverse(tab)
@@ -159,13 +159,13 @@ end
 
 function func.slice(tab, start_idx, end_idx)
 	if not end_idx and type(tab) == "number" then return function(x) return func.slice(x, tab, start_idx) end end
-	if end_idx < start_idx then return {} end 
 	if not end_idx then 
 		end_idx = start_idx
 		start_idx = 1
 	end
 	if end_idx == "end" or end_idx > #tab then end_idx = #tab end 
 	if start_idx == "begin" or start_idx < 1 then start_idx = 1 end 
+	if end_idx < start_idx then return {} end 
 	local new_tab = {}
 	for i=start_idx,end_idx do
 		table.insert(new_tab, tab[i])
@@ -182,7 +182,7 @@ end
 function func.last(tab, n)
 	if not n and type(tab) == "function" then return function(x) return func.last(x, tab) end end
 	n = n or 1 
-	return func.slice(tab, #tab - n, #tab)
+	return func.slice(tab, #tab - n + 1, #tab)
 end
 
 function func.rep(tab, n)

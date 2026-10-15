@@ -19,7 +19,7 @@ just test-e2e                    # busted --run=e2e (black-box, shells out to sr
 
 There is no build step (LuaJIT runs `.lua` sources directly) and no linter configured.
 
-`lux.toml`'s `[run] args = ["src/main.lua"]` is **stale** — that file doesn't exist. The real entrypoint is `src/vex.lua`, launched through the `src/vex` shell wrapper (`src/vex.bat` on Windows), which resolves its own directory and sets `package.path`/`package.cpath` before `require 'vex'`. Use `./src/vex`, not `lux run`.
+The entrypoint is `src/vex.lua` (also `lux.toml`'s `[run] args`), launched through the `src/vex` shell wrapper (`src/vex.bat` on Windows), which resolves its own directory and sets `package.path`/`package.cpath` before `require 'vex'`.
 
 ### Running a single test
 
@@ -65,11 +65,11 @@ Everything swappable in vex — id generation, file path layout, serialization f
 
 A small validation/transformation DSL, not a data-modeling library you'd recognize from elsewhere. Schemas are registered once by name (`Schema.register 'str' { validate = ... }`) and instantiated with a specification (`schema.atleast { field = schema.str, ... }`). Each schema type can define `prevalidate`/`validate`/`postvalidate`/`iterate`/`isos`. Composable primitives: `atleast`/`exactly`/`atmost` (table shape), `maybe`/`default`/`derive` (optionality), `vec` (arrays), `any`/`all`/`none` (union-style combinators), `formatted`/`serialized` (apply an iso before validating). `iterate` is what lets a container schema recurse into children — see `Context:descend` for how the validation path/type-stack is tracked for error messages. `apply`/`unapply` run an iso through containers the same way (e.g. formatting every element of a `vec`), only ever transform values through an iso, and only format values the iso's owner validates — so anything formatted can always be unformatted again.
 
-Task type schemas live in `src/core/taskdefinitions.lua`: base `task` (has `vexid`, `description`, `vextype`, `created`, `modified`, `status`, optional `due`/`cost`/`benefit`/`dependencies`/`vexbody`), extended by `abstract` (adds `children`), `decision` (adds `options`+`decision`), `exploration` and `atom`. Custom types would extend these via `task:task 'name':extends 'parent' { schema = ... }`, though nothing yet loads user-defined types from a project's `.vex/tasks/` folder.
+Task type schemas live in `src/core/taskdefinitions.lua`: base `task` (has `vexid`, `description`, `vextype`, `created`, `modified`, `status`, optional `due`/`cost`/`benefit`/`dependencies`/`owner`/`vexbody`; `owner` must be one of the config's `users`), extended by `abstract` (adds `children`), `decision` (adds `options`+`decision`), `exploration` and `atom`. A project adds its own types in `.vex/tasks/*.lua` with `task:task 'name':extends 'parent' { schema = ... }` (see Extensions below).
 
 ### Focus: the query layer (`src/core/focus.lua`)
 
-A `Focus` is a lazy, composable, **persisted** query over the task index (`.vex/vexdex/focus.bin`). Every operation (`select`, `filter`, `fuzzy`, `between`, `tree`, `reversetree`, `backlinks`, set ops) returns a new `Focus` and records itself in `self.operations`, so a focus can be serialized/deserialized and replayed. Named focuses: `all`, `none`, `updated`, `prev` (the default when a verb's `[focus]` arg is omitted), a bare `vexid`, or a file/folder path. `vex focus <name> [--flags]` builds and saves one; most other verbs (`show`, `get`, `set`, `view`, `resolve`, `remove`) read the saved focus back when no argument is given.
+A `Focus` is a lazy, composable, **persisted** query over the task index (`.vex/vexdex/focus.bin`). Every operation (`select`, `filter`, `fuzzy`, `between`, `tree`, `reversetree`, `backlinks`, set ops) returns a new `Focus` and records itself in `self.operations`, so a focus can be serialized/deserialized and replayed. Named focuses: `all`, `none`, `updated`, `initial`/`interim`/`final` (by where each task's `status` sits in its type's state machine: the initial state, a sink with no outgoing transitions, or neither), `prev` (the default when a verb's `[focus]` arg is omitted), a bare `vexid`, or a file/folder path. `vex focus <name> [--flags]` builds and saves one; most other verbs (`show`, `get`, `set`, `view`, `resolve`, `remove`) read the saved focus back when no argument is given.
 
 Known-broken: the binary set-op flags (`--union`/`--intersect`/`--xor`/`--notin`/`--onlyin`) crash through the CLI because `Focus.parse` passes the flag's raw string value straight into e.g. `Focus:union(focus)`, which expects a `Focus` object, not a name to resolve.
 
@@ -82,20 +82,24 @@ Pluggable display formats over a focus's task list: `csv`, `tabular`, `json`, `k
 A from-scratch verb/error registry, not a wrapper around an existing arg-parsing library:
 - `cli:verb "name" { fn, doc = ..., args = ..., example = ... }` registers a command.
 - `cli:error "name" { fn, hint = ... }` registers a named error type; `cli:throw('name', ...)` prints the formatted message + hint to stderr and `os.exit(1)`. All of vex's user-facing errors go through this (see `src/core/errors.lua` for the full catalog) — prefer adding a new named error over an ad hoc `assert`/`error` when something is a user-facing failure rather than a bug.
-- Argument parsing (`parse_args`) splits `"verb --flag value positional"` into a mixed array/hash `Arguments` table; `--flag` with no following value (or one starting with `--`) becomes a boolean-ish presence flag. **Flag values can't contain spaces** — the CLI reassembles `arg` with `table.concat(arg, " ")` and re-splits on whitespace, so shell-quoted multi-word flag values get torn apart. This is why `due` uses `T` as a date/time separator instead of a space.
+- Argument parsing (`parse_args`) splits `"verb --flag value positional"` into a mixed array/hash `Arguments` table; `--flag` with no following value (or one starting with `--`) becomes a boolean-ish presence flag. `CLI:rawify` re-quotes each shell word and `tokenize` honours that quoting, so a quoted value with spaces (`--due "2026-08-01 09:00:00"`, `--vexbody "two words"`) stays one value; `due` also accepts `T` as the date/time separator.
 - `cli:call` wraps every verb body in `xpcall`, converting any Lua error into a `bug` CLI error with a traceback — a verb function crashing doesn't need its own top-level pcall.
 
 ### Storage (`.vex/` and `src/core/vexdex.lua`)
 
-`vex init` creates: `vexdex/` (index + focus, real), `config.lua` (the one file actually read every run, real), and `tasks/`, `recipes/`, `focuses/`, `views/`, `events/` (scaffolded extension points — folders exist, nothing reads them yet), plus `tmp/` for atomic writes. The vexdex also keeps `backlinks` (`backlinks[target][source] = true` for every `vexlink` from source to target), saved with the index. The index, backlinks and focus are each persisted twice per write: a `binser`-serialized `.bin` (what's actually read back) and a human-readable `pretty`-printed `.lua` mirror (debugging aid only, never read). `VexDex.new()` walks up from cwd looking for `.vex` and throws `not-vexed` if none is found — this happens at **module load time**, which is why plugin loading is skipped during `init` (see above).
+`vex init` creates: `vexdex/` (index + focus, real), `config.lua` (the one file actually read every run, real), `tasks/`, `recipes/`, `focuses/`, `views/` (extensions, see below), `events/` (scaffolded extension point — the folder exists, nothing reads it yet), plus `tmp/` for atomic writes. The vexdex also keeps `backlinks` (`backlinks[target][source] = true` for every `vexlink` from source to target), saved with the index. The index, backlinks and focus are each persisted twice per write: a `binser`-serialized `.bin` (what's actually read back) and a human-readable `pretty`-printed `.lua` mirror (debugging aid only, never read). `VexDex.new()` walks up from cwd looking for `.vex` and throws `not-vexed` if none is found — this happens at **module load time**, which is why plugin loading is skipped during `init` (see above).
 
 ### Config (`src/core/config.lua` / `src/lib/config.lua`)
 
 `config.lua`'s `Config:loadall()` `dofile`s each registered path (currently just `.vex/config.lua`) and merges the returned table into `properties`, later paths overwriting earlier ones — there's no inheritance chain wired up yet despite that being a stated design goal. Access via metatable fallthrough (`config.taskfolder`, etc.), not a getter method.
 
+### Extensions (`src/core/extensions.lua`)
+
+Required at the end of `core.verbs`, once every manager exists. It runs each `.lua` file in the project's `.vex/tasks/`, `.vex/recipes/`, `.vex/focuses/` then `.vex/views/` (each sorted by path) through `loadfile` + `setfenv`, in an environment that exposes `task`, `recipe`, `focus` (the `Focus` class: `focus.register_focus(name, get)`), `view` and `schema` on top of `_G`, so a file registers things directly (`task:task 'bug':extends 'task' { ... }`) without any `require`. A file that fails to load throws `bad-extension`.
+
 ### Recipes (`src/core/recipe.lua`)
 
-A recipe is a named shortcut producing a task with some fields pre-filled (`Recipe:recipe 'name' { add = function(task, taskproperties) ... end }`). Only `abstract` ships (`src/core/taskdefinitions.lua`), which forces `vextype = 'abstract'`. `Recipe:add` only resolves/writes the **single** vexid the recipe's `add` function returns — a recipe that calls `task:add` multiple times to create several tasks only persists the last one to disk (see `vexdoc/Home.md`'s recipe example for the full explanation). Project-specific recipes from `.vex/recipes/` aren't loaded yet.
+A recipe is a named shortcut producing a task with some fields pre-filled (`Recipe:recipe 'name' { add = function(task, taskproperties) ... end }`). Only `abstract` ships (`src/core/taskdefinitions.lua`), which forces `vextype = 'abstract'`. `Recipe:add` only resolves/writes the **single** vexid the recipe's `add` function returns — a recipe that calls `task:add` multiple times to create several tasks only persists the last one to disk (see `vexdoc/Home.md`'s recipe example for the full explanation). Projects add their own in `.vex/recipes/*.lua` (see Extensions).
 
 ### Singletons
 
@@ -130,7 +134,8 @@ If a new concept appears and it isn't clear which of these it belongs to, stop a
 ## Repo preferences
 
 - **Track work with vex.** This repo's backlog is vex tasks in `vexdoc/vex/`. When new work or a new bug comes up, raise it with `./src/vex add <description>`, then give the task a body that fully describes it.
-- **Close out vex tasks** that a change addresses: move the status through `doing` to `done` with `./src/vex set <vexid> --status ...` and replace the body with a short "Fixed." summary.
+- **Close out vex tasks** that a change addresses: move the status through `doing` to `done` with `./src/vex set <vexid> --status ...`. Append to a task's body rather than overwriting it, and only when there is something worth adding: a `done` status already says the task was fixed.
+- **Fix docs directly.** When documentation (e.g. this file) is stale or wrong, fix it in place instead of raising a vex task for it.
 - **Design before writing code.** Work out which module each piece belongs to (see "Where code goes"), then write the code.
 - **Tests come first.** Before starting, make sure the existing tests are enough to validate the change. If they aren't, design and write the tests that need to pass, and see them fail.
 - **No explanatory comments.**
