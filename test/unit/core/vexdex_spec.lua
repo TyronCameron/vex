@@ -69,6 +69,15 @@ describe("vexdex", function()
         vexdex:remove("__persisted")
     end)
 
+    it("writeindex persists paths and unsafe_remove clears them", function()
+        local binser = require 'lib.binser'
+        vexdex:locate("__placed", "group/__placed.md")
+        local saved = binser.readFile(vexdex:vexpath("vexdex/paths.bin"))[1]
+        assert.equal("group/__placed.md", saved["__placed"])
+        vexdex:remove("__placed")
+        assert.is_nil(vexdex.paths["__placed"])
+    end)
+
     it("index is clean after add then remove", function()
         vexdex:unsafe_add("__clean-test", "/tmp/clean.md")
         vexdex:unsafe_remove("__clean-test")

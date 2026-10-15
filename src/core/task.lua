@@ -263,6 +263,9 @@ function TaskManager:reindexall()
         vexdex:unsafe_add(vexid, self.tasks[vexid])
     end
     vexdex:writeindex()
+    for _, vexid in ipairs(vexids) do
+        self:move(vexid)
+    end
     return self 
 end
 
@@ -350,9 +353,31 @@ function TaskManager:format(vexid)
     return formatted
 end
 
+local function taskroot()
+    return vexdex.path .. '/' .. config.taskfolder
+end
+
+local function dirname(path)
+    return path:match("^(.*)/")
+end
+
+local function tidy(path)
+    local dir = dirname(path)
+    while #dir > #taskroot() and os.remove(dir) do
+        dir = dirname(dir)
+    end
+end
+
 -- get the path that a task should live at
 function TaskManager:getabspath(vexid)
-    return vexdex.path .. '/' .. config.taskfolder .. '/' .. self:getrelpath(vexid)
+    return taskroot() .. '/' .. self:getrelpath(vexid)
+end
+
+-- get the path that a task's file currently lives at
+function TaskManager:getcurrentpath(vexid)
+    local relpath = vexdex.paths[vexid]
+    if not relpath then return self:getabspath(vexid) end
+    return taskroot() .. '/' .. relpath
 end
 
 function TaskManager:getrelpath(vexid)
@@ -361,7 +386,7 @@ end
 
 -- reads a file from disk and adds it to memory
 function TaskManager:read(vexid)
-    return self:readfrompath(self:getabspath(vexid))
+    return self:readfrompath(self:getcurrentpath(vexid))
 end
 
 -- reads a file from disk and adds it to memory by path
@@ -369,6 +394,7 @@ function TaskManager:readfrompath(path)
     local ok, task = pcall(taskformat.read, path)
     if ok and task then 
         self.tasks[task.vexid] = Task.new(task)
+        vexdex:unsafe_locate(task.vexid, path:sub(#taskroot() + 2))
         self:index(task.vexid)
         return task
     else 
@@ -379,17 +405,40 @@ end
 -- writes a file from disk
 function TaskManager:write(vexid)
     local task = self:format(vexid)
-    vexdex:atomic(self:getabspath(vexid), function(path)
+    local path = self:getcurrentpath(vexid)
+    lfs.mkdir(dirname(path))
+    vexdex:atomic(path, function(path)
         taskformat.write(path, sortdata(frontmatter(task)), body(task))
     end)
     self:index(vexid)
+    focus.focus(vexid):tree('children'):each(function(descendant)
+        self:move(descendant)
+    end)
+    return vexid
+end
+
+-- moves a file to the path it should live at
+function TaskManager:move(vexid)
+    local from, to = self:getcurrentpath(vexid), self:getabspath(vexid)
+    if from ~= to then
+        lfs.mkdir(dirname(to))
+        os.rename(from, to)
+        tidy(from)
+    end
+    vexdex:locate(vexid, self:getrelpath(vexid))
     return vexid
 end
 
 -- deletes a file from disk
 function TaskManager:delete(vexid)
-    os.remove(self:getabspath(vexid))
+    local descendants = focus.focus(vexid):tree('children'):get()
+    local path = self:getcurrentpath(vexid)
+    os.remove(path)
     self:unindex(vexid)
+    tidy(path)
+    for i = 2, #descendants do
+        self:move(descendants[i].vexid)
+    end
     return vexid
 end
 
