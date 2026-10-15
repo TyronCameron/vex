@@ -1,53 +1,60 @@
-local busted = require 'busted'
 local view = require 'core.view'
+local focus = require 'core.focus'
+local task = require 'core.task'
 
-local function make_focus(tasks)
-    return { get = function() return tasks end }
+local function create(properties)
+    local vexid = task:add(properties)
+    task:resolve(vexid)
+    task:write(vexid)
+    return vexid
 end
 
 describe("view", function()
 
-    local sample_tasks = {
-        {vexid = "hello-world-1", title = "Hello World", status = "todo"},
-    }
+    local child, parent, dependent
 
-    it("singleton loads and is truthy", function()
-        assert.truthy(view)
+    setup(function()
+        child = create({description = "viewed child task", cost = "5", due = "2026-08-01 09:00:00"})
+        parent = create({description = "viewed parent abstract", vextype = 'abstract', children = {child}})
+        dependent = create({description = "viewed dependent atom", vextype = 'atom', dependencies = {child}})
+        task:set(dependent, {status = 'doing'})
+        task:resolve(dependent)
+        task:write(dependent)
     end)
 
-    it("view.views is a table", function()
-        assert.is_table(view.views)
+    local function crashes(focusname, skip)
+        local crashed = {}
+        for name in pairs(view.views) do
+            if name ~= skip then
+                local ok, result = pcall(view.display, view, name, focus.focus(focusname), {})
+                if not ok or type(result) ~= "string" then crashed[name] = tostring(result) end
+            end
+        end
+        return crashed
+    end
+
+    it("renders every view for a mix of task types, links and statuses", function()
+        assert.same({}, crashes('all', 'singular'))
     end)
 
-    it("known views csv, tabular, json are registered", function()
-        assert.truthy(view.views["csv"])
-        assert.truthy(view.views["tabular"])
-        assert.truthy(view.views["json"])
+    it("renders every view for an empty focus (fix-views-crashing-empty-1)", function()
+        assert.same({}, crashes('none'))
     end)
 
-    it("a custom view can be registered and retrieved", function()
-        view:view("__specview") {
-            display = function(focus, flags) return "specresult" end
-        }
-        assert.truthy(view.views["__specview"])
+    it("renders the singular view for each linked task", function()
+        for _, vexid in ipairs({child, parent, dependent}) do
+            local result = view:display('singular', focus.focus(vexid), {})
+            assert.truthy(result:find(vexid:upper(), 1, true))
+        end
     end)
 
-    it("display 'json' returns a string", function()
-        local result = view:display("json", make_focus(sample_tasks), {})
-        assert.is_string(result)
-    end)
-
-    it("display 'json' output contains the task vexid", function()
-        local result = view:display("json", make_focus(sample_tasks), {})
-        assert.truthy(result:find("hello-world-1", 1, true))
-    end)
-
-    it("display of a custom view calls its display function", function()
-        view:view("__specview2") {
-            display = function(focus, flags) return "custom-output" end
-        }
-        local result = view:display("__specview2", make_focus({}), {})
-        assert.equal("custom-output", result)
+    it("lists every task in the csv and json views", function()
+        for _, name in ipairs({'csv', 'json'}) do
+            local result = view:display(name, focus.focus('all'), {})
+            for _, vexid in ipairs({child, parent, dependent}) do
+                assert.truthy(result:find(vexid, 1, true), name .. " is missing " .. vexid)
+            end
+        end
     end)
 
 end)

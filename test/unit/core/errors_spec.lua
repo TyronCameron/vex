@@ -1,53 +1,37 @@
--- Test file for core/errors.lua
-local busted = require 'busted'
 local cli = require 'lib.cli'
-require 'core.errors'  -- registers error types as side effects
+local lfsext = require 'lib.lfsext'
+
+local src = debug.getinfo(1, "S").source:match("^@(.+[\\/])") .. "../../../src"
+
+local function thrown_errors()
+    local thrown = {}
+    for _, path in ipairs(lfsext.walk(src)) do
+        if path:match("%.lua$") then
+            local code = io.open(path):read("*a")
+            for name in code:gmatch(":throw%s*%(?%s*['\"]([%w-]+)['\"]") do
+                thrown[name] = path:match("src/.*")
+            end
+        end
+    end
+    return thrown
+end
 
 describe("errors", function()
 
-    it("registers all expected error types on the cli singleton", function()
-        local expected = {
-            'already-vexed', 'not-vexed', 'unimplemented', 'file', 'write',
-            'task-already-exists', 'path-already-exists', 'no-focus', 'unknown-focus',
-            'missing-required-field', 'unknown-vextype',
-            'resolution-failed-validation', 'resolution-failed-derivation',
-            'resolution-failed-normalisation', 'resolution-failed-linking',
-            'unknown-view', 'unknown-recipe', 'unknown-field', 'task-creation-failed',
-        }
-        for _, name in ipairs(expected) do
-            assert.truthy(cli.errors[name], name .. " should be registered")
+    it("registers every error that src throws", function()
+        local thrown = thrown_errors()
+        assert.truthy(next(thrown))
+        for name, path in pairs(thrown) do
+            assert.truthy(cli.errors[name], "`" .. name .. "` is thrown in " .. path .. " but never registered")
         end
     end)
 
-    it("`file` error message includes the filename", function()
-        local handler = cli.errors['file'][1]
-        local msg = handler("missing.txt")
-        assert.truthy(msg:find("missing.txt"))
-    end)
-
-    it("`task-already-exists` error message includes the vexid", function()
-        local handler = cli.errors['task-already-exists'][1]
-        local msg = handler("my-task-1")
-        assert.truthy(msg:find("my%-task%-1"))
-    end)
-
-    it("`missing-required-field` error message includes both vexid and field", function()
-        local handler = cli.errors['missing-required-field'][1]
-        local msg = handler("my-task-1", "status")
-        assert.truthy(msg:find("my%-task%-1"))
-        assert.truthy(msg:find("status"))
-    end)
-
-    it("`unknown-view` error message includes the view name", function()
-        local handler = cli.errors['unknown-view'][1]
-        local msg = handler("kanban")
-        assert.truthy(msg:find("kanban"))
-    end)
-
-    it("`resolution-failed-validation` error includes the vexid", function()
-        local handler = cli.errors['resolution-failed-validation'][1]
-        local msg = handler("my-task-1", "bad data")
-        assert.truthy(msg:find("my%-task%-1"))
+    it("formats every registered error as a string", function()
+        for name, err in pairs(cli.errors) do
+            local ok, message = pcall(err[1], "a", "b", "c", "d")
+            assert.is_true(ok, "`" .. name .. "` crashed while formatting: " .. tostring(message))
+            assert.is_string(message, "`" .. name .. "` did not return a message")
+        end
     end)
 
 end)

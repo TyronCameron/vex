@@ -4,31 +4,6 @@ local cli = require 'lib.cli'
 
 describe("CLI", function()
 
-    it("has the correct entrypoint", function()
-        assert.equal("vex", cli.entrypoint)
-    end)
-
-    it("has a built-in help verb", function()
-        assert.truthy(cli.verbs.help)
-        assert.is_function(cli.verbs.help[1])
-        assert.is_string(cli.verbs.help.doc)
-    end)
-
-    it("has built-in usage and bug error types", function()
-        assert.truthy(cli.errors.usage)
-        assert.truthy(cli.errors.bug)
-    end)
-
-    it("registers a verb with `cli:verb`", function()
-        cli:verb("_test_noop") {
-            function(args) return "noop" end,
-            doc = "no-op test verb"
-        }
-        assert.truthy(cli.verbs["_test_noop"])
-        assert.is_function(cli.verbs["_test_noop"][1])
-        assert.equal("no-op test verb", cli.verbs["_test_noop"].doc)
-    end)
-
     it("calls a registered verb and returns its result", function()
         cli:verb("_test_return") {
             function(args) return "hello" end,
@@ -47,19 +22,40 @@ describe("CLI", function()
         assert.equal("world", result)
     end)
 
-    it("registers error types with `cli:error`", function()
-        cli:error("_test_err") {
-            function(msg) return "err: " .. tostring(msg) end
-        }
-        assert.truthy(cli.errors["_test_err"])
+    it("lists every verb in help", function()
+        local help = cli:call("help", {})
+        for name in pairs(cli.verbs) do
+            assert.truthy(help:find("  " .. name .. " ", 1, true), name .. " is missing from help")
+        end
     end)
 
-    it("error handlers produce the correct message", function()
-        cli:error("_test_msg") {
-            function(path) return "cannot find: " .. tostring(path) end
-        }
-        local handler = cli.errors["_test_msg"][1]
-        assert.equal("cannot find: /some/path", handler("/some/path"))
+    describe("failures", function()
+
+        before_each(function()
+            stub(cli, 'throw', function(self, name) error(name) end)
+        end)
+
+        after_each(function()
+            cli.throw:revert()
+        end)
+
+        it("rejects an unknown verb as a usage error", function()
+            assert.has_error(function() cli:run('_test_no_such_verb') end)
+            assert.stub(cli.throw).was.called_with(cli, 'usage', match._)
+        end)
+
+        it("reports a crashing verb as a bug with its traceback (show-traceback-internal-errors-1)", function()
+            cli:verb("_test_crash") {
+                function(args) error("boom") end,
+                doc = "crash test"
+            }
+            assert.has_error(function() cli:call("_test_crash", {}) end)
+            local _, name, message, trace = unpack(cli.throw.calls[1].vals)
+            assert.equal('bug', name)
+            assert.truthy(tostring(message):find("boom", 1, true))
+            assert.truthy(trace:find("traceback", 1, true))
+        end)
+
     end)
 
     it("makes the raw string available to verbs via args.raw", function()

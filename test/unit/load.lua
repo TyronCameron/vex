@@ -1,3 +1,5 @@
+assert(jit, "unit tests must run under LuaJIT, the runtime vex ships with")
+
 local script_dir = debug.getinfo(1, "S").source:match("^@(.+[\\/])")
 local src_dir = script_dir .. "../../src/"
 package.path = src_dir .. "?.lua;" .. src_dir .. "?/init.lua;" .. package.path

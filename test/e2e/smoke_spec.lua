@@ -1,0 +1,139 @@
+local spec_dir = debug.getinfo(1, "S").source:match("^@(.+[\\/])")
+package.path = spec_dir .. "?.lua;" .. package.path
+local helper = require 'helper'
+local vex = helper.vex
+
+local CHILD = "child-task-here-1"
+local PARENT = "parent-abstract-here-1"
+local DEPENDENT = "dependent-atom-here-1"
+local DECISION = "choose-car-1"
+
+local verbs = {
+  {"help"},
+  {"help", "add"},
+  {"show", CHILD},
+  {"show", "all"},
+  {"get", "all", "--status", "--cost"},
+  {"set", DEPENDENT, "--cost", "4"},
+  {"resolve", "all"},
+  {"resolve", CHILD},
+  {"focus", "all"},
+  {"focus"},
+  {"view"},
+  {"recipe"},
+  {"recipe", "abstract", "Smoke", "recipe", "abstract"},
+  {"add", "Smoke", "added", "task"},
+  {"add", "Explore", "some", "options", "--vextype", "exploration", bug = "fix-exploration-tasks-crashing-1"},
+  {"remove", "smoke-added-task-1"},
+  {"autocomplete", "bash"},
+  {"suggest", "2", "vex", "view", bug = "fix-vex-suggest-crashing-1"},
+}
+
+local views = {
+  {"view", "all", "csv"},
+  {"view", "all", "tabular"},
+  {"view", "all", "json"},
+  {"view", "all", "kanban"},
+  {"view", "all", "overview", bug = "stop-indexing-unresolved-linked-1"},
+  {"view", CHILD, "singular", bug = "stop-indexing-unresolved-linked-1"},
+  {"view", PARENT, "singular", bug = "stop-indexing-unresolved-linked-1"},
+  {"view", DEPENDENT, "singular", bug = "stop-indexing-unresolved-linked-1"},
+  {"view", DECISION, "singular", bug = "stop-indexing-unresolved-linked-1"},
+  {"view", "none", "csv", bug = "fix-views-crashing-empty-1"},
+  {"view", "none", "kanban", bug = "fix-views-crashing-empty-1"},
+}
+
+local focuses = {
+  {"focus", "none"},
+  {"focus", "updated", bug = "stop-indexing-unresolved-linked-1"},
+  {"focus", "initial"},
+  {"focus", "interim"},
+  {"focus", "final"},
+  {"focus", "prev"},
+  {"focus", CHILD .. "," .. PARENT},
+  {"focus", "all", "--filter", "status:todo"},
+  {"focus", "all", "--fuzzy", "description:child"},
+  {"focus", "all", "--select", "description"},
+  {"focus", PARENT, "--tree", "children"},
+  {"focus", CHILD, "--reversetree", "children"},
+  {"focus", CHILD, "--complement"},
+  {"focus", "all", "--filter", "vextype:task", "--select", "cost"},
+  {"focus", "all", "--between", "cost:1:9", bug = "fix-between-focus-crashing-1"},
+  {"focus", "all", "--union", "none", bug = "fix-focus-binary-ops-cli-1"},
+  {"focus", "all", "--intersect", "all", bug = "fix-focus-binary-ops-cli-1"},
+  {"focus", "all", "--xor", "none", bug = "fix-focus-binary-ops-cli-1"},
+  {"focus", "all", "--notin", "none", bug = "fix-focus-binary-ops-cli-1"},
+  {"focus", "all", "--onlyin", "all", bug = "fix-focus-binary-ops-cli-1"},
+  {"focus", "./" .. CHILD .. ".md", count = 1, bug = "fix-file-path-focuses-1"},
+  {"focus", "./", bug = "fix-folder-path-focuses-1"},
+}
+
+local function name(row)
+  local words = {}
+  for _, word in ipairs(row) do table.insert(words, word) end
+  return "vex " .. table.concat(words, " ") .. (row.bug and " (" .. row.bug .. ")" or "")
+end
+
+describe("vex smoke test: every verb, view and focus (e2e, subprocess)", function()
+  local dir
+
+  setup(function()
+    dir = helper.project()
+    vex(dir, "add", "Child", "task", "here", "--cost", "5", "--benefit", "3", "--due", "2026-08-01T09:00:00")
+    vex(dir, "add", "Parent", "abstract", "here", "--vextype", "abstract")
+    vex(dir, "add", "Dependent", "atom", "here", "--vextype", "atom")
+    vex(dir, "add", "Choose", "a", "car")
+    helper.link(dir, PARENT, "children", {CHILD})
+    helper.link(dir, DEPENDENT, "dependencies", {CHILD})
+    local decision = dir .. "/" .. DECISION .. ".md"
+    helper.write_file(decision, helper.read_file(decision):gsub("vextype: task", "vextype: decision"))
+    helper.link(dir, DECISION, "options", {CHILD, DEPENDENT})
+    vex(dir, "resolve", "all")
+    vex(dir, "set", DEPENDENT, "--status", "doing")
+  end)
+
+  teardown(function()
+    helper.rm_tmp_dir(dir)
+  end)
+
+  for _, group in ipairs({verbs, views, focuses}) do
+    for _, row in ipairs(group) do
+      it(name(row), function()
+        local out = vex(dir, unpack(row))
+        if row.count then
+          assert.truthy(out:find("Focusing on " .. row.count .. " vex", 1, true), out)
+        end
+      end)
+    end
+  end
+
+  it("vex init", function()
+    local fresh = helper.make_tmp_dir()
+    vex(fresh, "init")
+    helper.rm_tmp_dir(fresh)
+  end)
+
+  local function covered(position)
+    local seen = {init = true}
+    for _, group in ipairs({verbs, views, focuses}) do
+      for _, row in ipairs(group) do
+        if row[position] then seen[row[position]] = true end
+      end
+    end
+    return seen
+  end
+
+  it("exercises every verb that vex help lists", function()
+    local seen = covered(1)
+    for verb in vex(dir, "help"):gmatch("\n  (%S+)") do
+      assert.truthy(seen[verb], "add a row for `vex " .. verb .. "` to smoke_spec.lua")
+    end
+  end)
+
+  it("exercises every view that vex view lists", function()
+    local seen = covered(3)
+    for view in vex(dir, "view"):gmatch("\n%s+(%S+)") do
+      assert.truthy(seen[view], "add a row for the `" .. view .. "` view to smoke_spec.lua")
+    end
+  end)
+end)

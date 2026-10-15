@@ -102,7 +102,39 @@ function M.run_vex(cwd, args)
   local stderr = slurp(stderr_path)
   local exit_code = tonumber(M.trim(slurp(exit_path))) or -1
 
+  if stderr:find("Internal error", 1, true) then
+    error("vex " .. table.concat(args, " ") .. " crashed:\n" .. M.strip_ansi(stderr), 2)
+  end
+
   return { stdout = stdout, stderr = stderr, code = exit_code }
+end
+
+function M.vex(cwd, ...)
+  local args = {...}
+  local result = M.run_vex(cwd, args)
+  if result.code ~= 0 then
+    error("vex " .. table.concat(args, " ") .. " failed:\n" .. M.strip_ansi(result.stderr), 2)
+  end
+  return M.trim(M.strip_ansi(result.stdout))
+end
+
+function M.vex_fails(cwd, expected, ...)
+  local args = {...}
+  local result = M.run_vex(cwd, args)
+  local stderr = M.strip_ansi(result.stderr)
+  if result.code == 0 then
+    error("vex " .. table.concat(args, " ") .. " should have failed", 2)
+  end
+  if not stderr:find(expected, 1, true) then
+    error("vex " .. table.concat(args, " ") .. " failed without '" .. expected .. "':\n" .. stderr, 2)
+  end
+  return stderr
+end
+
+function M.project()
+  local dir = M.make_tmp_dir()
+  M.vex(dir, "init")
+  return dir
 end
 
 local function shell_ok(cmd)
@@ -124,6 +156,48 @@ function M.read_file(path)
   local content = f:read("*a")
   f:close()
   return content
+end
+
+function M.write_file(path, content)
+  local f = assert(io.open(path, "w"))
+  f:write(content)
+  f:close()
+end
+
+function M.copy_tree(from, to)
+  assert(os.execute("mkdir -p " .. M.shell_escape(to) .. " && cp -R " .. M.shell_escape(from) .. "/. " .. M.shell_escape(to)))
+end
+
+function M.link(dir, vexid, field, targets)
+  local path = dir .. "/" .. vexid .. ".md"
+  local items = {field .. ":"}
+  for _, target in ipairs(targets) do
+    table.insert(items, '  - "[[' .. target .. ']]"')
+  end
+  local content = M.read_file(path)
+    :gsub("\n" .. field .. ": %[%]\n", "\n", 1)
+    :gsub("\nstatus: ", "\n" .. table.concat(items, "\n") .. "\nstatus: ", 1)
+  M.write_file(path, content)
+end
+
+local function unquote(value)
+  return (value:gsub('^"(.*)"$', "%1"))
+end
+
+function M.frontmatter(path)
+  local fields, last = {}, nil
+  local yaml = assert(M.read_file(path), "no task file at " .. path):match("^%-%-%-\n(.-)\n%-%-%-")
+  for line in (yaml .. "\n"):gmatch("(.-)\n") do
+    local key, value = line:match("^([%w_]+):%s*(.-)%s*$")
+    local item = line:match("^%s+%- (.-)%s*$")
+    if key then
+      fields[key] = (value == "" or value == "[]") and {} or unquote(value)
+      last = key
+    elseif item and last then
+      table.insert(fields[last], unquote(item))
+    end
+  end
+  return fields
 end
 
 return M

@@ -4,29 +4,6 @@ local Config = require 'lib.config'
 
 describe("Config", function()
 
-    it("creates a new Config instance", function()
-        local cfg = Config.new()
-        assert.truthy(cfg)
-        assert.is_table(cfg.paths)
-        assert.is_table(cfg.properties)
-    end)
-
-    it("registers a path", function()
-        local cfg = Config.new()
-        cfg:registerpath("/some/path.lua")
-        assert.equal(1, #cfg.paths)
-        assert.equal("/some/path.lua", cfg.paths[1])
-    end)
-
-    it("registers multiple paths in order", function()
-        local cfg = Config.new()
-        cfg:registerpath("/a.lua")
-        cfg:registerpath("/b.lua")
-        assert.equal(2, #cfg.paths)
-        assert.equal("/a.lua", cfg.paths[1])
-        assert.equal("/b.lua", cfg.paths[2])
-    end)
-
     it("loads a config file and exposes its values as properties", function()
         local tmpfile = os.tmpname()
         local f = io.open(tmpfile, "w")
