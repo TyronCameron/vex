@@ -4,6 +4,7 @@ local optic = require 'lib.optic'
 local lfs = require 'lib.lfs'
 local cli = require 'lib.cli'
 local pretty = require 'lib.pretty'
+local statemachine = require 'lib.statemachine'
 local vexdex = require 'core.vexdex'
 
 local Focus = {
@@ -40,6 +41,21 @@ end)
 Focus.register_focus("updated", function() 
     return func.filter(Focus.getalltasks(), function(task) return task.modified > vexdex.modified end) 
 end)
+
+local function statusphase(phase)
+    return function()
+        local task = require 'core.task'
+        return func.ifilter(Focus.getalltasks(), function(t)
+            local status = task:schemaof(t.vextype, 'status').specification
+            local machine = statemachine.new(status.states, t.status, status.initial)
+            return machine[phase](machine)
+        end)
+    end
+end
+
+Focus.register_focus("initial", statusphase 'isinitial')
+Focus.register_focus("interim", statusphase 'isinterim')
+Focus.register_focus("final", statusphase 'isfinal')
 
 -----------------------------------------
 -- Binary Operations 

@@ -179,20 +179,6 @@ recipe:recipe 'abstract' {
     end 
 }
 
-local function statusphase(phase)
-    return function()
-        return func.ifilter(focus.getalltasks(), function(t)
-            local status = task:schemaof(t.vextype, 'status').specification
-            local machine = statemachine.new(status.states, t.status, status.initial)
-            return machine[phase](machine)
-        end)
-    end
-end
-
-focus.register_focus('initial', statusphase 'isinitial')
-focus.register_focus('interim', statusphase 'isinterim')
-focus.register_focus('final', statusphase 'isfinal')
-
 -- task:field 'due' {
 --     normalise = function(value, context)
 --         if type(value) == "number" then return math.floor(value) end
