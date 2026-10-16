@@ -267,10 +267,6 @@ function TaskManager:reindexall()
     end), function(vexid) return vexid end)
 
     for _, vexid in ipairs(vexids) do
-        vexdex:unsafe_add(vexid, self.tasks[vexid])
-    end
-
-    for _, vexid in ipairs(vexids) do
         self:read(vexid)
         self:resolve(vexid)
         vexdex:unsafe_add(vexid, self.tasks[vexid])
@@ -363,6 +359,22 @@ function TaskManager:format(vexid)
     return formatted
 end
 
+function TaskManager:unformat(task)
+    local vextype = self.tasktypes[task.vextype]
+    if not vextype then return task end
+
+    local parents = {vextype}
+    while parents[1].parent do
+        table.insert(parents, 1, self.tasktypes[parents[1].parent])
+    end
+
+    local unformatted = task
+    for _, parent in ipairs(parents) do
+        unformatted = parent.schema:unapply('format', unformatted)
+    end
+    return unformatted
+end
+
 -- get the path that a task should live at
 function TaskManager:getabspath(vexid)
     return vexdex.path .. '/' .. config.taskfolder .. '/' .. self:getrelpath(vexid)
@@ -381,7 +393,9 @@ end
 function TaskManager:readfrompath(path)
     local ok, task = pcall(taskformat.read, path)
     if ok and task then 
+        task = self:unformat(task)
         self.tasks[task.vexid] = Task.new(task)
+        self:index(task.vexid)
         return task
     else 
         return nil 

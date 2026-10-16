@@ -376,6 +376,12 @@ describe("schema", function()
         assert.truthy(s:validate(result))
     end)
 
+    it("`unapply` leaves a value that is already unformatted untouched", function()
+        local s = schema.atleast { at = schema.formatted { schema.datetime } }
+        assert.same({at = 60}, s:unapply('format', {at = 60}))
+        assert.same({at = 60}, s:unapply('format', s:apply('format', {at = 60})))
+    end)
+
     it("`schema.maybe{schema.formatted{schema.datetime}}` converts a datetime string end-to-end (covers `due`)", function()
         local s = schema.maybe { schema.formatted { schema.datetime } }
         local result = s:prevalidate("2026-07-10 09:00:00")

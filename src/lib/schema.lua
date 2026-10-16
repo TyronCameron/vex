@@ -591,6 +591,7 @@ Schema.register 'date' {
     isos = {
         format = {
             backward = function(self, value)
+                if type(value) ~= "string" then return value end
                 local y, mo, d = value:match("^(%d%d%d%d)-(%d%d)-(%d%d)$")
                 if not y then return end
                 return os.time({
@@ -614,6 +615,7 @@ Schema.register 'datetime' {
     isos = {
         format = {
             backward = function(self, value)
+                if type(value) ~= "string" then return value end
                 local y, mo, d, h, mi, s = value:match("^(%d%d%d%d)-(%d%d)-(%d%d)[T ](%d%d):(%d%d):(%d%d)$")
                 if not y then return end
                 return os.time({

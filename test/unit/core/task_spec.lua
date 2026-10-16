@@ -111,13 +111,14 @@ describe("task", function()
 
     end)
 
-    it("reading a task from disk leaves its indexed version untouched", function()
-        local vexid = create({description = "indexed then read task"})
-        local indexed = vexdex:get(vexid)
+    it("reading a task from disk indexes it unformatted", function()
+        local dependency = create({description = "read dependency task"})
+        local vexid = create({description = "indexed then read task", dependencies = {dependency}})
+        vexdex:unsafe_remove(vexid)
         task.tasks[vexid] = nil
         task:read(vexid)
-        assert.equal(indexed, vexdex:get(vexid))
         assert.is_number(vexdex:get(vexid).created)
+        assert.same({dependency}, vexdex:get(vexid).dependencies)
     end)
 
     it("reindexall rebuilds the index from the task files, including hand edits", function()
