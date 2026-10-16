@@ -1,19 +1,12 @@
 return {
   _all = {
-    coverage = true,
+    lua = "luajit",
   },
 
   default = {
     verbose = true,
     helper = "test/unit/load.lua",
-    ["suppress-pending"] = true,
     ROOT = {"test/unit"},
-  },
-
-  apiUnit = {
-    tags = "api",
-    ROOT = {"test/unit"},
-    verbose = true,
   },
 
   e2e = {

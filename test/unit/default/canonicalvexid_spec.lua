@@ -44,21 +44,24 @@ describe("canonicalvexid", function()
 
     it("drops prepositional phrases before the main clause when over budget", function()
         assert.equal("investigate-login-page-slow-1", cv.generate("Investigate why the login page is slow on mobile", {}))
-        assert.equal("fix-numeric-datetime-fields-1", cv.generate("Fix numeric and datetime fields failing validation from the CLI", {}))
+        assert.equal("email-landlord-broken-boiler-1", cv.generate("Email the landlord about the broken boiler before Friday", {}))
     end)
 
     it("keeps negation", function()
         assert.equal("ensure-verbs-return-data-not-1", cv.generate("Ensure all verbs return data and do not print", {}))
-        assert.truthy(cv.generate("Status state machine doesn't reject transitions", {}):find("-not-", 1, true))
+        assert.equal("status-state-machine-not-reject-1", cv.generate("Status state machine doesn't actually reject invalid transitions", {}))
     end)
 
-    it("stays within 32 characters and 6 words", function()
-        local id = cv.generate("one two three four five six seven eight nine ten eleven", {})
-        local tag = id:gsub("%-%d+$", "")
-        assert.truthy(#tag <= 32)
-        local count = select(2, tag:gsub("[^-]+", ""))
-        assert.truthy(count <= 6)
-        assert.equal("one-two-three-four-five-six-1", id)
+    it("stops at 6 words", function()
+        assert.equal("one-two-three-four-five-six-1", cv.generate("one two three four five six seven eight", {}))
+    end)
+
+    it("stops before the word that would take it past 32 characters", function()
+        assert.equal("abcdefghij-abcdefghij-abcdefghij-1", cv.generate("abcdefghij abcdefghij abcdefghij k", {}))
+    end)
+
+    it("never skips a word to fit a later, shorter one", function()
+        assert.equal("fix-numeric-datetime-fields-1", cv.generate("Fix numeric and datetime fields failing validation from the CLI", {}))
     end)
 
     it("always takes the first two words even when they are long", function()

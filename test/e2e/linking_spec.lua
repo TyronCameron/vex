@@ -19,17 +19,7 @@ describe("vex linking (e2e, subprocess)", function()
   end
 
   local function link(vexid, field, targets)
-    local path = dir .. "/" .. vexid .. ".md"
-    local items = {field .. ":"}
-    for _, target in ipairs(targets) do
-      table.insert(items, '  - "[[' .. target .. ']]"')
-    end
-    local content = helper.read_file(path)
-      :gsub("\n" .. field .. ": %[%]\n", "\n", 1)
-      :gsub("\nstatus: ", "\n" .. table.concat(items, "\n") .. "\nstatus: ", 1)
-    local f = assert(io.open(path, "w"))
-    f:write(content)
-    f:close()
+    helper.link(dir, vexid, field, targets)
   end
 
   local function under(out, heading, vexid)

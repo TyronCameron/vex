@@ -1,36 +1,85 @@
-local busted = require 'busted'
 local cli = require 'lib.cli'
--- core.verbs is loaded by test/load.lua; require here is idempotent
+local vexdex = require 'core.vexdex'
+local task = require 'core.task'
 require 'core.verbs'
+
+local function run(command)
+    local printed = {}
+    local quiet = stub(_G, 'print', function(text) table.insert(printed, tostring(text)) end)
+    cli:run(command)
+    quiet:revert()
+    return (table.concat(printed, "\n"):gsub("\27%[[%d;]*m", ""):gsub("%s+$", ""))
+end
+
+local function file(vexid)
+    local f = io.open(task:getabspath(vexid))
+    if not f then return nil end
+    local content = f:read("*a")
+    f:close()
+    return content
+end
 
 describe("verbs", function()
 
-    it("cli singleton is truthy after verbs load", function()
-        assert.truthy(cli)
+    it("add writes a resolved task, prints its vexid and focuses on it", function()
+        local vexid = run("add Buy fresh milk --cost 3")
+        assert.equal("buy-fresh-milk-1", vexid)
+        assert.truthy(file(vexid):find("\ncost: 3\n", 1, true))
+        assert.truthy(file(vexid):find("\nstatus: todo\n", 1, true))
+        assert.equal(vexid, run("get"))
     end)
 
-    it("verb 'add' is registered", function()
-        assert.is_table(cli.verbs["add"])
+    it("set changes a field on disk and leaves the rest", function()
+        local vexid = run("add Water the plants --cost 1")
+        run("set " .. vexid .. " --benefit 4")
+        assert.truthy(file(vexid):find("\nbenefit: 4\n", 1, true))
+        assert.truthy(file(vexid):find("\ncost: 1\n", 1, true))
     end)
 
-    it("verb 'get' is registered", function()
-        assert.is_table(cli.verbs["get"])
+    it("get prints the selected fields of each focused task", function()
+        local vexid = run("add Feed the cat --cost 2")
+        local out = run("get " .. vexid .. " --cost --status")
+        assert.truthy(out:find("2", 1, true))
+        assert.truthy(out:find("todo", 1, true))
     end)
 
-    it("verb 'set' is registered", function()
-        assert.is_table(cli.verbs["set"])
+    it("show prints the task file", function()
+        local vexid = run("add Show this task")
+        assert.truthy(run("show " .. vexid):find("Show this task", 1, true))
     end)
 
-    it("verb 'remove' is registered", function()
-        assert.is_table(cli.verbs["remove"])
+    it("focus saves a focus and lists its operations when given nothing", function()
+        run("add Focus on this task")
+        assert.truthy(run("focus all --filter status:todo"):find("Focusing on", 1, true))
+        local current = run("focus")
+        assert.truthy(current:find("filter", 1, true))
+        assert.truthy(current:find("all", 1, true))
     end)
 
-    it("verb 'view' is registered", function()
-        assert.is_table(cli.verbs["view"])
+    it("resolve all rebuilds the index from the task files", function()
+        local vexid = run("add Reindexed task here")
+        vexdex:unsafe_remove(vexid)
+        run("resolve all")
+        assert.truthy(vexdex:get(vexid))
     end)
 
-    it("verb 'focus' is registered", function()
-        assert.is_table(cli.verbs["focus"])
+    it("remove deletes the task file and its index entry", function()
+        local vexid = run("add Throw this away")
+        run("remove " .. vexid)
+        assert.is_nil(file(vexid))
+        assert.is_nil(vexdex:get(vexid))
+    end)
+
+    it("recipe adds a task through the named recipe and lists recipes when given none", function()
+        local vexid = run("recipe abstract Plan the release")
+        assert.truthy(file(vexid):find("\nvextype: abstract\n", 1, true))
+        assert.truthy(run("recipe"):find("abstract", 1, true))
+    end)
+
+    it("view renders a view of a focus and lists views when given none", function()
+        local vexid = run("add Viewed task here")
+        assert.truthy(run("view " .. vexid .. " csv"):find(vexid, 1, true))
+        assert.truthy(run("view"):find("kanban", 1, true))
     end)
 
 end)

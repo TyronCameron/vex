@@ -2,6 +2,7 @@
 local func = require 'lib.func'
 local optic = require 'lib.optic'
 local lfs = require 'lib.lfs'
+local lfsext = require 'lib.lfsext'
 local cli = require 'lib.cli'
 local pretty = require 'lib.pretty'
 local statemachine = require 'lib.statemachine'
@@ -61,6 +62,14 @@ Focus.register_focus("final", statusphase 'isfinal')
 -- Binary Operations 
 -----------------------------------------
 
+local deserialize
+
+local function asfocus(focus)
+    if type(focus) == "string" then return Focus.focus(focus) end
+    if getmetatable(focus) ~= Focus then return deserialize(focus) end
+    return focus
+end
+
 function Focus:chain(operation, focus, ...)
     if type(focus) == "function" then 
         focus = Focus.new(operation, focus)
@@ -71,6 +80,7 @@ function Focus:chain(operation, focus, ...)
 end
 
 function Focus:intersect(focus)
+    focus = asfocus(focus)
     return Focus.new('intersect', function(tasks) 
         local dedup = {}
         for _, task in ipairs(self:get(tasks)) do
@@ -90,6 +100,7 @@ function Focus:intersect(focus)
 end 
 
 function Focus:union(focus)
+    focus = asfocus(focus)
     return Focus.new('union', function(tasks) 
         local tasklist = {}
         local dedup = {}
@@ -124,6 +135,7 @@ function Focus:complement()
 end 
 
 function Focus:xor(focus)
+    focus = asfocus(focus)
     return Focus.new('xor', function(tasks) 
         local dedup = {}
         for _, task in ipairs(self:get(tasks)) do
@@ -143,6 +155,7 @@ function Focus:xor(focus)
 end 
 
 function Focus:notin(focus)
+    focus = asfocus(focus)
     return Focus.new('notin', function(tasks) 
         local dedup = {}
         for _, task in ipairs(self:get(tasks)) do
@@ -160,6 +173,7 @@ function Focus:notin(focus)
 end 
 
 function Focus:onlyin(focus)
+    focus = asfocus(focus)
     return Focus.new('onlyin', function(tasks) 
         local dedup = {}
         for _, task in ipairs(focus:get(tasks)) do
@@ -173,7 +187,7 @@ function Focus:onlyin(focus)
             end 
         end
         return func.values(dedup) 
-    end)
+    end, func.imerge(self.operations or {}, {{ operation = 'onlyin', args = {{ name = focus.name, operations = focus.operations }}}}))
 end 
 
 -----------------------------------------
@@ -211,34 +225,21 @@ function namedfocus.from_vexid(vexid)
     return Focus.new(vexid, function() return {vexdex.index[vexid]} end)
 end 
 
-function namedfocus.from_file_path(path)
-    local vexid = path:gsub(".*/", "")
-    return Focus.new(path, function() return {vexdex.index[vexid]} end)
-end 
-
-local function recursive_dir_walk(path, paths)
-    paths = paths or {}
-    local files = lfs.readdir(path)
-    for _, file in ipairs(files) do 
-        if lfs.attributes(file, "mode") == "file" then 
-            table.insert(paths, file)
-        elseif lfs.attributes(file, "mode") == "directory" then 
-            recursive_dir_walk(file, paths)
-        end 
-    end 
-    return paths
+local function tasksat(paths)
+    local tasks = {}
+    for _, path in ipairs(paths) do
+        local task = require('core.task'):readfrompath(path)
+        if task and vexdex.index[task.vexid] then table.insert(tasks, vexdex.index[task.vexid]) end
+    end
+    return tasks
 end
 
+function namedfocus.from_file_path(path)
+    return Focus.new(path, function() return tasksat({path}) end)
+end 
+
 function namedfocus.from_folder_path(path)
-    return Focus.new(path, function() 
-        local tasks = {}
-        -- walk through path recursively 
-        local files = recursive_dir_walk(path)
-        for _, file in ipairs(files) do 
-            table.insert(tasks, namedfocus.from_file_path(path))
-        end 
-        return tasks
-    end)
+    return Focus.new(path, function() return tasksat(lfsext.walk(path)) end)
 end 
 
 function namedfocus.focus(focusname)
@@ -355,11 +356,25 @@ function Focus:fuzzy(field, fuzz, n)
     end, field, fuzz, n)
 end 
 
+local function normalised(task, field, value)
+    local fieldschema = value and require('core.task'):schemaof(task.vextype, field)
+    if not fieldschema then return value end
+    local ok, result = pcall(fieldschema.prevalidate, fieldschema, value, {})
+    if ok and result ~= nil then value = result end
+    if type(value) ~= type(task[field]) then
+        cli:throw('usage', 'Cannot compare `' .. field .. '` with `' .. tostring(value) .. '`.')
+    end
+    return value
+end
+
 -- between field:begin:end
 function Focus:between(field, start, finish)
     return self:chain('between', function(tasks) 
         return func.ifilter(tasks, function(task) 
-            return (not start or start <= task[field]) and (not finish or task[field] <= finish)
+            local value = task[field]
+            if value == nil then return false end
+            local lower, upper = normalised(task, field, start), normalised(task, field, finish)
+            return (not lower or lower <= value) and (not upper or value <= upper)
         end)
     end, field, start, finish)
 end 
@@ -477,7 +492,7 @@ function Focus.parse(args)
     else 
         current = Focus.read()
     end 
-    if not current then cli:error('no-focus') end
+    if not current then cli:throw('no-focus') end
     for _, arg in ipairs(args) do
         if type(arg) == "table" then 
             local f = table.remove(arg, 1)
@@ -497,7 +512,7 @@ end
 -- Saving
 -----------------------------------------
 
-local function deserialize(saved)
+function deserialize(saved)
     local f
     for _, op in ipairs(saved.operations) do
         if op.operation == 'focus' then

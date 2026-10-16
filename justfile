@@ -1,20 +1,20 @@
-
 default:
 	@just --list
 
-test: test-unit test-e2e
-
-test-unit:
+test:
 	#!/usr/bin/env bash
-	set -euo pipefail
-	repo="$(pwd)"
-	tmp=$(mktemp -d)
-	trap 'rm -rf "$tmp"' EXIT
-	(cd "$tmp" && "$repo/src/vex" init)
-	(cd "$tmp" && busted --helper="$repo/test/unit/load.lua" --config-file="$repo/.busted" "$repo/test/unit")
+	status=0
+	just test-unit || status=1
+	just test-e2e || status=1
+	just lint || status=1
+	exit $status
 
-test-e2e:
-	busted --run=e2e
+test-unit *specs:
+	test/unit/run.sh {{specs}}
 
-test-all:
-	vex add Hello world
+test-e2e *specs:
+	busted --run=e2e {{specs}}
+
+lint:
+	luacheck src test
+	test/unit/mirror.sh

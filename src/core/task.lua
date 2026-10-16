@@ -217,8 +217,7 @@ end
 
 -- gets data from a task and returns it as a string for the command line
 function TaskManager:get(vexid, fields)
-    local task = self:getsingle(vexid)
-    return task:tostring(fields)
+    return Task.new(self:format(vexid)):tostring(fields)
 end
 
 -- sets task properties for a given focus
@@ -238,8 +237,7 @@ end
 -- shows task, basically cat 'filename'
 function TaskManager:show(vexid)
     assert(vexid, "show() requires an vexid")
-    local task = self:getsingle(vexid)
-    return task:show(self:getabspath(vexid))
+    return Task.new(self:format(vexid)):show(self:getabspath(vexid))
 end
 
 ---------------------------------------------------
@@ -310,7 +308,7 @@ function TaskManager:resolve(vexid)
     if not task.vextype then cli:throw('missing-required-field', task.vexid, 'vextype') end 
 
     local vextype = self.tasktypes[task.vextype]
-    if not vextype then cli:throw('unknown-vextype', vextype, func.keys(self.tasktypes)) end 
+    if not vextype then cli:throw('unknown-vextype', task.vextype, func.keys(self.tasktypes)) end 
 
     local context = {
         vexid = vexid,
@@ -359,6 +357,22 @@ function TaskManager:format(vexid)
     return formatted
 end
 
+function TaskManager:unformat(task)
+    local vextype = self.tasktypes[task.vextype]
+    if not vextype then return task end
+
+    local parents = {vextype}
+    while parents[1].parent do
+        table.insert(parents, 1, self.tasktypes[parents[1].parent])
+    end
+
+    local unformatted = task
+    for _, parent in ipairs(parents) do
+        unformatted = parent.schema:unapply('format', unformatted)
+    end
+    return unformatted
+end
+
 -- get the path that a task should live at
 function TaskManager:getabspath(vexid)
     return vexdex.path .. '/' .. config.taskfolder .. '/' .. self:getrelpath(vexid)
@@ -377,6 +391,7 @@ end
 function TaskManager:readfrompath(path)
     local ok, task = pcall(taskformat.read, path)
     if ok and task then 
+        task = self:unformat(task)
         self.tasks[task.vexid] = Task.new(task)
         self:index(task.vexid)
         return task
