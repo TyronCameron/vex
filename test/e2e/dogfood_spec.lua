@@ -36,7 +36,7 @@ describe("this repo's own backlog (e2e, subprocess)", function()
     assert.equal(before, snapshot())
   end)
 
-  it("still renders the whole backlog (stop-indexing-unresolved-linked-1)", function()
+  it("still renders the whole backlog", function()
     for _, view in ipairs({"csv", "tabular", "kanban", "overview"}) do
       assert.truthy(#vex(dir, "view", "all", view) > 0, view)
     end

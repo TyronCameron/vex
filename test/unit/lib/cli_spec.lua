@@ -44,7 +44,7 @@ describe("CLI", function()
             assert.stub(cli.throw).was.called_with(cli, 'usage', match._)
         end)
 
-        it("reports a crashing verb as a bug with its traceback (show-traceback-internal-errors-1)", function()
+        it("reports a crashing verb as a bug with its traceback", function()
             cli:verb("_test_crash") {
                 function(args) error("boom") end,
                 doc = "crash test"
@@ -56,6 +56,18 @@ describe("CLI", function()
             assert.truthy(trace:find("traceback", 1, true))
         end)
 
+    end)
+
+    it("exits with a message when throwing an unregistered error", function()
+        local stderr, written = io.stderr, {}
+        io.stderr = {write = function(self, text) table.insert(written, text) end}
+        stub(os, 'exit', function() error('exited') end)
+        local ok, err = pcall(cli.throw, cli, '_test_unregistered', 'details')
+        io.stderr = stderr
+        os.exit:revert()
+        assert.is_false(ok)
+        assert.truthy(err:find('exited', 1, true))
+        assert.truthy(table.concat(written):find('_test_unregistered', 1, true))
     end)
 
     it("makes the raw string available to verbs via args.raw", function()

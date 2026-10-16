@@ -4,6 +4,7 @@ local pretty = require 'lib.pretty'
 local func = require 'lib.func'
 local view = require 'core.view'
 local task = require 'core.task'
+local recipe = require 'core.recipe'
 require 'core.taskdefinitions'
 
 local POWERSHELL_SCRIPT = [[
@@ -199,14 +200,11 @@ function suggest.suggest(args)
     table.remove(args, 1)
     --> args = focus {select, field:value}
 
-    pretty.write('/home/tyronc/Nextcloud/projects/vex/.vex/current.txt', current, args)
     local next_arg_type = suggest.next_arg_type(current, args)
-    pretty.append('/home/tyronc/Nextcloud/projects/vex/.vex/current.txt', next_arg_type or 'nil')
 
     if type(suggest[next_arg_type]) == "function" then 
         local suggestions = suggest[next_arg_type]()
         local printable_suggestions = suggest.options(suggestions)
-        pretty.append('/home/tyronc/Nextcloud/projects/vex/.vex/current.txt', printable_suggestions or 'nil')
         return printable_suggestions
     end 
 end 

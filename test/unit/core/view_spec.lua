@@ -37,8 +37,17 @@ describe("view", function()
         assert.same({}, crashes('all', 'singular'))
     end)
 
-    it("renders every view for an empty focus (fix-views-crashing-empty-1)", function()
-        assert.same({}, crashes('none'))
+    it("renders every view for an empty focus", function()
+        assert.same({}, crashes('none', 'singular'))
+    end)
+
+    it("rejects the singular view of an empty focus as a usage error", function()
+        local cli = require 'lib.cli'
+        stub(cli, 'throw', function(self, name) error(name) end)
+        local ok, err = pcall(view.display, view, 'singular', focus.focus('none'), {})
+        cli.throw:revert()
+        assert.is_false(ok)
+        assert.truthy(err:find('usage', 1, true))
     end)
 
     it("renders the singular view for each linked task", function()

@@ -329,6 +329,10 @@ describe("schema", function()
         assert.truthy(schema.empty:validate(""))
     end)
 
+    it("`schema.empty` validates a missing value", function()
+        assert.truthy(schema.empty:validate(nil))
+    end)
+
     it("`schema.empty` invalidates a non-empty string", function()
         assert.falsy(schema.empty:validate("hello"))
     end)

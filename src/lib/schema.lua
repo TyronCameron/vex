@@ -656,7 +656,7 @@ Schema.register 'hasmetatable' {
 -- checks for an empty string or table 
 Schema.register 'empty' {
     validate = function(self, instance)
-        return #instance == 0, "Non-empty length of " .. tostring(#instance)
+        return instance == nil or #instance == 0, "Non-empty length of " .. tostring(instance and #instance)
     end
 }
 

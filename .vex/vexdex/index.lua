@@ -84,6 +84,17 @@ It should use the description fields, not the actual bodies.\
     vexid = "create-view-next-up-1",
     vextype = "task"
   },
+  decide-how-between-takes-1 = {
+    created = 1792116143,
+    description = "Decide how between takes datetime bounds",
+    modified = 1792116143,
+    status = "todo",
+    vexbody = "Design decision, raised while fixing [[fix-between-focus-crashing-1]]. `--between field:begin:end` now converts each bound through the field's schema, so `cost:1:9` works. Datetime fields (`due`, `created`, `modified`) cannot be filtered yet, for two reasons. `Focus.parse` splits flag values on `:`, so a full `YYYY-MM-DD HH:MM:SS` bound is torn apart. And the `datetime` schema's format iso only accepts a full date and time, so a date-only bound like `2026-01-01` does not parse. Today such a bound gives a usage error (\"Cannot compare `due` with `2026-01-01`\").\
+\
+Options: (a) let `datetime` also read a date-only value as midnight; (b) give `between` a separator that cannot appear in a datetime (e.g. `due:2026-01-01..2026-06-01`); (c) both. The pending row in `test/e2e/smoke_spec.lua` (`--between due:...`) should pass once this is decided.",
+    vexid = "decide-how-between-takes-1",
+    vextype = "task"
+  },
   ensure-verbs-return-data-1 = {
     created = 1779226066,
     description = "Ensure all verbs return data and do not print",
@@ -98,17 +109,19 @@ Terminal output is unchanged (verified via the e2e suite and manual runs), but e
   fix-between-focus-crashing-1 = {
     created = 1792069229,
     description = "Fix between focus crashing on CLI values",
-    modified = 1792070231,
-    status = "todo",
-    vexbody = "Found by the e2e smoke test. `vex focus all --between created:0:9999999999` crashes with an Internal error: `Focus:between` (`src/core/focus.lua`) compares the raw CLI strings `start`/`finish` with the task's field (`attempt to compare string with number`). The bounds need converting through the field's schema (e.g. `due` as a datetime, `cost` as a number) before comparing.",
+    modified = 1792116314,
+    status = "done",
+    vexbody = "Found by the e2e smoke test. `vex focus all --between created:0:9999999999` crashes with an Internal error: `Focus:between` (`src/core/focus.lua`) compares the raw CLI strings `start`/`finish` with the task's field (`attempt to compare string with number`). The bounds need converting through the field's schema (e.g. `due` as a datetime, `cost` as a number) before comparing.\
+\
+Fixed for numeric bounds. Datetime bounds need a design decision first, tracked in [[decide-how-between-takes-1]].",
     vexid = "fix-between-focus-crashing-1",
     vextype = "task"
   },
   fix-decision-constraint-crashing-1 = {
     created = 1792069346,
     description = "Fix decision constraint crashing",
-    modified = 1792070231,
-    status = "todo",
+    modified = 1792116304,
+    status = "done",
     vexbody = "Found by the new task round-trip unit test. The `decision` field's constraint in `src/core/taskdefinitions.lua` is written as `function(self, instance, context)`, but `schema.constraint` calls its function with `(instance, context)` (compare `acyclic(dependency, context)`). So `context` is nil, and setting `decision` on any decision task crashes resolution (\"attempt to index local 'context'\").",
     vexid = "fix-decision-constraint-crashing-1",
     vextype = "task"
@@ -116,17 +129,17 @@ Terminal output is unchanged (verified via the e2e suite and manual runs), but e
   fix-exploration-tasks-crashing-1 = {
     created = 1792069229,
     description = "Fix exploration tasks crashing on add",
-    modified = 1792070231,
-    status = "todo",
+    modified = 1792116304,
+    status = "done",
     vexbody = "Found by the e2e smoke test. `vex add Explore some options --vextype exploration` crashes with an Internal error: the `empty` schema (`src/lib/schema.lua`) takes `#instance` of a nil `vexbody`. An exploration with no body yet should either resolve or fail validation with a named error.",
     vexid = "fix-exploration-tasks-crashing-1",
     vextype = "task"
   },
   fix-file-path-focuses-1 = {
-    created = "2026-10-15 13:07:26",
+    created = 1792069646,
     description = "Fix file path focuses",
-    modified = "2026-10-15 13:07:26",
-    status = "todo",
+    modified = 1792116305,
+    status = "done",
     vexbody = "Found by the new e2e smoke test. `vex focus ./some-task-1.md` (or an absolute path to a task file) focuses on 0 vexes: `namedfocus.from_file_path` (`src/core/focus.lua`) strips the folders but keeps the `.md` extension, then looks `some-task-1.md` up in the index, which is keyed by vexid. It should find the task by its path (see also [[fix-folder-path-focuses-1]], which builds on this).",
     vexid = "fix-file-path-focuses-1",
     vextype = "task"
@@ -134,8 +147,8 @@ Terminal output is unchanged (verified via the e2e suite and manual runs), but e
   fix-focus-binary-ops-cli-1 = {
     created = 1783339200,
     description = "Fix union/intersect/xor/notin/onlyin crashing from the CLI",
-    modified = 1792070231,
-    status = "todo",
+    modified = 1792116305,
+    status = "done",
     vexbody = "\
 Confirmed by testing: `vex focus all --union all`, `--intersect all`, and (by the same code path) presumably `--xor`/`--notin`/`--onlyin` all crash with \"Internal error ... attempt to call method 'get' (a nil value)\". `Focus:union`/`Focus:intersect`/etc. (`core/focus.lua`) expect a Focus *object* as their argument (they call `focus:get(tasks)` on it), but `Focus.parse` passes whatever raw string came from the CLI flag value (e.g. `\"all\"`) straight through — never resolving it to an actual named focus first. `--complement` works fine since it takes no argument at all. Needs `Focus.parse` (or the binary-op methods themselves) to resolve a string argument through `namedfocus.focus(...)` before calling it.\
 ",
@@ -145,8 +158,8 @@ Confirmed by testing: `vex focus all --union all`, `--intersect all`, and (by th
   fix-focus-parse-registering-1 = {
     created = 1792069229,
     description = "Fix Focus parse registering no-focus",
-    modified = 1792070231,
-    status = "todo",
+    modified = 1792116304,
+    status = "done",
     vexbody = "`Focus.parse` (`src/core/focus.lua`) calls `cli:error('no-focus')`, which registers a new (empty) `no-focus` error type, instead of `cli:throw('no-focus')`. When there is no current focus it carries on with a nil focus.",
     vexid = "fix-focus-parse-registering-1",
     vextype = "task"
@@ -163,8 +176,8 @@ Confirmed by testing: `vex focus all --union all`, `--intersect all`, and (by th
   fix-folder-path-focuses-1 = {
     created = 1792016374,
     description = "Fix folder path focuses",
-    modified = 1792070231,
-    status = "todo",
+    modified = 1792116305,
+    status = "done",
     vexbody = "`namedfocus.from_folder_path` (`src/core/focus.lua`) inserts `namedfocus.from_file_path(path)` for each file it walks: a Focus object built from the folder path, not the task. A folder focus therefore returns focus objects instead of tasks. It should look up each walked file's task. `recursive_dir_walk` also passes bare names from `lfs.readdir` to `lfs.attributes`; check that those resolve against the folder.",
     vexid = "fix-folder-path-focuses-1",
     vextype = "task"
@@ -239,8 +252,8 @@ Note: this only fixes the disk round-trip. Setting a list field directly via a C
   fix-optic-cartesian-product-1 = {
     created = 1792016374,
     description = "Fix optic cartesian product",
-    modified = 1792070231,
-    status = "todo",
+    modified = 1792116305,
+    status = "done",
     vexbody = "`Optic.cartesian` (`src/lib/optic.lua`) cannot work. `increment_multi_index` loops `for i = #indexes, 1` with no `-1` step, so it runs at most once. `cartesian_product_gen` assigns to undefined globals `index` / passes `index` instead of `indexes`. Its cardinality fold seeds with the number `1`, not a `Cardinality`. Nothing uses it yet. Fix it with tests, or remove it.",
     vexid = "fix-optic-cartesian-product-1",
     vextype = "task"
@@ -259,8 +272,8 @@ Fixed. The `statemachine` schema (`core/taskdefinitions.lua`) used to cache one 
   fix-throw-unregistered-error-1 = {
     created = 1792069229,
     description = "Fix throw with unregistered error crashing",
-    modified = 1792070231,
-    status = "todo",
+    modified = 1792116304,
+    status = "done",
     vexbody = "`CLI:throw` (`src/lib/cli.lua`) reads `self.errors[errtype][1]` before checking whether `errtype` is registered, so throwing an unknown error name crashes with \"attempt to index a nil value\" instead of reaching its own \"Unknown error type\" fallback.",
     vexid = "fix-throw-unregistered-error-1",
     vextype = "task"
@@ -286,8 +299,8 @@ Fix: added the `num` coercion, and rewrote `maybe`'s `prevalidate` to use an unc
   fix-unknownvextype-naming-nil-1 = {
     created = 1792069230,
     description = "Fix unknown-vextype naming nil type",
-    modified = 1792070231,
-    status = "todo",
+    modified = 1792116304,
+    status = "done",
     vexbody = "`TaskManager:resolve` (`src/core/task.lua`) throws `unknown-vextype` with `vextype`, which is nil at that point, instead of `task.vextype`. `vex add Hello there --vextype nope` prints \"Type = nil\" rather than naming `nope`.",
     vexid = "fix-unknownvextype-naming-nil-1",
     vextype = "task"
@@ -295,8 +308,8 @@ Fix: added the `num` coercion, and rewrote `maybe`'s `prevalidate` to use an unc
   fix-vex-suggest-crashing-1 = {
     created = 1792069229,
     description = "Fix vex suggest crashing",
-    modified = 1792070231,
-    status = "todo",
+    modified = 1792116304,
+    status = "done",
     vexbody = "Found by the e2e smoke test and luacheck. `suggest.suggest` (`src/plugin/vexcomplete.lua`) writes debug output to a hardcoded `/home/tyronc/Nextcloud/projects/vex/.vex/current.txt`, so `vex suggest ...` crashes on any other machine. `suggest.recipe` also reads an undefined global `recipe` (`core.recipe` is never required). Shell completion is broken until both are fixed.",
     vexid = "fix-vex-suggest-crashing-1",
     vextype = "task"
@@ -304,8 +317,8 @@ Fix: added the `num` coercion, and rewrote `maybe`'s `prevalidate` to use an unc
   fix-views-crashing-empty-1 = {
     created = 1792069418,
     description = "Fix views crashing on empty focus",
-    modified = 1792070231,
-    status = "todo",
+    modified = 1792116304,
+    status = "done",
     vexbody = "Found by the new view unit tests. With an empty focus (e.g. `vex view none csv`), the `csv` view crashes in `func.lua` (`pairs` on nil), `kanban` crashes in `view.lua` (`ipairs` on nil) and `singular` indexes a nil task. An empty focus should render an empty view, and `singular` should throw a usage error like it does for more than one task.",
     vexid = "fix-views-crashing-empty-1",
     vextype = "task"
@@ -504,8 +517,8 @@ That alone wasn't enough, since `vex.lua` was reassembling `arg` with a plain sp
   record-onlyin-focus-operations-1 = {
     created = 1792016373,
     description = "Record onlyin focus operations",
-    modified = 1792070231,
-    status = "todo",
+    modified = 1792116305,
+    status = "done",
     vexbody = "`Focus:onlyin` (`src/core/focus.lua`) is the only set operation that passes no `operations` to `Focus.new`, so it falls back to `{focus, {\"onlyin\"}}`. Saving and replaying such a focus throws `unknown-focus onlyin`. It should record `{operation = \"onlyin\", ...}` like `notin` does.",
     vexid = "record-onlyin-focus-operations-1",
     vextype = "task"
@@ -522,8 +535,8 @@ That alone wasn't enough, since `vex.lua` was reassembling `arg` with a plain sp
   show-traceback-internal-errors-1 = {
     created = 1792069506,
     description = "Show traceback in internal errors",
-    modified = 1792070231,
-    status = "todo",
+    modified = 1792116304,
+    status = "done",
     vexbody = "Found by the new cli unit test. `CLI:call` (`src/lib/cli.lua`) builds the `bug` error's trace with `debug.traceback(nil, 2)`, which returns nil in LuaJIT and Lua 5.1 (a nil message means no traceback is produced). So every \"Internal error\" is printed without its traceback, which hides where the crash happened. Passing a string message (e.g. `debug.traceback(\"\", 2)`) fixes it.",
     vexid = "show-traceback-internal-errors-1",
     vextype = "task"
@@ -540,8 +553,8 @@ That alone wasn't enough, since `vex.lua` was reassembling `arg` with a plain sp
   stop-indexing-unresolved-linked-1 = {
     created = 1792069751,
     description = "Stop indexing unresolved linked tasks",
-    modified = 1792070231,
-    status = "todo",
+    modified = 1792116305,
+    status = "done",
     vexbody = "Found by the new e2e smoke test. After `vex resolve all` on linked tasks, `vex set <a task with dependencies> --status doing` leaves the *linked* task in the vexdex with its frontmatter as written on disk: `created`/`modified` as \"YYYY-MM-DD HH:MM:SS\" strings instead of epoch numbers. `TaskManager:readfrompath` (`src/core/task.lua`) indexes whatever `taskformat.read` returns without resolving (unformatting) it, and resolving a task reads its links through `getsingle`. Once the index holds strings, `vex view all overview` (`view.lua:183`), `vex view <id> singular` (`view.lua:221`) and `vex focus updated` (`focus.lua:42`) all crash comparing strings with numbers. Reproduced by the `test/e2e/smoke_spec.lua` fixture.\
 \
 Even read-only verbs trigger it: `vex view all tabular` calls `task:format` on every task, which reads each one from disk through `getsingle` and writes the raw data back to the index. After that, `vex view all overview` crashes on this repo's own backlog (`test/e2e/dogfood_spec.lua`).",

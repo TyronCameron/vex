@@ -96,7 +96,7 @@ describe("task", function()
             roundtrip(create({description = "roundtrip atom task", vextype = 'atom'}))
         end)
 
-        it("reads back a decision with its options and decision (fix-decision-constraint-crashing-1)", function()
+        it("reads back a decision with its options and decision", function()
             local first = create({description = "roundtrip first option"})
             local second = create({description = "roundtrip second option"})
             roundtrip(create({description = "roundtrip decision task", vextype = 'decision', options = {first, second}, decision = second}))
@@ -109,6 +109,15 @@ describe("task", function()
             assert.same(resolved, comparable(task.tasks[vexid]))
         end)
 
+    end)
+
+    it("reading a task from disk leaves its indexed version untouched", function()
+        local vexid = create({description = "indexed then read task"})
+        local indexed = vexdex:get(vexid)
+        task.tasks[vexid] = nil
+        task:read(vexid)
+        assert.equal(indexed, vexdex:get(vexid))
+        assert.is_number(vexdex:get(vexid).created)
     end)
 
     it("reindexall rebuilds the index from the task files, including hand edits", function()

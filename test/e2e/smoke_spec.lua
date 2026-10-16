@@ -23,10 +23,10 @@ local verbs = {
   {"recipe"},
   {"recipe", "abstract", "Smoke", "recipe", "abstract"},
   {"add", "Smoke", "added", "task"},
-  {"add", "Explore", "some", "options", "--vextype", "exploration", bug = "fix-exploration-tasks-crashing-1"},
+  {"add", "Explore", "some", "options", "--vextype", "exploration"},
   {"remove", "smoke-added-task-1"},
   {"autocomplete", "bash"},
-  {"suggest", "2", "vex", "view", bug = "fix-vex-suggest-crashing-1"},
+  {"suggest", "2", "vex", "view"},
 }
 
 local views = {
@@ -34,18 +34,18 @@ local views = {
   {"view", "all", "tabular"},
   {"view", "all", "json"},
   {"view", "all", "kanban"},
-  {"view", "all", "overview", bug = "stop-indexing-unresolved-linked-1"},
-  {"view", CHILD, "singular", bug = "stop-indexing-unresolved-linked-1"},
-  {"view", PARENT, "singular", bug = "stop-indexing-unresolved-linked-1"},
-  {"view", DEPENDENT, "singular", bug = "stop-indexing-unresolved-linked-1"},
-  {"view", DECISION, "singular", bug = "stop-indexing-unresolved-linked-1"},
-  {"view", "none", "csv", bug = "fix-views-crashing-empty-1"},
-  {"view", "none", "kanban", bug = "fix-views-crashing-empty-1"},
+  {"view", "all", "overview"},
+  {"view", CHILD, "singular"},
+  {"view", PARENT, "singular"},
+  {"view", DEPENDENT, "singular"},
+  {"view", DECISION, "singular"},
+  {"view", "none", "csv"},
+  {"view", "none", "kanban"},
 }
 
 local focuses = {
   {"focus", "none"},
-  {"focus", "updated", bug = "stop-indexing-unresolved-linked-1"},
+  {"focus", "updated"},
   {"focus", "initial"},
   {"focus", "interim"},
   {"focus", "final"},
@@ -58,20 +58,22 @@ local focuses = {
   {"focus", CHILD, "--reversetree", "children"},
   {"focus", CHILD, "--complement"},
   {"focus", "all", "--filter", "vextype:task", "--select", "cost"},
-  {"focus", "all", "--between", "cost:1:9", bug = "fix-between-focus-crashing-1"},
-  {"focus", "all", "--union", "none", bug = "fix-focus-binary-ops-cli-1"},
-  {"focus", "all", "--intersect", "all", bug = "fix-focus-binary-ops-cli-1"},
-  {"focus", "all", "--xor", "none", bug = "fix-focus-binary-ops-cli-1"},
-  {"focus", "all", "--notin", "none", bug = "fix-focus-binary-ops-cli-1"},
-  {"focus", "all", "--onlyin", "all", bug = "fix-focus-binary-ops-cli-1"},
-  {"focus", "./" .. CHILD .. ".md", count = 1, bug = "fix-file-path-focuses-1"},
-  {"focus", "./", bug = "fix-folder-path-focuses-1"},
+  {"focus", "all", "--between", "cost:1:9"},
+  {"focus", "all", "--between", "due:2026-01-01:2026-12-31", count = 1, pending = "decide-how-between-takes-1"},
+  {"focus", "all", "--union", "none"},
+  {"focus", "all", "--intersect", "all"},
+  {"focus", "all", "--xor", "none"},
+  {"focus", "all", "--notin", "none"},
+  {"focus", "all", "--onlyin", "all"},
+  {"focus", "./" .. CHILD .. ".md", count = 1},
+  {"focus", "./"},
 }
 
 local function name(row)
   local words = {}
   for _, word in ipairs(row) do table.insert(words, word) end
-  return "vex " .. table.concat(words, " ") .. (row.bug and " (" .. row.bug .. ")" or "")
+  local tag = row.bug or row.pending
+  return "vex " .. table.concat(words, " ") .. (tag and " (" .. tag .. ")" or "")
 end
 
 describe("vex smoke test: every verb, view and focus (e2e, subprocess)", function()
@@ -98,7 +100,8 @@ describe("vex smoke test: every verb, view and focus (e2e, subprocess)", functio
 
   for _, group in ipairs({verbs, views, focuses}) do
     for _, row in ipairs(group) do
-      it(name(row), function()
+      local test = row.pending and pending or it
+      test(name(row), function()
         local out = vex(dir, unpack(row))
         if row.count then
           assert.truthy(out:find("Focusing on " .. row.count .. " vex", 1, true), out)

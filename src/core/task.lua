@@ -267,6 +267,10 @@ function TaskManager:reindexall()
     end), function(vexid) return vexid end)
 
     for _, vexid in ipairs(vexids) do
+        vexdex:unsafe_add(vexid, self.tasks[vexid])
+    end
+
+    for _, vexid in ipairs(vexids) do
         self:read(vexid)
         self:resolve(vexid)
         vexdex:unsafe_add(vexid, self.tasks[vexid])
@@ -310,7 +314,7 @@ function TaskManager:resolve(vexid)
     if not task.vextype then cli:throw('missing-required-field', task.vexid, 'vextype') end 
 
     local vextype = self.tasktypes[task.vextype]
-    if not vextype then cli:throw('unknown-vextype', vextype, func.keys(self.tasktypes)) end 
+    if not vextype then cli:throw('unknown-vextype', task.vextype, func.keys(self.tasktypes)) end 
 
     local context = {
         vexid = vexid,
@@ -378,7 +382,6 @@ function TaskManager:readfrompath(path)
     local ok, task = pcall(taskformat.read, path)
     if ok and task then 
         self.tasks[task.vexid] = Task.new(task)
-        self:index(task.vexid)
         return task
     else 
         return nil 

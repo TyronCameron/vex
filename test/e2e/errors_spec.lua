@@ -19,7 +19,7 @@ describe("vex user-facing errors (e2e, subprocess)", function()
     {"an unknown focus", "unknown focus with name: nosuch", {"show", "nosuch"}},
     {"an unknown view", "A view of name `nope` does not exist", {"view", "all", "nope"}},
     {"an unknown recipe", "A recipe of name `nope` does not exist", {"recipe", "nope", "Hello", "there"}},
-    {"an unknown vextype (fix-unknownvextype-naming-nil-1)", "Type  = nope", {"add", "Bad", "type", "thing", "--vextype", "nope"}},
+    {"an unknown vextype", "Type  = nope", {"add", "Bad", "type", "thing", "--vextype", "nope"}},
     {"a description that is too short", "Need more than 3 characters", {"add", "abc"}},
     {"vex init inside a project", "Already in a vex directory", {"init"}},
     {"a filter without a value", "You need to provide a field and value", {"focus", "all", "--filter", "status"}},

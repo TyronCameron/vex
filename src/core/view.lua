@@ -84,7 +84,7 @@ v:view 'kanban' {
         end
 
         local viewable = {}
-        for i in ipairs(statuses[maxfield]) do 
+        for i in ipairs(statuses[maxfield] or {}) do 
             local row = {}
             for status, vexids in pairs(statuses) do
                 row[status] = tostring(vexids[i] or '')
@@ -208,7 +208,7 @@ v:view 'overview' {
 v:view 'singular' {
     display = function(focus, flags)
         local tasks = focus:get()
-        if #tasks > 1 then cli:throw('usage', 'The view of singular only accepts focuses which have a single task in them.') end 
+        if #tasks ~= 1 then cli:throw('usage', 'The view of singular only accepts focuses which have a single task in them.') end 
         local task = tasks[1]
         
         local lines = {}

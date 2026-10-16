@@ -105,6 +105,22 @@ describe("Focus", function()
         assert.same({tasks[2], tasks[3]}, f:between("cost", 2):get(tasks))
     end)
 
+    it("between converts text bounds through the field's schema and skips tasks without the field", function()
+        local task = require 'core.task'
+        for _, properties in ipairs({
+            {description = "between cheap task", cost = "2"},
+            {description = "between pricey task", cost = "20"},
+            {description = "between free task"},
+        }) do
+            local vexid = task:add(properties)
+            task:resolve(vexid)
+            task:write(vexid)
+        end
+        local result = Focus.focus('all'):between("cost", "1", "9"):get()
+        assert.equal(1, #result)
+        assert.equal("between-cheap-task-1", result[1].vexid)
+    end)
+
     it("select keeps only the chosen fields plus the vexid", function()
         local f = Focus.new("all", function(t) return t end)
         assert.same({{vexid = "t1", status = "todo"}}, f:select("status"):get({{vexid = "t1", status = "todo", cost = 3}}))
@@ -123,6 +139,33 @@ describe("Focus", function()
         local replayed = Focus.read():get()
         assert.equal(1, #replayed)
         assert.equal("saved-focus-doing-task-1", replayed[1].vexid)
+    end)
+
+    it("resolves a set operation's focus name and replays it once saved", function()
+        local task = require 'core.task'
+        for _, description in ipairs({"set op first task", "set op second task"}) do
+            local vexid = task:add({description = description})
+            task:resolve(vexid)
+            task:write(vexid)
+        end
+        for _, operation in ipairs({'union', 'intersect', 'xor', 'notin', 'onlyin'}) do
+            local parsed = Focus.parse({"set-op-first-task-1", {operation, "set-op-second-task-1"}})
+            local expected = #parsed:get()
+            parsed:write()
+            assert.equal(expected, #Focus.read():get(), operation .. " did not replay")
+        end
+        assert.equal(2, #Focus.parse({"set-op-first-task-1", {"union", "set-op-second-task-1"}}):get())
+    end)
+
+    it("rejects parsing when the saved focus has nothing to replay", function()
+        local cli = require 'lib.cli'
+        local vexdex = require 'core.vexdex'
+        stub(cli, 'throw', function(self, name) error(name) end)
+        vexdex:setfocus({operations = {}})
+        local ok, err = pcall(Focus.parse, {})
+        cli.throw:revert()
+        assert.is_false(ok)
+        assert.truthy(err:find('no-focus', 1, true))
     end)
 
     describe("tree and reversetree", function()
