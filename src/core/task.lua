@@ -217,8 +217,7 @@ end
 
 -- gets data from a task and returns it as a string for the command line
 function TaskManager:get(vexid, fields)
-    local task = self:getsingle(vexid)
-    return task:tostring(fields)
+    return Task.new(self:format(vexid)):tostring(fields)
 end
 
 -- sets task properties for a given focus
@@ -238,8 +237,7 @@ end
 -- shows task, basically cat 'filename'
 function TaskManager:show(vexid)
     assert(vexid, "show() requires an vexid")
-    local task = self:getsingle(vexid)
-    return task:show(self:getabspath(vexid))
+    return Task.new(self:format(vexid)):show(self:getabspath(vexid))
 end
 
 ---------------------------------------------------

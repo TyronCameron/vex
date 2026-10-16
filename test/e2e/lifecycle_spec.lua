@@ -34,6 +34,14 @@ describe("vex CLI lifecycle (e2e, subprocess)", function()
     assert.truthy(vex(dir, "show", vexid):find("coffee", 1, true))
   end)
 
+  it("vex show and vex get print fields as they are written in the task file", function()
+    local vexid = vex(dir, "add", "Dated", "task", "--due", "2026-08-01T09:00:00")
+    local due = "2026-08-01 09:00:00"
+    assert.truthy(vex(dir, "show", vexid):find("due: " .. due, 1, true))
+    assert.equal(due, vex(dir, "get", vexid, "--due"))
+    assert.truthy(vex(dir, "get", vexid, "--created"):match("^%d%d%d%d%-%d%d%-%d%d %d%d:%d%d:%d%d$"))
+  end)
+
   it("vex get returns the task's selected fields", function()
     vex(dir, "add", "Buy", "milk")
     local out = vex(dir, "get", "all", "--description", "--status")
