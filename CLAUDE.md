@@ -15,7 +15,7 @@ The project is early (`v0.1.0`), single-developer, and **dogfoods itself**: this
 just test                        # unit + e2e + lint; reports every failing suite
 just test-unit [spec...]         # unit tests (all, or the given spec files)
 just test-e2e [spec...]          # e2e tests (all, or the given spec files)
-just lint                        # luacheck: globals, undefined names, broken loops
+just lint                        # luacheck (globals, undefined names, broken loops) + mirror check
 ```
 
 There is no build step: LuaJIT runs the `.lua` sources directly, through the `src/vex` shell wrapper (`src/vex.bat` on Windows). `.busted` runs every test under `luajit`, the runtime vex ships with, and `test/unit/load.lua` refuses to run anywhere else.
@@ -24,7 +24,7 @@ There is no build step: LuaJIT runs the `.lua` sources directly, through the `sr
 
 The tests exist to give fast, trustworthy feedback on any change. Every behaviour change comes with a test at the right layer:
 
-- **Unit tests** (`test/unit/**/*_spec.lua`, mirroring `src/`) cover a module's behaviour through its own API. `test/unit/run.sh` runs each spec file in its own fresh `vex init` directory, because `core.vexdex` binds to the cwd's `.vex` when the module loads. Never run busted on unit specs from the repo root: that would read and write this repo's own task data.
+- **Unit tests** (`test/unit/**/*_spec.lua`) cover a module's behaviour through its own API. Every `src/<path>.lua` has a `test/unit/<path>_spec.lua`; `test/unit/mirror.sh` (part of `just lint`) fails when one is missing. Only `src/vex.lua` (covered by e2e), the vendored `src/lib/binser.lua` and `return {}` stubs are exempt. `test/unit/run.sh` runs each spec file in its own fresh `vex init` directory, because `core.vexdex` binds to the cwd's `.vex` when the module loads. Never run busted on unit specs from the repo root: that would read and write this repo's own task data.
 - **e2e tests** (`test/e2e/*_spec.lua`) are black-box: they never `require` a vex module, only shell out to `src/vex` in a fresh temp project through `test/e2e/helper.lua` (`helper.project()`, `helper.vex(dir, ...)` which asserts success, `helper.vex_fails(dir, expected_message, ...)`, `helper.frontmatter(path)`, `helper.link(...)`). Anything a user can type belongs here.
   - `smoke_spec.lua` runs every verb, view and focus form over a fixture project with every task type and link. It fails if `vex help` or `vex view` lists something it doesn't exercise, so a new verb or view needs a row there.
   - `storage_spec.lua` guards the files on disk: resolving is idempotent, hand edits are picked up, the index can be rebuilt.

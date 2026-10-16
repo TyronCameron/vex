@@ -17,3 +17,4 @@ test-e2e *specs:
 
 lint:
 	luacheck src test
+	test/unit/mirror.sh
