@@ -149,7 +149,7 @@ task:task 'decision':extends 'task' {
             schema.all {
                 schema.formatted {schema.vexlink},
                 schema.constraint{
-                    function(self, instance, context)
+                    function(instance, context)
                         return func.any(context.root.options, function(option) return option == instance end), "Decision not found in options"
                     end 
                 }

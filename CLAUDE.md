@@ -11,38 +11,38 @@ The project is early (`v0.1.0`), single-developer, and **dogfoods itself**: this
 ## Commands
 
 ```txt
-./src/vex <verb> [args]          # run the CLI directly (chmod +x src/vex first if needed)
-just test                        # test-unit + test-e2e
-just test-unit                   # unit tests, in an isolated tmp .vex dir (see below)
-just test-e2e                    # busted --run=e2e (black-box, shells out to src/vex)
+./src/vex <verb> [args]          # run the CLI directly
+just test                        # unit + e2e + lint; reports every failing suite
+just test-unit [spec...]         # unit tests (all, or the given spec files)
+just test-e2e [spec...]          # e2e tests (all, or the given spec files)
+just lint                        # luacheck (globals, undefined names, broken loops) + mirror check
 ```
 
-There is no build step (LuaJIT runs `.lua` sources directly) and no linter configured.
+There is no build step: LuaJIT runs the `.lua` sources directly, through the `src/vex` shell wrapper (`src/vex.bat` on Windows). `.busted` runs every test under `luajit`, the runtime vex ships with, and `test/unit/load.lua` refuses to run anywhere else.
 
-The entrypoint is `src/vex.lua` (also `lux.toml`'s `[run] args`), launched through the `src/vex` shell wrapper (`src/vex.bat` on Windows), which resolves its own directory and sets `package.path`/`package.cpath` before `require 'vex'`.
+## Testing
 
-### Running a single test
+The tests exist to give fast, trustworthy feedback on any change. Every behaviour change comes with a test at the right layer:
 
-Unit tests (`test/unit/**/*_spec.lua`, busted) must run with a **fresh, isolated `.vex` directory** as cwd — never run busted directly from the repo root, since that would exercise this repo's own dogfooded task data. Follow the pattern in `justfile`'s `test-unit`:
+- **Unit tests** (`test/unit/**/*_spec.lua`) cover a module's behaviour through its own API. Every `src/<path>.lua` has a `test/unit/<path>_spec.lua`; `test/unit/mirror.sh` (part of `just lint`) fails when one is missing. Only `src/vex.lua` (covered by e2e), the vendored `src/lib/binser.lua` and `return {}` stubs are exempt. `test/unit/run.sh` runs each spec file in its own fresh `vex init` directory, because `core.vexdex` binds to the cwd's `.vex` when the module loads. Never run busted on unit specs from the repo root: that would read and write this repo's own task data.
+- **e2e tests** (`test/e2e/*_spec.lua`) are black-box: they never `require` a vex module, only shell out to `src/vex` in a fresh temp project through `test/e2e/helper.lua` (`helper.project()`, `helper.vex(dir, ...)` which asserts success, `helper.vex_fails(dir, expected_message, ...)`, `helper.frontmatter(path)`, `helper.link(...)`). Anything a user can type belongs here.
+  - `smoke_spec.lua` runs every verb, view and focus form over a fixture project with every task type and link. It fails if `vex help` or `vex view` lists something it doesn't exercise, so a new verb or view needs a row there.
+  - `storage_spec.lua` guards the files on disk: resolving is idempotent, hand edits are picked up, the index can be rebuilt.
+  - `errors_spec.lua` checks that each user mistake gets its named error.
+  - `dogfood_spec.lua` resolves a copy of this repo's own backlog, so schema changes that would break real task files fail.
 
-```bash
-repo="$(pwd)"
-tmp=$(mktemp -d)
-(cd "$tmp" && "$repo/src/vex" init)
-(cd "$tmp" && busted --helper="$repo/test/unit/load.lua" --config-file="$repo/.busted" "$repo/test/unit/core/task_spec.lua")
-```
+Rules:
 
-Swap the last path for any single spec file, or add busted's `--filter=<pattern>` to match specific `it(...)` blocks.
-
-e2e tests (`test/e2e/*_spec.lua`) are black-box: they never `require` core/lib modules, only shell out to the compiled `src/vex` binary via `test/e2e/helper.lua`'s `run_vex(cwd, args)`, each in its own `mktemp -d`. Run one file with `busted --run=e2e test/e2e/lifecycle_spec.lua`.
-
-`.busted` defines three profiles: `default` (unit), `apiUnit` (tag-filtered subset), `e2e`.
+- An `Internal error` (the CLI's `bug` error) is always a regression. `helper.run_vex` fails any test whose command prints one.
+- Test behaviour, not registration or internals: what a user or caller observes, not that a name exists in a table.
+- A test for a known, unfixed bug names its vex task in the test name (e.g. `(fix-between-focus-crashing-1)`) and fails until the bug is fixed. Fix the bug, never weaken or delete the test.
+- Every thrown error name must be registered (`test/unit/core/errors_spec.lua` scans `src/` for `:throw('...')`).
 
 ## Architecture
 
 ### Entry point and plugin bootstrap (`src/vex.lua`)
 
-Registers seven plugin **enums** (named slots with exactly one active implementation), loads every file under `src/plugin/`, then hands off to `lib.cli`. Plugin loading is skipped when the verb is `init`, otherwise everything (including `core.vexdex`, whose module load throws if no `.vex` exists) gets eagerly required — this is why `init`'s own verb body has to run before any plugin touches `vexdex`.
+Registers seven plugin **enums** (named slots with exactly one active implementation), loads every file under `src/plugin/`, then hands off to `lib.cli`. Loading `core.vexdex` throws `not-vexed` when no `.vex` exists above the cwd, so `src/vex.lua` only requires `core.verbs` (and with it the vexdex and every plugin) when the verb isn't `init`.
 
 ### The plugin system (`src/lib/plugin.lua`)
 
@@ -50,8 +50,6 @@ Everything swappable in vex — id generation, file path layout, serialization f
 - `plugin:add(name)` / `plugin:addall(dir)` — register standalone plugins (e.g. `src/plugin/vexcomplete.lua`, the only real one today).
 - `plugin:addenum(name, members)` — register a named set with one active member.
 - `plugin:get(name)` — resolve to a module, `pcall`-requiring `plugin.<name>` first and falling back to `default.<name>` if that plugin isn't overridden. This is why `src/default/*.lua` holds the actual reference implementations for every slot (`tagger`, `taskpath`, `taskformat`, `dataformat`, `sortdata`, `frontmatter`, `body`) without a project needing to override anything.
-
-`Plugin:select`/`enable`/`disable`/`reload` exist for runtime switching but nothing in the CLI currently exposes them.
 
 ### Data flow: add → resolve → write
 
@@ -71,8 +69,6 @@ Task type schemas live in `src/core/taskdefinitions.lua`: base `task` (has `vexi
 
 A `Focus` is a lazy, composable, **persisted** query over the task index (`.vex/vexdex/focus.bin`). Every operation (`select`, `filter`, `fuzzy`, `between`, `tree`, `reversetree`, `backlinks`, set ops) returns a new `Focus` and records itself in `self.operations`, so a focus can be serialized/deserialized and replayed. Named focuses: `all`, `none`, `updated`, `initial`/`interim`/`final` (by where each task's `status` sits in its type's state machine: the initial state, a sink with no outgoing transitions, or neither), `prev` (the default when a verb's `[focus]` arg is omitted), a bare `vexid`, or a file/folder path. `vex focus <name> [--flags]` builds and saves one; most other verbs (`show`, `get`, `set`, `view`, `resolve`, `remove`) read the saved focus back when no argument is given.
 
-Known-broken: the binary set-op flags (`--union`/`--intersect`/`--xor`/`--notin`/`--onlyin`) crash through the CLI because `Focus.parse` passes the flag's raw string value straight into e.g. `Focus:union(focus)`, which expects a `Focus` object, not a name to resolve.
-
 ### Views (`src/core/view.lua`)
 
 Pluggable display formats over a focus's task list: `csv`, `tabular`, `json`, `kanban`, `overview` (scope/quality/structure/movement stats), `singular` (tree + DAG diagram for one task). `vex view [focus] [view]`.
@@ -82,16 +78,16 @@ Pluggable display formats over a focus's task list: `csv`, `tabular`, `json`, `k
 A from-scratch verb/error registry, not a wrapper around an existing arg-parsing library:
 - `cli:verb "name" { fn, doc = ..., args = ..., example = ... }` registers a command.
 - `cli:error "name" { fn, hint = ... }` registers a named error type; `cli:throw('name', ...)` prints the formatted message + hint to stderr and `os.exit(1)`. All of vex's user-facing errors go through this (see `src/core/errors.lua` for the full catalog) — prefer adding a new named error over an ad hoc `assert`/`error` when something is a user-facing failure rather than a bug.
-- Argument parsing (`parse_args`) splits `"verb --flag value positional"` into a mixed array/hash `Arguments` table; `--flag` with no following value (or one starting with `--`) becomes a boolean-ish presence flag. `CLI:rawify` re-quotes each shell word and `tokenize` honours that quoting, so a quoted value with spaces (`--due "2026-08-01 09:00:00"`, `--vexbody "two words"`) stays one value; `due` also accepts `T` as the date/time separator.
+- Arguments parse into a mixed array/hash `Arguments` table (`args:positional()`, `args:flags()`); shell quoting survives, so `--vexbody "two words"` is one value.
 - `cli:call` wraps every verb body in `xpcall`, converting any Lua error into a `bug` CLI error with a traceback — a verb function crashing doesn't need its own top-level pcall.
 
 ### Storage (`.vex/` and `src/core/vexdex.lua`)
 
-`vex init` creates: `vexdex/` (index + focus, real), `config.lua` (the one file actually read every run, real), `tasks/`, `recipes/`, `focuses/`, `views/` (extensions, see below), `events/` (scaffolded extension point — the folder exists, nothing reads it yet), plus `tmp/` for atomic writes. The vexdex also keeps `backlinks` (`backlinks[target][source] = true` for every `vexlink` from source to target), saved with the index. The index, backlinks and focus are each persisted twice per write: a `binser`-serialized `.bin` (what's actually read back) and a human-readable `pretty`-printed `.lua` mirror (debugging aid only, never read). `VexDex.new()` walks up from cwd looking for `.vex` and throws `not-vexed` if none is found — this happens at **module load time**, which is why plugin loading is skipped during `init` (see above).
+`vex init` creates: `vexdex/` (index + focus, real), `config.lua` (the one file actually read every run, real), `tasks/`, `recipes/`, `focuses/`, `views/` (extensions, see below), `events/`, plus `tmp/` for atomic writes. The vexdex also keeps `backlinks` (`backlinks[target][source] = true` for every `vexlink` from source to target), saved with the index. The index, backlinks and focus are each persisted twice per write: a `binser`-serialized `.bin` (what's actually read back) and a human-readable `pretty`-printed `.lua` mirror (debugging aid only, never read). `VexDex.new()` walks up from cwd looking for `.vex` when the module loads (see Entry point).
 
 ### Config (`src/core/config.lua` / `src/lib/config.lua`)
 
-`config.lua`'s `Config:loadall()` `dofile`s each registered path (currently just `.vex/config.lua`) and merges the returned table into `properties`, later paths overwriting earlier ones — there's no inheritance chain wired up yet despite that being a stated design goal. Access via metatable fallthrough (`config.taskfolder`, etc.), not a getter method.
+`Config:loadall()` `dofile`s each registered path (currently just `.vex/config.lua`) and merges the returned tables, later paths overwriting earlier ones. Read values as fields: `config.taskfolder`, `config.users`.
 
 ### Extensions (`src/core/extensions.lua`)
 
@@ -99,15 +95,11 @@ Required at the end of `core.verbs`, once every manager exists. It runs each `.l
 
 ### Recipes (`src/core/recipe.lua`)
 
-A recipe is a named shortcut producing a task with some fields pre-filled (`Recipe:recipe 'name' { add = function(task, taskproperties) ... end }`). Only `abstract` ships (`src/core/taskdefinitions.lua`), which forces `vextype = 'abstract'`. `Recipe:add` only resolves/writes the **single** vexid the recipe's `add` function returns — a recipe that calls `task:add` multiple times to create several tasks only persists the last one to disk (see `vexdoc/Home.md`'s recipe example for the full explanation). Projects add their own in `.vex/recipes/*.lua` (see Extensions).
+A recipe is a named shortcut producing a task with some fields pre-filled (`Recipe:recipe 'name' { add = function(task, taskproperties) ... end }`). Only `abstract` ships (`src/core/taskdefinitions.lua`), which forces `vextype = 'abstract'`. `Recipe:add` resolves the vexid the recipe's `add` function returns and focuses on it. Projects add their own in `.vex/recipes/*.lua` (see Extensions).
 
 ### Singletons
 
 `core.task`, `core.vexdex`, `core.focus`, `core.view`, `core.recipe`, `core.config`, `lib.cli`, `lib.plugin` are all modules that `require`-cache a single constructed instance (`return TaskManager.new()` etc. at end of file) rather than exposing a class you instantiate yourself. Requiring the module *is* getting the instance.
-
-### Stub libraries
-
-`src/lib/tree.lua`, `dag.lua`, `event.lua`, and `state.lua` are currently **empty files** (0 bytes) — reserved names from the original code plan (see `vexdoc/Vex.md`) that nothing requires yet. Don't assume they contain anything.
 
 ## Where code goes
 
@@ -128,8 +120,6 @@ If a new concept appears and it isn't clear which of these it belongs to, stop a
 
 - Metatable-based "OO": `Module.new()` + `Module.__index = Module`, methods as `function Module:method(...)`.
 - No explanatory comments. Code should read clearly on its own; the few existing comments (e.g. the workarounds in `test/e2e/helper.lua`) only record a non-obvious *why*.
-- Tests mirror `src/`'s directory structure under `test/unit/` (`test/unit/core/task_spec.lua` tests `src/core/task.lua`, etc.).
-- New CLI verbs go in `src/core/verbs.lua` (or a plugin file) using `cli:verb "name" { ... }`; new user-facing errors go in `src/core/errors.lua` using `cli:error "name" { ... }`.
 
 ## Repo preferences
 
@@ -137,9 +127,8 @@ If a new concept appears and it isn't clear which of these it belongs to, stop a
 - **Close out vex tasks** that a change addresses: move the status through `doing` to `done` with `./src/vex set <vexid> --status ...`. Append to a task's body rather than overwriting it, and only when there is something worth adding: a `done` status already says the task was fixed.
 - **Fix docs directly.** When documentation (e.g. this file) is stale or wrong, fix it in place instead of raising a vex task for it.
 - **Design before writing code.** Work out which module each piece belongs to (see "Where code goes"), then write the code.
-- **Tests come first.** Before starting, make sure the existing tests are enough to validate the change. If they aren't, design and write the tests that need to pass, and see them fail.
-- **No explanatory comments.**
-- **Ask about new concepts.** If something new appears and it isn't clear where it belongs in the codebase, stop, ask, and discuss it with the user.
+- **Tests come first.** Before starting, make sure the existing tests are enough to validate the change. If they aren't, design and write the tests that need to pass, and see them fail (see "Testing").
+- **Run `just test` before calling a change done.** Failures tagged with a vex task are known bugs; anything else is yours.
 
 ## Working practices (Andrej Karpathy's guidelines)
 
