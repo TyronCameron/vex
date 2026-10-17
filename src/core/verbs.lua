@@ -88,7 +88,7 @@ cli:verb "view" {
     end,
     doc = "Prints a view of current tasks",
     args = "[focus] [view]",
-    example = "vex view all table"
+    example = "vex view all tabular"
 }
 
 cli:verb "resolve" {

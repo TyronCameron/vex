@@ -4,7 +4,7 @@ return {
     option = "prev",
     taskformat = "obsidian",
     tasktype = "task",
-    view = "table"
+    view = "tabular"
   },
   plugins = {
     inline = true,
