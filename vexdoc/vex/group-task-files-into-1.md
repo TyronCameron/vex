@@ -3,8 +3,8 @@ vexid: group-task-files-into-1
 vextype: task
 description: Group task files into folders
 created: "2026-10-15 00:45:00"
-modified: "2026-10-15 00:45:00"
-status: todo
+modified: "2026-10-17 08:37:05"
+status: done
 ---
 
 Arrange task files into nested folders by a configurable list of groupings, e.g. `groupby = {'parent', 'status'}` in `.vex/config.lua`. `parent` nests a task under its ancestor chain (through `children`). Any other name groups by that field's value (`status`, `owner`, ...). Spiked as the `grouppath` taskpath plugin. Without `groupby` the paths stay flat.
@@ -33,3 +33,9 @@ Dragons:
 12. Folder and file focuses now work (`vex show todo/`, `vex focus todo/x.md`). They only trigger when the name contains a `/`.
 13. `owner` isn't a real field yet ([[implement-owner-assignment-1]]).
 14. Config can't select plugins ([[make-config-actually-control-1]]), so `grouppath` is the active taskpath and stays flat without `groupby`.
+
+Shipped on top of transients, replacing the spike:
+
+- `grouppath` is the only taskpath plugin (flatpath is gone) and groups by any field in `groupby`, transients included. A list value nests one folder per element. `parent` became the `lineage` transient (renamed from `ancestors`, now root first), so nothing hardcodes `children` any more.
+- The cascade runs from `TaskManager:resolve`, over the task's forwardlinks (the new `Focus:forwardlinks`) and the links it just dropped, transitively.
+- Folder names are sanitised so a value can't escape the taskfolder. A bad `groupby` throws `bad-groupby`, and a failed rename throws `move-failed`.
