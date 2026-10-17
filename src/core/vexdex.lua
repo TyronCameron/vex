@@ -19,7 +19,8 @@ function VexDex.new(path)
         path = found,
         modified = os.time(),
         index = {},
-        backlinks = {}
+        backlinks = {},
+        paths = {}
     }, VexDex)
     return this:ensureindex()
 end
@@ -37,6 +38,7 @@ end
 function VexDex:unsafe_remove(vexid)
     self.index[vexid] = nil
     self.backlinks[vexid] = nil
+    self.paths[vexid] = nil
     return self:unsafe_link(vexid, {})
 end
 
@@ -60,6 +62,11 @@ end
 function VexDex:link(vexid, links)
     self:unsafe_link(vexid, links)
     return self:writeindex()
+end
+
+function VexDex:unsafe_locate(vexid, path)
+    self.paths[vexid] = path
+    return self
 end
 
 function VexDex:get(vexid)
@@ -87,6 +94,10 @@ function VexDex:readindex()
         local backlinks = {binser.readFile(self:vexpath("vexdex/backlinks.bin"))}
         self.backlinks = backlinks[1][1]
     end
+    if lfs.attributes(self:vexpath("vexdex/paths.bin"), "mode") == "file" then
+        local paths = {binser.readFile(self:vexpath("vexdex/paths.bin"))}
+        self.paths = paths[1][1]
+    end
     return self 
 end
 
@@ -107,6 +118,12 @@ function VexDex:writeindex()
     end)
     self:atomic(self:vexpath("vexdex/backlinks.lua"), function(path)
         pretty.write(path, self.backlinks)
+    end)
+    self:atomic(self:vexpath("vexdex/paths.bin"), function(path)
+        binser.writeFile(path, self.paths)
+    end)
+    self:atomic(self:vexpath("vexdex/paths.lua"), function(path)
+        pretty.write(path, self.paths)
     end)
     return self 
 end

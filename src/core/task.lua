@@ -38,11 +38,11 @@ end
 
 -- gets data from a task and returns it as a string for the command line
 function Task:tostring(fields)
-    local values = {}
-    for _, pair in ipairs(func.ifilter(fields, function(word) return type(word) == "table" end)) do
-        table.insert(values, self[pair[1]])
-    end
-    return table.concat(values, "\t")
+    return table.concat(func.imap(fields, function(field)
+        local value = self[field]
+        if value == nil then return "" end
+        return type(value) == "table" and table.concat(value, ",") or tostring(value)
+    end), "\t")
 end
 
 -- show 
@@ -239,14 +239,40 @@ function TaskManager:get(vexid, fields)
     return self:format(vexid):tostring(fields)
 end
 
--- sets task properties for a given focus
-function TaskManager:set(vexid, tab)
+local function aslist(value)
+    if value == nil then return {} end
+    return type(value) == "table" and value or {value}
+end
+
+local listmodifiers = {
+    insert = function(current, values)
+        local result = func.imap(current, function(v) return v end)
+        for _, value in ipairs(values) do
+            if not func.any(result, function(v) return v == value end) then table.insert(result, value) end
+        end
+        return result
+    end,
+    remove = function(current, values)
+        return func.ifilter(current, function(v)
+            return not func.any(values, function(value) return value == v end)
+        end)
+    end,
+}
+
+-- sets task properties for a given focus; modifiers[field] = 'insert' or 'remove' edits a list by value instead
+function TaskManager:set(vexid, tab, modifiers)
     assert(tab and type(tab) == "table", "set() requires a table")
     local task = {}
     for k, v in pairs(self:getsingle(vexid)) do task[k] = v end
     for k,v in pairs(tab) do 
         assert(k ~= "vexid", "Cannot change the vexid with set")
-        task[k] = v
+        local modifier = modifiers and modifiers[k]
+        if modifier then
+            if not listmodifiers[modifier] then cli:throw('unknown-modifier', modifier) end
+            task[k] = listmodifiers[modifier](aslist(task[k]), aslist(v))
+        else
+            task[k] = v
+        end
     end
     task.modified = os.time()
     self.tasks[vexid] = Task.new(task)
@@ -256,7 +282,7 @@ end
 -- shows task, basically cat 'filename'
 function TaskManager:show(vexid)
     assert(vexid, "show() requires an vexid")
-    return self:format(vexid):show(self:getabspath(vexid))
+    return self:format(vexid):show(self:getcurrentpath(vexid))
 end
 
 ---------------------------------------------------
@@ -313,11 +339,6 @@ function TaskManager:index(vexid)
     vexdex:add(vexid, self.tasks[vexid])
 end
 
--- removes from the index
-function TaskManager:unindex(vexid)
-    vexdex:remove(vexid)
-end
-
 -- resolve
 function TaskManager:resolve(vexid)
     if not vexid then cli:throw('missing-required-field', vexid, 'vexid') end 
@@ -348,9 +369,17 @@ function TaskManager:resolve(vexid)
         if not derive(parent, task, context) then cli:throw('resolution-failed-derivation', vexid) end 
     end 
 
+    local unlinked = vexdex:get(vexid) and focus.focus(vexid):forwardlinks():get() or {}
     self.tasks[vexid] = task
     vexdex:unsafe_link(vexid, context.links)
-    self:index(vexid)
+    vexdex:unsafe_add(vexid, task)
+
+    local arranged = {}
+    self:arrange(vexid, arranged)
+    for _, linked in ipairs(unlinked) do
+        self:arrange(linked.vexid, arranged)
+    end
+    vexdex:writeindex()
 end
 
 ---------------------------------------------------
@@ -390,9 +419,42 @@ function TaskManager:unformat(task)
     return unformatted
 end
 
+local function taskroot()
+    return vexdex.path .. '/' .. config.taskfolder
+end
+
+local function relative(path)
+    local root = taskroot() .. '/'
+    if path:sub(1, #root) == root then return path:sub(#root + 1) end
+end
+
+local function dirname(path)
+    return path:match("^(.*)/")
+end
+
+local function tidy(path)
+    local dir = dirname(path)
+    while #dir > #taskroot() and os.remove(dir) do
+        dir = dirname(dir)
+    end
+end
+
 -- get the path that a task should live at
 function TaskManager:getabspath(vexid)
-    return vexdex.path .. '/' .. config.taskfolder .. '/' .. self:getrelpath(vexid)
+    return taskroot() .. '/' .. self:getrelpath(vexid)
+end
+
+-- get the path that a task's file currently lives at
+function TaskManager:getcurrentpath(vexid)
+    local relpath = vexdex.paths[vexid]
+    if not relpath then return self:getabspath(vexid) end
+    return taskroot() .. '/' .. relpath
+end
+
+-- finds a task's file anywhere in the taskfolder by its filename
+function TaskManager:find(vexid)
+    local filename = self:getrelpath(vexid):match("[^/]*$")
+    return func.ifilter(lfsext.walk(taskroot()), function(path) return path:match("[^/]*$") == filename end)[1]
 end
 
 function TaskManager:getrelpath(vexid)
@@ -401,7 +463,9 @@ end
 
 -- reads a file from disk and adds it to memory
 function TaskManager:read(vexid)
-    return self:readfrompath(self:getabspath(vexid))
+    local task = self:readfrompath(self:getcurrentpath(vexid))
+    if not task and vexdex:get(vexid) then task = self:readfrompath(self:find(vexid)) end
+    return task
 end
 
 -- reads a file from disk and adds it to memory by path
@@ -410,6 +474,7 @@ function TaskManager:readfrompath(path)
     if ok and task then 
         task = self:unformat(task)
         self.tasks[task.vexid] = Task.new(task)
+        if relative(path) then vexdex:unsafe_locate(task.vexid, relative(path)) end
         self:index(task.vexid)
         return task
     else 
@@ -420,17 +485,53 @@ end
 -- writes a file from disk
 function TaskManager:write(vexid)
     local task = self:format(vexid)
-    vexdex:atomic(self:getabspath(vexid), function(path)
+    local path = self:getcurrentpath(vexid)
+    lfs.mkdir(dirname(path))
+    vexdex:atomic(path, function(path)
         taskformat.write(path, sortdata(frontmatter(task)), body(task))
     end)
+    vexdex:unsafe_locate(vexid, relative(path))
     self:index(vexid)
     return vexid
 end
 
+-- moves a task's file to the path it should live at
+function TaskManager:move(vexid)
+    local relpath = self:getrelpath(vexid)
+    local from, to = self:getcurrentpath(vexid), taskroot() .. '/' .. relpath
+    if from ~= to and lfs.attributes(from, "mode") ~= "file" then from = self:find(vexid) end
+    if from and from ~= to then
+        lfs.mkdir(dirname(to))
+        local ok, err = os.rename(from, to)
+        if not ok then cli:throw('move-failed', vexid, from, to, err) end
+        tidy(from)
+    end
+    vexdex:unsafe_locate(vexid, relpath)
+    return vexid
+end
+
+-- moves a task's file, and those of every task it links to, to where they should live
+function TaskManager:arrange(vexid, arranged)
+    if arranged[vexid] then return end
+    arranged[vexid] = true
+    self:move(vexid)
+    focus.focus(vexid):forwardlinks():each(function(linked)
+        self:arrange(linked, arranged)
+    end)
+end
+
 -- deletes a file from disk
 function TaskManager:delete(vexid)
-    os.remove(self:getabspath(vexid))
-    self:unindex(vexid)
+    local linked = focus.focus(vexid):forwardlinks():get()
+    local path = self:getcurrentpath(vexid)
+    os.remove(path)
+    vexdex:unsafe_remove(vexid)
+    tidy(path)
+    local arranged = {}
+    for _, task in ipairs(linked) do
+        self:arrange(task.vexid, arranged)
+    end
+    vexdex:writeindex()
     return vexid
 end
 

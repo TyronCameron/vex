@@ -29,6 +29,20 @@ cli:error "file" {
     hint = "Check that the file exists and is not in use?"
 }
 
+cli:error "move-failed" {
+    function(vexid, from, to, err)
+        return 'Could not move the task file for `' .. tostring(vexid) .. '` from `' .. tostring(from) .. '` to `' .. tostring(to) .. '`: ' .. tostring(err)
+    end,
+    hint = "Check that the folder is writable and that nothing else holds the file open."
+}
+
+cli:error "bad-groupby" {
+    function(groupby)
+        return 'The `paths.groupby` setting in your config must be a list of field names, but it is `' .. tostring(groupby) .. '`.'
+    end,
+    hint = "Write it as a list, e.g. `paths = { groupby = {'lineage', 'status'} }`, or remove it to keep task files flat."
+}
+
 cli:error "write" {
     function(path, vexpath)
         return 'Could not write file intended for `' .. tostring(path) .. '`. This may be partially written to `' .. tostring(vexpath) .. '`.'
@@ -179,4 +193,11 @@ cli:error "bad-extension" {
         return 'Could not load the vex extension at `' .. tostring(path) .. '`: ' .. tostring(err)
     end,
     hint = "Fix or remove this file in your `.vex` folder."
+}
+
+cli:error "unknown-modifier" {
+    function(modifier)
+        return 'Unknown modifier `' .. tostring(modifier) .. '`.'
+    end,
+    hint = "Put `--insert` or `--remove` before a list field, e.g. `vex set my-task --insert --children a,b`."
 }

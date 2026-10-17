@@ -4,13 +4,18 @@ local func = require 'lib.func'
 -- Arguments
 -- ---------------------------------------------------------------------------
 
+local Flag = {}
+
+local function isflag(word)
+    return getmetatable(word) == Flag
+end
+
 local Arguments = {}
 Arguments.__index = Arguments
 
 function Arguments:flags()
     local taskproperties = {}
-    local argproperties = func.ifilter(self, function(word) return type(word) == "table" end)
-    for _, pair in ipairs(argproperties) do
+    for _, pair in ipairs(func.ifilter(self, isflag)) do
         if pair[2] then 
             taskproperties[pair[1]] = pair[2]
         end 
@@ -19,7 +24,26 @@ function Arguments:flags()
 end 
 
 function Arguments:positional()
-    return func.ifilter(self, function(word) return type(word) == "string" end)
+    return func.ifilter(self, function(word) return not isflag(word) end)
+end 
+
+-- the positional words as prose, with any comma lists joined back up
+function Arguments:text()
+    return table.concat(func.imap(self:positional(), function(word)
+        return type(word) == "table" and table.concat(word, ",") or word
+    end), " ")
+end
+
+-- maps each flag to the valueless flag right before it: --insert --children a => {children = "insert"}
+function Arguments:modifiers()
+    local modifiers = {}
+    for i, word in ipairs(self) do
+        local nextword = self[i + 1]
+        if isflag(word) and not word[2] and isflag(nextword) and nextword[2] then
+            modifiers[nextword[1]] = word[1]
+        end
+    end
+    return modifiers
 end 
 
 -- ---------------------------------------------------------------------------
@@ -38,16 +62,25 @@ CLI.__index = CLI
 -- quotes allow \" and \\ (and \$, \`) to escape, a bare backslash escapes
 -- the next character outside quotes, and quoted/unquoted segments glue
 -- together into one word (e.g. status:"not done" => `status:not done`).
+-- A comma outside quotes splits a word into a list (a,b => {"a", "b"});
+-- `\,` keeps a literal comma, quoted or not.
 local function tokenize(txt)
     local tokens = {}
     local i, n = 1, #txt
     local buf = {}
+    local parts = {}
     local in_token = false
 
     local function flush()
         if in_token then
-            table.insert(tokens, table.concat(buf))
+            if #parts > 0 then
+                table.insert(parts, table.concat(buf))
+                table.insert(tokens, parts)
+            else
+                table.insert(tokens, table.concat(buf))
+            end
             buf = {}
+            parts = {}
             in_token = false
         end
     end
@@ -69,7 +102,7 @@ local function tokenize(txt)
                 local ch = txt:sub(i, i)
                 if ch == "\\" and i < n then
                     local nextch = txt:sub(i + 1, i + 1)
-                    if nextch == '"' or nextch == "\\" or nextch == "$" or nextch == "`" then
+                    if nextch == '"' or nextch == "\\" or nextch == "$" or nextch == "`" or nextch == "," then
                         table.insert(buf, nextch)
                         i = i + 2
                     else
@@ -90,6 +123,11 @@ local function tokenize(txt)
             else
                 i = i + 1
             end
+        elseif c == "," then
+            in_token = true
+            table.insert(parts, table.concat(buf))
+            buf = {}
+            i = i + 1
         else
             in_token = true
             table.insert(buf, c)
@@ -102,27 +140,38 @@ end
 
 -- Escapes a single argv-style word so that `tokenize` will read it back as
 -- exactly one word, even if it contains whitespace or quote characters.
+-- A word with whitespace must have been quoted in the shell, so it is
+-- quoted again and its commas stay literal. `\,` is passed through as is.
 local function quote_word(word)
-    if word ~= "" and not word:find('[%s"\'\\]') then return word end
-    return '"' .. word:gsub('[\\"]', '\\%0') .. '"'
+    local quoted = word == "" or word:find("%s")
+    local specials = quoted and '[\\"]' or '[\\"\']'
+    local function escape(c) return c:find(specials) and "\\" .. c or c end
+    local escaped = word:gsub("\\?.", function(match)
+        if match == "\\," then return match end
+        return #match == 2 and "\\\\" .. escape(match:sub(2)) or escape(match)
+    end)
+    return quoted and '"' .. escaped .. '"' or escaped
 end
 
 local function parse_args(txt)
     -- splits a string into positional args and named flags
-    -- "query tag --filter --select a --drop b" => {"query", "tag", {"filter"}, {"select","a"}, {"drop", "b"}}
+    -- "query tag --filter --select a,b --drop c" => {"query", "tag", {"filter"}, {"select", {"a", "b"}}, {"drop", "c"}}
+    local function isflagword(token)
+        return type(token) == "string" and token:sub(1, 2) == "--"
+    end
     local args = {}
     local i = 1
     local tokens = tokenize(txt)
     while i <= #tokens do
         local t = tokens[i]
-        if t:sub(1, 2) == "--" then
+        if isflagword(t) then
             local key = t:sub(3)
             local val = tokens[i + 1]
-            if val and val:sub(1, 2) ~= "--" then
-                table.insert(args, {key, val})
+            if val and not isflagword(val) then
+                table.insert(args, setmetatable({key, val}, Flag))
                 i = i + 2
             else
-                table.insert(args, {key})
+                table.insert(args, setmetatable({key}, Flag))
                 i = i + 1
             end
         else
@@ -278,13 +327,21 @@ function CLI:rawify(argv)
     return table.concat(words, " ")
 end
 
+-- Parses a raw string into Arguments: positional words and flags, with comma lists split out.
+function CLI:parse(txt)
+    return parse_args(txt)
+end
+
+-- Tells a flag apart from a positional word or list.
+CLI.isflag = isflag
+
 -- Run from a raw arg string (or pass arg table directly).
 function CLI:run(input)
     local args
     local raw
     if type(input) == "string" then
         raw = input
-        args = parse_args(input)
+        args = self:parse(input)
     elseif type(input) == "table" then
         args = setmetatable(input, Arguments)
     else

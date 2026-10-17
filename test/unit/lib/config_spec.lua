@@ -20,6 +20,19 @@ describe("Config", function()
         os.remove(tmpfile)
     end)
 
+    it("exposes settings that share a name with the config's own fields", function()
+        local tmpfile = os.tmpname()
+        local f = io.open(tmpfile, "w")
+        f:write("return { paths = { groupby = {'status'} } }")
+        f:close()
+
+        local cfg = Config.new():registerpath(tmpfile):loadall()
+
+        assert.same({groupby = {'status'}}, cfg.paths)
+
+        os.remove(tmpfile)
+    end)
+
     it("later config files override earlier ones", function()
         local first  = os.tmpname()
         local second = os.tmpname()

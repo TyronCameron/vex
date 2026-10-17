@@ -268,6 +268,12 @@ describe("schema", function()
         assert.falsy(s:validate({ [1] = 1, ["a"] = 2 }))
     end)
 
+    it("`schema.vec` normalises a single value into a one-element list", function()
+        local s = schema.vec { schema.num }
+        assert.same({ 5 }, s:prevalidate("5"))
+        assert.is_nil(s:prevalidate(nil))
+    end)
+
     -- ==================== Descriptive schemas ====================
 
     it("`schema.constant` validates the exact constant", function()

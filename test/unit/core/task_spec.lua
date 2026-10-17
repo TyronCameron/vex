@@ -47,6 +47,55 @@ describe("task", function()
         task:remove(vexid)
     end)
 
+    describe("set with modifiers", function()
+
+        local parent, first, second
+
+        before_each(function()
+            first = create({description = "modified first child"})
+            second = create({description = "modified second child"})
+            parent = create({description = "modified parent abstract", vextype = 'abstract', children = {first}})
+        end)
+
+        it("inserts values into a list without overwriting it, skipping ones already there", function()
+            task:set(parent, {children = {second, first}}, {children = 'insert'})
+            assert.same({first, second}, task.tasks[parent].children)
+        end)
+
+        it("inserts a single value", function()
+            task:set(parent, {children = second}, {children = 'insert'})
+            assert.same({first, second}, task.tasks[parent].children)
+        end)
+
+        it("inserts into a field the task does not hold yet", function()
+            task:set(first, {dependencies = second}, {dependencies = 'insert'})
+            assert.same({second}, task.tasks[first].dependencies)
+        end)
+
+        it("removes values from a list by value", function()
+            task:set(parent, {children = {first, second}})
+            task:set(parent, {children = first}, {children = 'remove'})
+            assert.same({second}, task.tasks[parent].children)
+        end)
+
+        it("rejects an unknown modifier", function()
+            local cli = require 'lib.cli'
+            stub(cli, 'throw', function(self, name) error(name) end)
+            local ok, err = pcall(task.set, task, parent, {children = second}, {children = 'append'})
+            cli.throw:revert()
+            assert.is_false(ok)
+            assert.truthy(err:find('unknown-modifier', 1, true))
+        end)
+
+    end)
+
+    it("gets list fields joined with commas", function()
+        local child = create({description = "gotten list child"})
+        local other = create({description = "gotten list other"})
+        local parent = create({description = "gotten list parent", vextype = 'abstract', children = {child, other}})
+        assert.equal("[[" .. child .. "]],[[" .. other .. "]]", task:get(parent, {'children'}))
+    end)
+
     it("remove strips the vexid from tasks linking to it and rewrites them", function()
         local child = create({description = "cascaded child task"})
         local parent = create({description = "cascading parent abstract", vextype = 'abstract', children = {child}})
@@ -196,7 +245,7 @@ describe("task", function()
 
         it("gets a transient computed from the unformatted task", function()
             local vexid = create({description = "quiet gotten task", vextype = 'transientparent'})
-            assert.equal("QUIET GOTTEN TASK\tnumber", task:get(vexid, {{'shout'}, {'createdtype'}}))
+            assert.equal("QUIET GOTTEN TASK\tnumber", task:get(vexid, {'shout', 'createdtype'}))
         end)
 
         it("rejects a transient for a task type that does not exist", function()
