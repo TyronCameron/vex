@@ -56,6 +56,11 @@ describe("vex user-facing errors (e2e, subprocess)", function()
     assert.equal("todo", helper.frontmatter(dir .. "/" .. vexid .. ".md").status)
   end)
 
+  it("rejects an unknown set modifier", function()
+    local vexid = vex(dir, "add", "Water", "the", "plants")
+    fails(dir, "Unknown modifier `frobnicate`", "set", vexid, "--frobnicate", "--status", "done")
+  end)
+
   it("rejects a link to a task that does not exist", function()
     local vexid = vex(dir, "add", "Dangling", "link", "task")
     helper.link(dir, vexid, "dependencies", {"no-such-task-1"})
