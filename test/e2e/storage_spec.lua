@@ -65,6 +65,14 @@ describe("vex storage (e2e, subprocess)", function()
     assert.truthy(vex(dir, "view", "child-task-here-1", "singular"):find("parent-abstract-here-1", 1, true))
   end)
 
+  it("rebuilds a missing vexdex folder, as in a fresh clone", function()
+    linked_project()
+    os.execute("rm -rf " .. helper.shell_escape(dir .. "/.vex/vexdex"))
+    vex(dir, "resolve", "all")
+    assert.truthy(vex(dir, "focus", "all"):find("Focusing on 3 vexes", 1, true))
+    assert.truthy(helper.is_file(dir .. "/.vex/vexdex/index.bin"))
+  end)
+
   it("never writes transients to a task file", function()
     linked_project()
     for _, vexid in ipairs({"child-task-here-1", "parent-abstract-here-1", "dependent-atom-here-1"}) do
