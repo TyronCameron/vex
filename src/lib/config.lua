@@ -6,16 +6,16 @@ Config.__index = function(tab, key)
 end
 
 function Config.new()
-    return setmetatable({paths = {}, properties = {}}, Config)
+    return setmetatable({files = {}, properties = {}}, Config)
 end
 
 function Config:registerpath(path)
-    table.insert(self.paths, path)
+    table.insert(self.files, path)
     return self
 end
 
 function Config:loadall()
-    for _, path in ipairs(self.paths) do
+    for _, path in ipairs(self.files) do
         local ok, cfg = pcall(dofile, path)
         if ok then 
             for key, value in pairs(cfg) do 

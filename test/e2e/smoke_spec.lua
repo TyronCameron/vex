@@ -56,6 +56,7 @@ local focuses = {
   {"focus", "all", "--select", "description"},
   {"focus", PARENT, "--tree", "children"},
   {"focus", CHILD, "--reversetree", "children"},
+  {"focus", PARENT, "--forwardlinks"},
   {"focus", CHILD, "--complement"},
   {"focus", "all", "--filter", "vextype:task", "--select", "cost"},
   {"focus", "all", "--between", "cost:1:9"},
