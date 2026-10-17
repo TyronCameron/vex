@@ -91,9 +91,9 @@ task:task 'task' {
             schema.formatted {schema.datetime},
             default = function(self, instance, context) return os.time() end
         },
-        modified = schema.derive {
+        modified = schema.default {
             schema.formatted {schema.datetime},
-            derive = function(self, instance, context) return os.time() end
+            default = function(self, instance, context) return os.time() end
         },
         status = schema.statemachine {
             states = {
