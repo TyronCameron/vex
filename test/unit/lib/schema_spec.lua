@@ -389,6 +389,11 @@ describe("schema", function()
         assert.truthy(s:validate(result))
     end)
 
+    it("`schema.datetime` reads a date-only value as midnight", function()
+        local s = schema.formatted { schema.datetime }
+        assert.equal(os.time({year = 2026, month = 1, day = 1, hour = 0, isdst = false}), s:prevalidate("2026-01-01"))
+    end)
+
     it("`schema.all` prevalidates through each of its subschemas", function()
         local s = schema.all { schema.num, schema.rng {0, 20} }
         assert.equal(15, s:prevalidate("15"))
