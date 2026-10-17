@@ -197,18 +197,18 @@ task:transient 'phase' {
     end
 }
 
-task:transient 'ancestors' {
+task:transient 'lineage' {
     vextype = 'task',
     definition = function(t)
-        local lineage = focus.focus(t.vexid):reversetree('children'):get()
-        return func.imap(func.slice(lineage, 2, 'end'), function(ancestor) return ancestor.vexid end)
+        local ancestors = focus.focus(t.vexid):reversetree('children'):get()
+        return func.reverse(func.imap(func.slice(ancestors, 2, 'end'), function(ancestor) return ancestor.vexid end))
     end
 }
 
 task:transient 'path' {
     vextype = 'task',
     definition = function(t)
-        return task:getabspath(t.vexid)
+        return task:getcurrentpath(t.vexid)
     end
 }
 
