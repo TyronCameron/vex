@@ -121,6 +121,67 @@ describe("task", function()
         assert.same({dependency}, vexdex:get(vexid).dependencies)
     end)
 
+    describe("transients", function()
+
+        local schema = require 'lib.schema'
+        task:task 'transientparent':extends 'task' { schema = schema.atleast {} }
+        task:task 'transientchild':extends 'transientparent' { schema = schema.atleast {} }
+        task:transient 'shout' { vextype = 'transientparent', definition = function(t) return t.description:upper() end }
+        task:transient 'loud' { vextype = 'transientparent', definition = function(t) return t.shout .. '!' end }
+        task:transient 'kind' { vextype = 'transientparent', definition = function() return 'parent' end }
+        task:transient 'kind' { vextype = 'transientchild', definition = function() return 'child' end }
+        task:transient 'createdtype' { vextype = 'transientparent', definition = function(t) return type(t.created) end }
+
+        it("computes a transient on a task as soon as it is added", function()
+            local vexid = task:add({description = "quiet added task", vextype = 'transientparent'})
+            assert.equal("QUIET ADDED TASK", task.tasks[vexid].shout)
+            task:remove(vexid)
+        end)
+
+        it("lets a transient use another transient", function()
+            local vexid = task:add({description = "quiet chained task", vextype = 'transientparent'})
+            assert.equal("QUIET CHAINED TASK!", task.tasks[vexid].loud)
+            task:remove(vexid)
+        end)
+
+        it("never stores a transient on the task, in the index or in the file", function()
+            local vexid = create({description = "quiet stored task", vextype = 'transientparent'})
+            assert.equal("QUIET STORED TASK", vexdex:get(vexid).shout)
+            for field in pairs(task.tasks[vexid]) do assert.not_equal('shout', field) end
+            assert.is_nil(io.open(task:getabspath(vexid)):read("*a"):find("shout", 1, true))
+        end)
+
+        it("inherits transients from parent types and lets a subtype override them", function()
+            local parent = task:add({description = "quiet parent type task", vextype = 'transientparent'})
+            local child = task:add({description = "quiet child type task", vextype = 'transientchild'})
+            local plain = task:add({description = "quiet plain type task"})
+            assert.equal("QUIET CHILD TYPE TASK", task.tasks[child].shout)
+            assert.equal("parent", task.tasks[parent].kind)
+            assert.equal("child", task.tasks[child].kind)
+            assert.is_nil(task.tasks[plain].shout)
+            task:remove(parent)
+            task:remove(child)
+            task:remove(plain)
+        end)
+
+        it("prefers a stored field over a transient of the same name", function()
+            local vexid = create({description = "quiet shadowed task", vextype = 'transientparent', shout = "whisper"})
+            assert.equal("whisper", task.tasks[vexid].shout)
+        end)
+
+        it("gets a transient computed from the unformatted task", function()
+            local vexid = create({description = "quiet gotten task", vextype = 'transientparent'})
+            assert.equal("QUIET GOTTEN TASK\tnumber", task:get(vexid, {{'shout'}, {'createdtype'}}))
+        end)
+
+        it("rejects a transient for a task type that does not exist", function()
+            assert.has_error(function()
+                task:transient 'orphaned' { vextype = 'nosuchtype', definition = function() end }
+            end)
+        end)
+
+    end)
+
     it("reindexall rebuilds the index from the task files, including hand edits", function()
         local vexid = create({description = "hand edited task"})
         local path = task:getabspath(vexid)

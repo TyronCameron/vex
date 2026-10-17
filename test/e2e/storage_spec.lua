@@ -65,6 +65,16 @@ describe("vex storage (e2e, subprocess)", function()
     assert.truthy(vex(dir, "view", "child-task-here-1", "singular"):find("parent-abstract-here-1", 1, true))
   end)
 
+  it("never writes transients to a task file", function()
+    linked_project()
+    for _, vexid in ipairs({"child-task-here-1", "parent-abstract-here-1", "dependent-atom-here-1"}) do
+      local fields = helper.frontmatter(dir .. "/" .. vexid .. ".md")
+      for _, transient in ipairs({"wordcount", "phase", "ancestors", "path", "age"}) do
+        assert.is_nil(fields[transient], transient .. " was written to " .. vexid)
+      end
+    end
+  end)
+
   it("leaves nothing behind in .vex/tmp", function()
     linked_project()
     vex(dir, "set", "child-task-here-1", "--status", "doing")
