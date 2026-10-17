@@ -403,7 +403,9 @@ Schema.register 'any' {
         end)
     end,
     validate = function(self, instance, context) 
-        if self.specification == nil or func.isempty(self.specification) then return true end
+        if self.specification == nil or func.isempty(self.specification) then 
+            return false, "Any schema is empty -- so trivially nothing can match"
+        end
         for childschema, childinstance in self:iterate(instance, context) do 
             if childschema:validate(childinstance, context) then return true end 
         end 
@@ -589,6 +591,7 @@ Schema.register 'date' {
     isos = {
         format = {
             backward = function(self, value)
+                if type(value) ~= "string" then return value end
                 local y, mo, d = value:match("^(%d%d%d%d)-(%d%d)-(%d%d)$")
                 if not y then return end
                 return os.time({
@@ -612,6 +615,7 @@ Schema.register 'datetime' {
     isos = {
         format = {
             backward = function(self, value)
+                if type(value) ~= "string" then return value end
                 local y, mo, d, h, mi, s = value:match("^(%d%d%d%d)-(%d%d)-(%d%d)[T ](%d%d):(%d%d):(%d%d)$")
                 if not y then return end
                 return os.time({
@@ -654,7 +658,7 @@ Schema.register 'hasmetatable' {
 -- checks for an empty string or table 
 Schema.register 'empty' {
     validate = function(self, instance)
-        return #instance == 0, "Non-empty length of " .. tostring(#instance)
+        return instance == nil or #instance == 0, "Non-empty length of " .. tostring(instance and #instance)
     end
 }
 

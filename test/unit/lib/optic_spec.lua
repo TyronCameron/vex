@@ -131,4 +131,23 @@ describe("Optic", function()
         assert.equal(0, #result)
     end)
 
+    -- ==================== errors ====================
+
+    it("`Optic:get` re-raises an error from inside the optic", function()
+        local broken = Optic.traverse(function() error("boom", 0) end)
+        assert.has_error(function() broken:get({}) end, "boom")
+    end)
+
+    -- ==================== cartesian ====================
+
+    it("`Optic.cartesian` get yields every combination of its optics' values", function()
+        local result = Optic.cartesian(Optic.ipairs(), Optic.field("label")):get(setmetatable({1, 2}, {__index = {label = "x"}}))
+        assert.same({{1, "x"}, {2, "x"}}, result)
+        assert.same({{1, 1}, {1, 2}, {2, 1}, {2, 2}}, Optic.cartesian(Optic.ipairs(), Optic.ipairs()):get({1, 2}))
+    end)
+
+    it("`Optic.cartesian` get yields nothing when one optic finds nothing", function()
+        assert.same({}, Optic.cartesian(Optic.ipairs(), Optic.field("missing")):get({1, 2}))
+    end)
+
 end)

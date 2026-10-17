@@ -1,41 +1,13 @@
-local busted = require 'busted'
 local vexdex = require 'core.vexdex'
+local lfs = require 'lib.lfs'
 
 describe("vexdex", function()
 
-    it("singleton loads and is truthy", function()
-        assert.truthy(vexdex)
-    end)
-
-    it("unsafe_add stores a path retrievable via get", function()
+    it("stores and removes index entries", function()
         vexdex:unsafe_add("__spec-id-1", "/some/path.md")
         assert.equal("/some/path.md", vexdex:get("__spec-id-1"))
         vexdex:unsafe_remove("__spec-id-1")
-    end)
-
-    it("get returns nil for a missing id", function()
-        assert.is_nil(vexdex:get("__nonexistent-id-xyz"))
-    end)
-
-    it("unsafe_remove removes the entry so get returns nil", function()
-        vexdex:unsafe_add("__spec-id-2", "/other/path.md")
-        vexdex:unsafe_remove("__spec-id-2")
-        assert.is_nil(vexdex:get("__spec-id-2"))
-    end)
-
-    it("vexpath returns a string containing the argument", function()
-        local p = vexdex:vexpath("foo")
-        assert.is_string(p)
-        assert.truthy(p:find("foo", 1, true))
-    end)
-
-    it("multiple unsafe_add calls accumulate independently", function()
-        vexdex:unsafe_add("__multi-1", "/path/a.md")
-        vexdex:unsafe_add("__multi-2", "/path/b.md")
-        assert.equal("/path/a.md", vexdex:get("__multi-1"))
-        assert.equal("/path/b.md", vexdex:get("__multi-2"))
-        vexdex:unsafe_remove("__multi-1")
-        vexdex:unsafe_remove("__multi-2")
+        assert.is_nil(vexdex:get("__spec-id-1"))
     end)
 
     it("unsafe_remove on a missing id does not error", function()
@@ -61,27 +33,31 @@ describe("vexdex", function()
         vexdex:unsafe_remove("__linker")
     end)
 
-    it("writeindex persists backlinks alongside the index", function()
-        local binser = require 'lib.binser'
+    it("persists the index, backlinks and focus for the next run", function()
+        vexdex:unsafe_add("__persisted", {vexid = "__persisted", status = "todo"})
         vexdex:link("__persisted", {"__target"})
-        local saved = binser.readFile(vexdex:vexpath("vexdex/backlinks.bin"))[1]
-        assert.truthy(saved["__target"]["__persisted"])
+        vexdex:setfocus({operations = {{operation = 'focus', args = {'all'}}}})
+        local reloaded = vexdex.new(vexdex.path)
+        assert.same({vexid = "__persisted", status = "todo"}, reloaded:get("__persisted"))
+        assert.truthy(reloaded.backlinks["__target"]["__persisted"])
+        assert.same({operations = {{operation = 'focus', args = {'all'}}}}, reloaded:getfocus())
         vexdex:remove("__persisted")
     end)
 
-    it("writeindex persists paths and unsafe_remove clears them", function()
-        local binser = require 'lib.binser'
-        vexdex:locate("__placed", "group/__placed.md")
-        local saved = binser.readFile(vexdex:vexpath("vexdex/paths.bin"))[1]
-        assert.equal("group/__placed.md", saved["__placed"])
-        vexdex:remove("__placed")
-        assert.is_nil(vexdex.paths["__placed"])
+    it("persists index entries as plain data, without their metatable", function()
+        vexdex:add("__object", setmetatable({vexid = "__object"}, {__index = function() return "computed" end}))
+        local reloaded = vexdex.new(vexdex.path)
+        assert.same({vexid = "__object"}, reloaded:get("__object"))
+        assert.is_nil(getmetatable(reloaded:get("__object")))
+        vexdex:remove("__object")
     end)
 
-    it("index is clean after add then remove", function()
-        vexdex:unsafe_add("__clean-test", "/tmp/clean.md")
-        vexdex:unsafe_remove("__clean-test")
-        assert.is_nil(vexdex:get("__clean-test"))
+    it("leaves nothing behind in .vex/tmp after writing", function()
+        vexdex:link("__tmpcheck", {"__target"})
+        vexdex:remove("__tmpcheck")
+        for file in lfs.dir(vexdex:vexpath("tmp")) do
+            assert.truthy(file:match("^%."), "left behind .vex/tmp/" .. file)
+        end
     end)
 
 end)

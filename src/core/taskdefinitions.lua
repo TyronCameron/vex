@@ -1,6 +1,7 @@
 local task = require "core.task"
 local recipe = require 'core.recipe'
 local focus = require 'core.focus'
+local config = require 'core.config'
 local cli = require 'lib.cli'
 local func = require 'lib.func'
 local pretty = require 'lib.pretty'
@@ -27,7 +28,7 @@ schema.register 'vextype' {
 
 schema.register 'statemachine' {
     prevalidate = function(self, instance, context)
-        self.extra.statemachine = statemachine.new(self.specification.states, context.previous.status)
+        self.extra.statemachine = statemachine.new(self.specification.states, context.previous.status, self.specification.initial)
         return instance or self.specification.initial
     end,
     validate = function(self, instance, context)
@@ -120,6 +121,7 @@ task:task 'task' {
         due = schema.maybe {schema.formatted {schema.datetime}},
         cost = schema.maybe {schema.num},
         benefit = schema.maybe {schema.num},
+        owner = schema.maybe {schema.any(config.users)},
     }
 }
 
@@ -147,7 +149,7 @@ task:task 'decision':extends 'task' {
             schema.all {
                 schema.formatted {schema.vexlink},
                 schema.constraint{
-                    function(self, instance, context)
+                    function(instance, context)
                         return func.any(context.root.options, function(option) return option == instance end), "Decision not found in options"
                     end 
                 }
@@ -175,6 +177,46 @@ recipe:recipe 'abstract' {
         taskproperties.vextype = 'abstract'
         return task:add(taskproperties)
     end 
+}
+
+task:transient 'wordcount' {
+    vextype = 'task',
+    definition = function(t)
+        return select(2, t.description:gsub('%S+', ''))
+    end
+}
+
+task:transient 'phase' {
+    vextype = 'task',
+    definition = function(t)
+        local status = task:schemaof(t.vextype, 'status').specification
+        local machine = statemachine.new(status.states, t.status, status.initial)
+        if machine:isinitial() then return 'initial' end
+        if machine:isfinal() then return 'final' end
+        return 'interim'
+    end
+}
+
+task:transient 'ancestors' {
+    vextype = 'task',
+    definition = function(t)
+        local lineage = focus.focus(t.vexid):reversetree('children'):get()
+        return func.imap(func.slice(lineage, 2, 'end'), function(ancestor) return ancestor.vexid end)
+    end
+}
+
+task:transient 'path' {
+    vextype = 'task',
+    definition = function(t)
+        return task:getabspath(t.vexid)
+    end
+}
+
+task:transient 'age' {
+    vextype = 'task',
+    definition = function(t)
+        return t.created and math.floor((os.time() - t.created) / 86400)
+    end
 }
 
 -- task:field 'due' {

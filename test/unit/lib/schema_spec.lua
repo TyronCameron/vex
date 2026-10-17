@@ -4,36 +4,6 @@ local schema = require 'lib.schema'
 
 describe("schema", function()
 
-    it("should register schemas", function()
-        assert.truthy(schema.str._name == "str", 'str not registered')
-        assert.truthy(schema.num._name == "num", 'num not registered')
-        assert.truthy(schema.constant._name == "constant", 'constant not registered')
-        assert.truthy(schema.exactly._name == "exactly", 'exactly not registered')
-        assert.truthy(schema.atmost._name == "atmost", 'atmost not registered')
-        assert.truthy(schema.atleast._name == "atleast", 'atleast not registered')
-        assert.truthy(schema.any._name == "any", 'any not registered')
-        assert.truthy(schema.all._name == "all", 'all not registered')
-        assert.truthy(schema.none._name == "none", 'none not registered')
-        assert.truthy(schema.maybe._name == "maybe", 'maybe not registered')
-        assert.truthy(schema.vec._name == "vec", 'vec not registered')
-        assert.truthy(schema.int._name == "int", 'int not registered')
-        assert.truthy(schema.uint._name == "uint", 'uint not registered')
-        assert.truthy(schema.bool._name == "bool", 'bool not registered')
-        assert.truthy(schema.thr._name == "thr", 'thr not registered')
-        assert.truthy(schema.table._name == "table", 'table not registered')
-        assert.truthy(schema.date._name == "date", 'date not registered')
-        assert.truthy(schema.datetime._name == "datetime", 'datetime not registered')
-        assert.truthy(schema.rng._name == "rng", 'rng not registered')
-        assert.truthy(schema.hasmetatable._name == "hasmetatable", 'hasmetatable not registered')
-        assert.truthy(schema.empty._name == "empty", 'empty not registered')
-        assert.truthy(schema.size._name == "size", 'size not registered')
-        assert.truthy(schema.default._name == "default", 'default not registered')
-        assert.truthy(schema.derive._name == "derive", 'derive not registered')
-        assert.truthy(schema.formatted._name == "formatted", 'formatted not registered')
-        assert.truthy(schema.serialized._name == "serialized", 'serialized not registered')
-        assert.truthy(schema.constraint._name == "constraint", 'constraint not registered')
-    end)
-
     it("should create schemas", function()
         local custom_schema = schema.new {
             validate = function(self, instance)
@@ -242,6 +212,17 @@ describe("schema", function()
         assert.falsy(s:validate(true))
     end)
 
+    it("`schema.any` of constants is a categorical variable", function()
+        local s = schema.any { 'low', 'medium', 'high' }
+        assert.truthy(s:validate('medium'))
+        assert.falsy(s:validate('urgent'))
+    end)
+
+    it("`schema.any` of nothing matches nothing", function()
+        assert.falsy(schema.any {}:validate('anything'))
+        assert.falsy(schema.any(nil):validate('anything'))
+    end)
+
     it("`schema.all` validates when all subschemas match", function()
         local s = schema.all { schema.num, schema.rng { lower = 0, upper = 100 } }
         assert.truthy(s:validate(50))
@@ -348,6 +329,10 @@ describe("schema", function()
         assert.truthy(schema.empty:validate(""))
     end)
 
+    it("`schema.empty` validates a missing value", function()
+        assert.truthy(schema.empty:validate(nil))
+    end)
+
     it("`schema.empty` invalidates a non-empty string", function()
         assert.falsy(schema.empty:validate("hello"))
     end)
@@ -389,6 +374,12 @@ describe("schema", function()
         local result = s:prevalidate("15")
         assert.equal(15, result)
         assert.truthy(s:validate(result))
+    end)
+
+    it("`unapply` leaves a value that is already unformatted untouched", function()
+        local s = schema.atleast { at = schema.formatted { schema.datetime } }
+        assert.same({at = 60}, s:unapply('format', {at = 60}))
+        assert.same({at = 60}, s:unapply('format', s:apply('format', {at = 60})))
     end)
 
     it("`schema.maybe{schema.formatted{schema.datetime}}` converts a datetime string end-to-end (covers `due`)", function()

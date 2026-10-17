@@ -52,7 +52,7 @@ end
 
 function format.csv(data)
     local rows = {}
-    local fields = func.keys(data[1])
+    local fields = func.keys(data[1] or {})
     table.insert(rows, table.concat(fields, ','))
     for _, task in ipairs(data) do 
         local rowdata = func.imap(fields, function(field) return csv_field(task[field]) end)

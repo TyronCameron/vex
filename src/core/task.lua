@@ -15,12 +15,19 @@ local vexdex = require 'core.vexdex'
 local focus = require 'core.focus'
 local config = require 'core.config'
 
+local taskmanager
+
 ------------------------------------------------
 --- Tasks
 ------------------------------------------------
 
 local Task = {}
-Task.__index = Task
+
+function Task:__index(key)
+    if Task[key] then return Task[key] end
+    local transient = taskmanager:transientof(rawget(self, 'vextype'), key)
+    return transient and transient.definition(self)
+end
 
 -- construction
 function Task.new(task)
@@ -82,8 +89,10 @@ end
 function TaskManager:transient(name)
     return function(tab)
         assert(type(tab) == "table", "transient: expected a table")
-        assert(tab.derive, "Field definition must include at least a derive function.")        
-        self.transients[name] = tab
+        assert(type(tab.definition) == "function", "Transient definition must include a definition function.")
+        assert(self.tasktypes[tab.vextype], "Unknown vextype of name " .. tostring(tab.vextype) .. " for transient " .. tostring(name))
+        self.transients[name] = self.transients[name] or {}
+        self.transients[name][tab.vextype] = tab
     end
 end
 
@@ -144,6 +153,24 @@ end
 ---------------------------------------------------
 -- Tasks and focuses
 ---------------------------------------------------
+
+function TaskManager:schemaof(vextype, field)
+    local tasktype = self.tasktypes[vextype]
+    while tasktype do
+        local _, fieldschema = tasktype.schema:get({}, {field})
+        if fieldschema then return fieldschema end
+        tasktype = self.tasktypes[tasktype.parent]
+    end
+end
+
+function TaskManager:transientof(vextype, name)
+    local tasktype = self.tasktypes[vextype]
+    local definitions = self.transients[name] or {}
+    while tasktype do
+        if definitions[tasktype.name] then return definitions[tasktype.name] end
+        tasktype = self.tasktypes[tasktype.parent]
+    end
+end
 
 -- Get a table of tasks 
 function TaskManager:gettasks(focus)
@@ -208,8 +235,7 @@ end
 
 -- gets data from a task and returns it as a string for the command line
 function TaskManager:get(vexid, fields)
-    local task = self:getsingle(vexid)
-    return task:tostring(fields)
+    return self:format(vexid):tostring(fields)
 end
 
 -- sets task properties for a given focus
@@ -229,8 +255,7 @@ end
 -- shows task, basically cat 'filename'
 function TaskManager:show(vexid)
     assert(vexid, "show() requires an vexid")
-    local task = self:getsingle(vexid)
-    return task:show(self:getabspath(vexid))
+    return self:format(vexid):show(self:getabspath(vexid))
 end
 
 ---------------------------------------------------
@@ -263,9 +288,6 @@ function TaskManager:reindexall()
         vexdex:unsafe_add(vexid, self.tasks[vexid])
     end
     vexdex:writeindex()
-    for _, vexid in ipairs(vexids) do
-        self:move(vexid)
-    end
     return self 
 end
 
@@ -304,7 +326,7 @@ function TaskManager:resolve(vexid)
     if not task.vextype then cli:throw('missing-required-field', task.vexid, 'vextype') end 
 
     local vextype = self.tasktypes[task.vextype]
-    if not vextype then cli:throw('unknown-vextype', vextype, func.keys(self.tasktypes)) end 
+    if not vextype then cli:throw('unknown-vextype', task.vextype, func.keys(self.tasktypes)) end 
 
     local context = {
         vexid = vexid,
@@ -350,59 +372,45 @@ function TaskManager:format(vexid)
     for _, parent in ipairs(parents) do
         formatted = parent.schema:apply('format', formatted)
     end
-    return formatted
+    return setmetatable(formatted, {__index = task})
 end
 
-local function taskroot()
-    return vexdex.path .. '/' .. config.taskfolder
-end
+function TaskManager:unformat(task)
+    local vextype = self.tasktypes[task.vextype]
+    if not vextype then return task end
 
-local function dirname(path)
-    return path:match("^(.*)/")
-end
-
-local function tidy(path)
-    local dir = dirname(path)
-    while #dir > #taskroot() and os.remove(dir) do
-        dir = dirname(dir)
+    local parents = {vextype}
+    while parents[1].parent do
+        table.insert(parents, 1, self.tasktypes[parents[1].parent])
     end
+
+    local unformatted = task
+    for _, parent in ipairs(parents) do
+        unformatted = parent.schema:unapply('format', unformatted)
+    end
+    return unformatted
 end
 
 -- get the path that a task should live at
 function TaskManager:getabspath(vexid)
-    return taskroot() .. '/' .. self:getrelpath(vexid)
-end
-
--- get the path that a task's file currently lives at
-function TaskManager:getcurrentpath(vexid)
-    local relpath = vexdex.paths[vexid]
-    if not relpath then return self:getabspath(vexid) end
-    return taskroot() .. '/' .. relpath
+    return vexdex.path .. '/' .. config.taskfolder .. '/' .. self:getrelpath(vexid)
 end
 
 function TaskManager:getrelpath(vexid)
     return taskpath.path(self, config, vexid)
 end
 
--- finds a task's file anywhere in the taskfolder by its filename
-function TaskManager:find(vexid)
-    local filename = self:getrelpath(vexid):match("[^/]*$")
-    for _, path in ipairs(lfsext.walk(taskroot())) do
-        if path:match("[^/]*$") == filename then return path end
-    end
-end
-
 -- reads a file from disk and adds it to memory
 function TaskManager:read(vexid)
-    return self:readfrompath(self:getcurrentpath(vexid)) or self:readfrompath(self:find(vexid))
+    return self:readfrompath(self:getabspath(vexid))
 end
 
 -- reads a file from disk and adds it to memory by path
 function TaskManager:readfrompath(path)
     local ok, task = pcall(taskformat.read, path)
     if ok and task then 
+        task = self:unformat(task)
         self.tasks[task.vexid] = Task.new(task)
-        vexdex:unsafe_locate(task.vexid, path:sub(#taskroot() + 2))
         self:index(task.vexid)
         return task
     else 
@@ -413,41 +421,17 @@ end
 -- writes a file from disk
 function TaskManager:write(vexid)
     local task = self:format(vexid)
-    local path = self:getcurrentpath(vexid)
-    lfs.mkdir(dirname(path))
-    vexdex:atomic(path, function(path)
+    vexdex:atomic(self:getabspath(vexid), function(path)
         taskformat.write(path, sortdata(frontmatter(task)), body(task))
     end)
     self:index(vexid)
-    focus.focus(vexid):tree('children'):each(function(descendant)
-        self:move(descendant)
-    end)
-    return vexid
-end
-
--- moves a file to the path it should live at
-function TaskManager:move(vexid)
-    local from, to = self:getcurrentpath(vexid), self:getabspath(vexid)
-    if from ~= to then
-        lfs.mkdir(dirname(to))
-        os.rename(from, to)
-        tidy(from)
-    end
-    local relpath = self:getrelpath(vexid)
-    if vexdex.paths[vexid] ~= relpath then vexdex:locate(vexid, relpath) end
     return vexid
 end
 
 -- deletes a file from disk
 function TaskManager:delete(vexid)
-    local descendants = focus.focus(vexid):tree('children'):get()
-    local path = self:getcurrentpath(vexid)
-    os.remove(path)
+    os.remove(self:getabspath(vexid))
     self:unindex(vexid)
-    tidy(path)
-    for i = 2, #descendants do
-        self:move(descendants[i].vexid)
-    end
     return vexid
 end
 
@@ -455,4 +439,6 @@ end
 -- Create single instance and init 
 ---------------------------------------------------
 
-return TaskManager.new()
+focus.focus('all'):each_task(Task.new)
+taskmanager = TaskManager.new()
+return taskmanager

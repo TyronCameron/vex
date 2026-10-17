@@ -356,7 +356,7 @@ function Optic.fanout(...)
 end
 
 local function increment_multi_index(indexes, maxindexes)
-	for i = #indexes, 1 do
+	for i = #indexes, 1, -1 do
 		if indexes[i] == maxindexes[i] then 
 			for j = i, #indexes do
 				indexes[j] = 1 
@@ -371,26 +371,27 @@ end
 
 local function cartesian_product_gen(lists, func)
 	local indexes, maxindexes = {}, {}
+	local done = false
 	for i, list in ipairs(lists) do
 		table.insert(indexes, 1)
 		table.insert(maxindexes, #list)
+		done = done or #list == 0
 	end
 
-	local done = false
 	while not done do 
 		local tab = {}
 		for i, list in ipairs(lists) do
 			table.insert(tab, list[indexes[i]])
 		end
 		coroutine.yield(func(tab))
-		index, done = increment_multi_index(index, maxindexes)
+		indexes, done = increment_multi_index(indexes, maxindexes)
 	end 
 end
 
 function Optic.cartesian(...)
 	local optics = {...}
 	return Optic.new {
-		cardinality = func.ifold(optics, function(card, optic) return card * optic.cardinality end, 1),
+		cardinality = func.ifold(optics, function(card, optic) return card * optic.cardinality end, Cardinality(1,1)),
 		mutating = false,
 		_get = function(data, func)
 		    local lists = {}
@@ -417,7 +418,8 @@ function Optic:get(data, func)
     end)
     while true do
         local ok, val = coroutine.resume(co)
-        if not ok or coroutine.status(co) == "dead" then break end
+        if not ok then error(val, 0) end
+        if coroutine.status(co) == "dead" then break end
         table.insert(results, val)
     end
     return results

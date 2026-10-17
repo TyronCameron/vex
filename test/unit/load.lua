@@ -1,3 +1,5 @@
+assert(jit, "unit tests must run under LuaJIT, the runtime vex ships with")
+
 local script_dir = debug.getinfo(1, "S").source:match("^@(.+[\\/])")
 local src_dir = script_dir .. "../../src/"
 package.path = src_dir .. "?.lua;" .. src_dir .. "?/init.lua;" .. package.path
@@ -5,7 +7,7 @@ package.cpath = src_dir .. "?.dll;"  .. src_dir .. "?.so;"       .. package.cpat
 
 local plugin = require 'lib.plugin'
 plugin:addenum("tagger", {"canonicalvexid"})
-plugin:addenum("taskpath", {"grouppath", "flatpath"})
+plugin:addenum("taskpath", {"flatpath"})
 plugin:addenum("taskformat", {"obsidian"})
 plugin:addenum("dataformat", {"csvdata"})
 plugin:addenum("sortdata", {"canonicalsort"})

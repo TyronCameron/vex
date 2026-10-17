@@ -318,7 +318,7 @@ function CLI:call(verbname, args)
     local ok, result = xpcall(
         function() return self.verbs[verbname][1](args) end,
         function(err)
-            return { msg = err, trace = debug.traceback(nil, 2) }
+            return { msg = err, trace = debug.traceback("", 2) }
         end
     )
     table.remove(self.verbstack)
@@ -330,11 +330,11 @@ end
 
 -- Throw a named error and exit.
 function CLI:throw(errtype, msg, ...)
-    local handler = self.errors[errtype][1]
+    local handler = self.errors[errtype] and self.errors[errtype][1]
     if not handler then
         io.stderr:write("Unknown error type '" .. tostring(errtype) .. "'\n")
         io.stderr:write(tostring(msg) .. "\n")
-        io.stderr:write(debug.traceback(nil, 2) .. "\n")
+        io.stderr:write(debug.traceback("", 2) .. "\n")
         os.exit(1)
     end
     io.stderr:write(handler(msg, ...) .. "\n")

@@ -2,7 +2,7 @@
   operations = {
     [1] = {
       args = {
-        [1] = "group-task-files-into-1"
+        [1] = "all"
       },
       operation = "focus"
     }

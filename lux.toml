@@ -13,7 +13,7 @@ license = "MIT"
 # `busted = ">=2.0"`
 
 [run]
-args = [ "src/main.lua" ]
+args = [ "src/vex.lua" ]
 
 [build]
 type = "builtin"

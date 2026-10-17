@@ -198,3 +198,5 @@ cli:verb "recipe" {
     args = "[recipe] Description... [--fields...]",
     example = "vex recipe abstract Create more vex tasks! --status todo"
 }
+
+require 'core.extensions'

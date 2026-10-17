@@ -106,6 +106,35 @@ describe("func", function()
         assert.equal(4, result[4])
     end)
 
+    -- ==================== map ====================
+
+    it("`func.map` maps every value, keeping its key", function()
+        local result = func.map({a = 1, b = 2, 3}, function(v) return v * 10 end)
+        assert.same({a = 10, b = 20, 30}, result)
+    end)
+
+    -- ==================== count / any / all ====================
+
+    it("`func.count` counts the values matching a predicate", function()
+        assert.equal(2, func.count({1, 2, 3, 4}, function(v) return v % 2 == 0 end))
+        assert.equal(3, func.count({1, 2, 3}))
+        assert.equal(1, func.count(function(v) return v > 2 end)({1, 2, 3}))
+    end)
+
+    it("`func.any` is true when some value matches", function()
+        assert.is_true(func.any({1, 2, 3}, function(v) return v == 2 end))
+        assert.is_false(func.any({1, 2, 3}, function(v) return v == 4 end))
+        assert.is_false(func.any({}, function(v) return true end))
+        assert.is_true(func.any(function(v) return v == 3 end)({1, 2, 3}))
+    end)
+
+    it("`func.all` is true when every value matches", function()
+        assert.is_true(func.all({2, 4}, function(v) return v % 2 == 0 end))
+        assert.is_false(func.all({2, 3}, function(v) return v % 2 == 0 end))
+        assert.is_true(func.all({}, function(v) return false end))
+        assert.is_false(func.all(function(v) return v > 1 end)({1, 2, 3}))
+    end)
+
     -- ==================== reverse ====================
 
     it("`func.reverse` reverses an array", function()
@@ -151,6 +180,15 @@ describe("func", function()
         assert.equal(0, #result)
     end)
 
+    it("`func.slice` with one index slices from the start", function()
+        assert.same({1, 2}, func.slice({1, 2, 3}, 2))
+    end)
+
+    it("`func.slice` understands 'begin' and 'end'", function()
+        assert.same({2, 3}, func.slice({1, 2, 3}, 2, "end"))
+        assert.same({1, 2}, func.slice({1, 2, 3}, "begin", 2))
+    end)
+
     -- ==================== first ====================
 
     it("`func.first` returns the first n elements", function()
@@ -164,6 +202,17 @@ describe("func", function()
         local result = func.first({10, 20, 30})
         assert.equal(1, #result)
         assert.equal(10, result[1])
+    end)
+
+    -- ==================== last ====================
+
+    it("`func.last` returns the last n elements", function()
+        assert.same({20, 30}, func.last({10, 20, 30}, 2))
+        assert.same({10, 20, 30}, func.last({10, 20, 30}, 5))
+    end)
+
+    it("`func.last` defaults to 1 element", function()
+        assert.same({30}, func.last({10, 20, 30}))
     end)
 
     -- ==================== rep ====================

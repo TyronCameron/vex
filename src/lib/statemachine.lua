@@ -33,9 +33,10 @@ local function preprocess(def)
     return states
 end
 
-function StateMachine.new(def, currentstate)
+function StateMachine.new(def, currentstate, initial)
     local this = setmetatable({
         states = preprocess(def),
+        initial = initial,
         current = nil,
         history = {}
     }, StateMachine)
@@ -53,12 +54,20 @@ function StateMachine:isvalid(to)
     return false, "invalid transition from '" .. self.current .. "' to '" .. to .. "'"
 end
 
-function StateMachine:isdone()
-    if not self.current then return false end 
-    for _ in pairs(self.states[self.current]) do
-        return false
+function StateMachine:isinitial(state)
+    return (state or self.current) == self.initial
+end
+
+function StateMachine:isfinal(state)
+    state = state or self.current
+    for to in pairs(self.states[state].valid) do
+        if to ~= state then return false end
     end
-    return true 
+    return true
+end
+
+function StateMachine:isinterim(state)
+    return not self:isinitial(state) and not self:isfinal(state)
 end
 
 function StateMachine:transition(to, ...)
