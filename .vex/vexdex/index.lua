@@ -193,8 +193,8 @@ Confirmed by testing: `vex focus all --union all`, `--intersect all`, and (by th
   fix-focusfocus-dropping-unions-1 = {
     created = 1792016373,
     description = "Fix Focus.focus dropping unions",
-    modified = 1792203107,
-    status = "todo",
+    modified = 1792271590,
+    status = "done",
     vexbody = "`Focus.focus(...)` in `src/core/focus.lua` calls `focus:union(namedfocus.focus(focusname))` for every name after the first and throws the result away, so `Focus.focus(\"a\", \"b\")` only ever returns `a`. It should be `focus = focus:union(...)`.",
     vexid = "fix-focusfocus-dropping-unions-1",
     vextype = "task"
@@ -334,8 +334,8 @@ Fix: added the `num` coercion, and rewrote `maybe`'s `prevalidate` to use an unc
   fix-vex-get-crashing-list-fields-1 = {
     created = 1792203107,
     description = "Fix vex get crashing on list fields",
-    modified = 1792203107,
-    status = "todo",
+    modified = 1792271590,
+    status = "done",
     vexbody = "`vex get <vexid> --children` (or any field holding a list, such as `dependencies`, `options` or the `ancestors` transient) crashes with an `Internal error`: `Task:tostring` in `src/core/task.lua` passes each value straight to `table.concat`, which only takes strings and numbers. Seen on main before transients existed. List values need a printable form (e.g. comma-separated, matching how list flags are written).",
     vexid = "fix-vex-get-crashing-list-fields-1",
     vextype = "task"
@@ -500,6 +500,16 @@ Fix: added the `num` coercion, and rewrote `maybe`'s `prevalidate` to use an unc
     vexid = "keep-task-modified-time-1",
     vextype = "task"
   },
+  let-vex-set-insert-remove-list-1 = {
+    created = 1792271589,
+    description = "Let vex set insert and remove list values",
+    modified = 1792271589,
+    status = "done",
+    vexbody = "`vex set` could only overwrite a field. List fields (`children`, `dependencies`, `options`, custom `vec` fields) need values added or removed without retyping the rest. `vex set <focus> --insert --children a,b` adds each value not already in the list; `vex set <focus> --remove --children a` removes values by value. A valueless flag directly before another flag modifies it (`Arguments:modifiers()` in `src/lib/cli.lua`); `TaskManager:set` takes those modifiers and throws `unknown-modifier` for any name other than `insert`/`remove`.\
+",
+    vexid = "let-vex-set-insert-remove-list-1",
+    vextype = "task"
+  },
   load-config-files-hierarchically-1 = {
     created = 1792069230,
     description = "Load config files hierarchically",
@@ -606,8 +616,8 @@ That alone wasn't enough, since `vex.lua` was reassembling `arg` with a plain sp
   split-comma-separated-select-1 = {
     created = 1792203108,
     description = "Split comma-separated select fields into separate fields",
-    modified = 1792203128,
-    status = "todo",
+    modified = 1792271590,
+    status = "done",
     vexbody = "`vex focus all --select phase,wordcount` selects a single field literally named `phase,wordcount`, so only `vexid` survives. `Focus.parse` (`src/core/focus.lua`) splits flag values on `:` only, although `Focus:select` is documented as `select comma,sep,values` and the `get` verb's example uses `--select due,id,description`. `--select phase wordcount` doesn't help either: the flag keeps only its first value, so there is currently no way to select more than one field from the CLI.",
     vexid = "split-comma-separated-select-1",
     vextype = "task"
@@ -664,8 +674,8 @@ Fixed by unformatting on read rather than skipping the index: `TaskManager:readf
   support-comma-list-flags-1 = {
     created = 1792016373,
     description = "Support comma list flags for multi-value fields",
-    modified = 1792203107,
-    status = "todo",
+    modified = 1792271589,
+    status = "done",
     vexbody = "Split out of [[implement-cli-list-fields-1]]. `children`, `dependencies` and `options` are `schema.vec` fields, but a CLI flag value is always a plain string, so `vex add/set ... --dependencies a,b` fails resolution (\"Instance is not a table so also not a vec\"). One option: have `vec` prevalidate split a comma-delimited string into a list, so the field schema does the normalising.\
 \
 This applies to any multi-value field, not only today's `vec` fields: any field whose schema expects a list (including custom fields from `.vex/tasks`) should accept a comma-delimited flag value.",

@@ -151,4 +151,46 @@ describe("CLI", function()
         assert.equal("not done", captured.owner)
     end)
 
+    describe("comma lists", function()
+
+        local function parsed(argv)
+            return cli:parse(cli:rawify(argv))
+        end
+
+        it("splits a flag value on commas into a list", function()
+            assert.same({"a", "b", "c"}, parsed({"--children", "a,b,c"}):flags().children)
+        end)
+
+        it("splits a positional word on commas into a list", function()
+            assert.same({{"a", "b"}}, parsed({"a,b"}):positional())
+        end)
+
+        it("keeps commas inside quotes, so a value with spaces stays one string", function()
+            assert.equal("Fixed, then tested", parsed({"--vexbody", "Fixed, then tested"}):flags().vexbody)
+            assert.equal("a,b", cli:parse('--flag "a,b"'):flags().flag)
+        end)
+
+        it("keeps a comma escaped with a backslash", function()
+            assert.equal("a,b", parsed({"--flag", "a\\,b"}):flags().flag)
+            assert.equal("a,b", cli:parse('--flag "a\\,b"'):flags().flag)
+        end)
+
+        it("tells flags apart from positional lists", function()
+            local args = parsed({"a,b", "--select", "x,y", "--due"})
+            assert.is_false(cli.isflag(args[1]))
+            assert.is_true(cli.isflag(args[2]))
+            assert.is_true(cli.isflag(args[3]))
+        end)
+
+        it("rejoins positional lists with commas as text", function()
+            assert.equal("Buy milk, eggs", parsed({"Buy", "milk,", "eggs"}):text())
+        end)
+
+        it("maps each flag to the valueless flag just before it", function()
+            local args = parsed({"--insert", "--children", "a,b", "--status", "done", "--remove", "--options", "c"})
+            assert.same({children = "insert", options = "remove"}, args:modifiers())
+        end)
+
+    end)
+
 end)

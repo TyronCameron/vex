@@ -122,16 +122,16 @@ function suggest.next_arg_type(current, args)
     current = current - 1
     local lastargcntr = 0
     for _, arg in ipairs(args) do
-        if type(arg) == "string" then 
-            lastargcntr = lastargcntr + 1
-        elseif type(arg) == "table" then 
+        if cli.isflag(arg) then 
             lastargcntr = lastargcntr + #arg
+        else
+            lastargcntr = lastargcntr + 1
         end
     end
     
     local lastarg = args[#args]
     local iscomplete = current > lastargcntr 
-    local isflag = (type(lastarg) == "string" and lastarg:sub(1, 2) == "--") or type(lastarg) == "table"
+    local isflag = (type(lastarg) == "string" and lastarg:sub(1, 2) == "--") or cli.isflag(lastarg)
 
     if not iscomplete and not isflag then 
         local current_position = #args:positional()

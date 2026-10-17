@@ -191,21 +191,9 @@ end
 -- `tag` for any task tag 
 -- `path` for any task path (if there is a slash)
 -- `updated` for only tasks which have updated against the index. 
--- comma separation of the above is allowed so as to union them
+-- a list of the above unions them
 
 local namedfocus = {}
-
-function namedfocus.from_comma_sep(focusname)
-    local focuses = {}
-    for name in focusname:gmatch("([^,]+)") do
-        table.insert(focuses, namedfocus.focus(name:match("^%s*(.-)%s*$")))
-    end
-    local result = table.remove(focuses, 1)
-    for _, f in ipairs(focuses) do
-        result = result:union(f)
-    end
-    return Focus.new(focusname, function(tasks) return result:get(tasks) end)
-end 
 
 function namedfocus.from_name(focusname)
     return Focus.named[focusname]
@@ -233,9 +221,6 @@ function namedfocus.from_folder_path(path)
 end 
 
 function namedfocus.focus(focusname)
-    if focusname:find(",") then
-        return namedfocus.from_comma_sep(focusname)
-    end 
     if Focus.named[focusname] then 
         return namedfocus.from_name(focusname)
     end 
@@ -256,14 +241,14 @@ function namedfocus.focus(focusname)
     cli:throw('unknown-focus', focusname)
 end 
 
-function Focus.focus(...)
-    local focusnames = {...}
-    if not focusnames[1] then focusnames = {'prev'} end 
-    local focus = namedfocus.focus(table.remove(focusnames, 1))
-    for _, focusname in ipairs(focusnames) do
-        focus:union(namedfocus.focus(focusname))
+function Focus.focus(focusname, ...)
+    if select('#', ...) > 0 then return Focus.focus({focusname, ...}) end
+    if type(focusname) ~= "table" then return namedfocus.focus(focusname or 'prev') end
+    local focus = namedfocus.focus(focusname[1])
+    for i = 2, #focusname do
+        focus = focus:union(namedfocus.focus(focusname[i]))
     end
-    return focus
+    return Focus.new(focusname, function(tasks) return focus:get(tasks) end)
 end
 
 -----------------------------------------
@@ -477,22 +462,22 @@ end
 
 function Focus.parse(args)
     local current
-    if type(args[1]) == "string" then 
+    if args[1] and not cli.isflag(args[1]) then 
         current = Focus.focus(args[1])
     else 
         current = Focus.read()
     end 
     if not current then cli:throw('no-focus') end
     for _, arg in ipairs(args) do
-        if type(arg) == "table" then 
-            local f = table.remove(arg, 1)
+        if cli.isflag(arg) then 
             local split_args = {}
-            for _, a in ipairs(arg) do
-                for _, part in ipairs({ split(a, ':') }) do
+            local values = type(arg[2]) == "table" and arg[2] or {arg[2]}
+            for _, value in ipairs(values) do
+                for _, part in ipairs({ split(value, ':') }) do
                     table.insert(split_args, part)
                 end
             end
-            current = current[f](current, unpack(split_args))
+            current = current[arg[1]](current, unpack(split_args))
         end 
     end
     return current
