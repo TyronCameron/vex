@@ -47,6 +47,7 @@
   implement-vexations-plugin-1 = "implement-vexations-plugin-1.md",
   implement-view-loader-1 = "implement-view-loader-1.md",
   keep-task-modified-time-1 = "keep-task-modified-time-1.md",
+  let-vex-set-insert-remove-list-1 = "let-vex-set-insert-remove-list-1.md",
   load-config-files-hierarchically-1 = "load-config-files-hierarchically-1.md",
   make-claude-review-docs-1 = "make-claude-review-docs-1.md",
   make-cli-understand-quoting-1 = "make-cli-understand-quoting-1.md",

@@ -187,3 +187,10 @@ cli:error "bad-extension" {
     end,
     hint = "Fix or remove this file in your `.vex` folder."
 }
+
+cli:error "unknown-modifier" {
+    function(modifier)
+        return 'Unknown modifier `' .. tostring(modifier) .. '`.'
+    end,
+    hint = "Put `--insert` or `--remove` before a list field, e.g. `vex set my-task --insert --children a,b`."
+}

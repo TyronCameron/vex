@@ -38,11 +38,11 @@ end
 
 -- gets data from a task and returns it as a string for the command line
 function Task:tostring(fields)
-    local values = {}
-    for _, pair in ipairs(func.ifilter(fields, function(word) return type(word) == "table" end)) do
-        table.insert(values, self[pair[1]])
-    end
-    return table.concat(values, "\t")
+    return table.concat(func.imap(fields, function(field)
+        local value = self[field]
+        if value == nil then return "" end
+        return type(value) == "table" and table.concat(value, ",") or tostring(value)
+    end), "\t")
 end
 
 -- show 
@@ -238,14 +238,40 @@ function TaskManager:get(vexid, fields)
     return self:format(vexid):tostring(fields)
 end
 
--- sets task properties for a given focus
-function TaskManager:set(vexid, tab)
+local function aslist(value)
+    if value == nil then return {} end
+    return type(value) == "table" and value or {value}
+end
+
+local listmodifiers = {
+    insert = function(current, values)
+        local result = func.imap(current, function(v) return v end)
+        for _, value in ipairs(values) do
+            if not func.any(result, function(v) return v == value end) then table.insert(result, value) end
+        end
+        return result
+    end,
+    remove = function(current, values)
+        return func.ifilter(current, function(v)
+            return not func.any(values, function(value) return value == v end)
+        end)
+    end,
+}
+
+-- sets task properties for a given focus; modifiers[field] = 'insert' or 'remove' edits a list by value instead
+function TaskManager:set(vexid, tab, modifiers)
     assert(tab and type(tab) == "table", "set() requires a table")
     local task = {}
     for k, v in pairs(self:getsingle(vexid)) do task[k] = v end
     for k,v in pairs(tab) do 
         assert(k ~= "vexid", "Cannot change the vexid with set")
-        task[k] = v
+        local modifier = modifiers and modifiers[k]
+        if modifier then
+            if not listmodifiers[modifier] then cli:throw('unknown-modifier', modifier) end
+            task[k] = listmodifiers[modifier](aslist(task[k]), aslist(v))
+        else
+            task[k] = v
+        end
     end
     task.modified = os.time()
     self.tasks[vexid] = Task.new(task)

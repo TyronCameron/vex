@@ -18,6 +18,10 @@ describe("vex CLI lifecycle (e2e, subprocess)", function()
     return helper.frontmatter(dir .. "/" .. vexid .. ".md")
   end
 
+  local function link(vexid)
+    return "[[" .. vexid .. "]]"
+  end
+
   it("vex init sets up a project that the other verbs work in", function()
     assert.is_true(helper.is_file(dir .. "/.vex/config.lua"))
     assert.equal("buy-milk-1", vex(dir, "add", "Buy", "milk"))
@@ -65,6 +69,50 @@ describe("vex CLI lifecycle (e2e, subprocess)", function()
     vex(dir, "set", "--owner_note", "shopping")
     assert.equal("shopping", task(milk).owner_note)
     assert.equal("shopping", task(eggs).owner_note)
+  end)
+
+  it("vex set takes a comma list for a list field", function()
+    local parent = vex(dir, "add", "Plan", "the", "trip", "--vextype", "abstract")
+    local flights = vex(dir, "add", "Book", "flights")
+    local hotel = vex(dir, "add", "Book", "hotel")
+    vex(dir, "set", parent, "--children", flights .. "," .. hotel)
+    assert.same({link(flights), link(hotel)}, task(parent).children)
+  end)
+
+  it("vex set --insert and --remove edit a list field by value", function()
+    local parent = vex(dir, "add", "Plan", "the", "trip", "--vextype", "abstract")
+    local flights = vex(dir, "add", "Book", "flights")
+    local hotel = vex(dir, "add", "Book", "hotel")
+    local car = vex(dir, "add", "Rent", "car")
+    vex(dir, "set", parent, "--children", flights)
+    vex(dir, "set", parent, "--insert", "--children", hotel .. "," .. car .. "," .. flights)
+    assert.equal(table.concat({link(flights), link(hotel), link(car)}, ","), vex(dir, "get", parent, "--children"))
+    vex(dir, "set", parent, "--remove", "--children", flights .. "," .. car)
+    assert.equal(link(hotel), vex(dir, "get", parent, "--children"))
+  end)
+
+  it("vex set keeps commas in a value with spaces", function()
+    local vexid = vex(dir, "add", "Buy", "milk")
+    vex(dir, "set", vexid, "--vexbody", "Fixed, then tested")
+    assert.truthy(vex(dir, "show", vexid):find("Fixed, then tested", 1, true))
+  end)
+
+  it("vex add keeps commas in the description", function()
+    local vexid = vex(dir, "add", "Buy", "milk,", "eggs")
+    assert.equal("Buy milk, eggs", task(vexid).description)
+  end)
+
+  it("vex get --select takes a comma list of fields", function()
+    local vexid = vex(dir, "add", "Buy", "milk", "--cost", "2")
+    assert.equal("2\ttodo", vex(dir, "get", vexid, "--select", "cost,status"))
+  end)
+
+  it("vex focus --select takes a comma list of fields", function()
+    vex(dir, "add", "Buy", "milk")
+    vex(dir, "focus", "all", "--select", "phase,wordcount")
+    local out = vex(dir, "view", "csv")
+    assert.truthy(out:find("phase", 1, true), out)
+    assert.truthy(out:find("wordcount", 1, true), out)
   end)
 
   it("vex focus + vex view tabular reference the task", function()

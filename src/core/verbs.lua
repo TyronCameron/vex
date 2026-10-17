@@ -10,7 +10,7 @@ local task = require 'core.task'
 require 'core.taskdefinitions'
 
 local function focus_pop_args(args)
-    if type(args[1]) ~= 'table' then
+    if not cli.isflag(args[1]) then
         return focus.focus(table.remove(args, 1))
     end
     return focus.focus()
@@ -109,7 +109,7 @@ cli:verb "resolve" {
 cli:verb "add" {
     function(args)
         local taskproperties = args:flags()
-        taskproperties.description = table.concat(args:positional(), " ")
+        taskproperties.description = args:text()
         local vexid = task:add(taskproperties)
         task:resolve(vexid)
         task:write(vexid)
@@ -144,31 +144,40 @@ cli:verb "remove" {
 cli:verb "get" {
     function(args)
         local f = focus_pop_args(args)
-        if #args == 0 then args = {{'vexid'}} end
+        local fields = {}
+        for _, flag in ipairs(func.ifilter(args, cli.isflag)) do
+            if flag[1] == 'select' then
+                fields = func.imerge(fields, type(flag[2]) == "table" and flag[2] or {flag[2]})
+            elseif not flag[2] then
+                table.insert(fields, flag[1])
+            end
+        end
+        if #fields == 0 then fields = {'vexid'} end
         local lines = {}
         f:each(function(vexid)
-            table.insert(lines, pretty.any(task:get(vexid, args)))
+            table.insert(lines, pretty.any(task:get(vexid, fields)))
         end)
         return join_lines(lines)
     end,
-    doc = "Presents the focus in a tangible data format. Can specify which fields by supplying them as flags",
+    doc = "Presents the focus in a tangible data format. Can specify which fields by supplying them as flags, or as a comma list to --select",
     args = "[focus] [--fields...]",
-    example = "vex get all --select due,id,description"
+    example = "vex get all --select due,vexid,description"
 }
 
 cli:verb "set" {
     function(args)
         local f = focus_pop_args(args)
         local taskproperties = args:flags()
+        local modifiers = args:modifiers()
         f:each(function(vexid)
-            task:set(vexid, taskproperties)
+            task:set(vexid, taskproperties, modifiers)
             task:resolve(vexid)
             task:write(vexid)
         end)
     end,
-    doc = "Allows you to set fields in the focus. Resolution is called on that `focus`",
+    doc = "Allows you to set fields in the focus. Put --insert or --remove before a list field to add or remove values rather than overwrite it. Resolution is called on that `focus`",
     args = "[focus] [--fields...]",
-    example = "vex set make-coffee --priority 1"
+    example = "vex set plan-trip-1 --insert --children book-flights-1,book-hotel-1"
 }
 
 cli:verb "recipe" {
@@ -183,7 +192,7 @@ cli:verb "recipe" {
         end
 
         local taskproperties = args:flags()
-        taskproperties.description = table.concat(args:positional(), " ")
+        taskproperties.description = args:text()
 
         local f = recipe:add(recipename, taskproperties)
         local lines = {}

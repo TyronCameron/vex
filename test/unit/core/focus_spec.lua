@@ -1,4 +1,5 @@
 local Focus = require 'core.focus'
+local cli = require 'lib.cli'
 
 describe("Focus", function()
 
@@ -158,16 +159,56 @@ describe("Focus", function()
             task:write(vexid)
         end
         for _, operation in ipairs({'union', 'intersect', 'xor', 'notin', 'onlyin'}) do
-            local parsed = Focus.parse({"set-op-first-task-1", {operation, "set-op-second-task-1"}})
+            local parsed = Focus.parse(cli:parse("set-op-first-task-1 --" .. operation .. " set-op-second-task-1"))
             local expected = #parsed:get()
             parsed:write()
             assert.equal(expected, #Focus.read():get(), operation .. " did not replay")
         end
-        assert.equal(2, #Focus.parse({"set-op-first-task-1", {"union", "set-op-second-task-1"}}):get())
+        assert.equal(2, #Focus.parse(cli:parse("set-op-first-task-1 --union set-op-second-task-1")):get())
+    end)
+
+    describe("lists of names", function()
+
+        local task = require 'core.task'
+        local first, second
+
+        setup(function()
+            for _, description in ipairs({"listed first task", "listed second task"}) do
+                local vexid = task:add({description = description})
+                task:resolve(vexid)
+                task:write(vexid)
+            end
+            first, second = "listed-first-task-1", "listed-second-task-1"
+        end)
+
+        local function vexids(f)
+            local result = {}
+            f:each(function(vexid) table.insert(result, vexid) end)
+            table.sort(result)
+            return result
+        end
+
+        it("unions every name given to Focus.focus", function()
+            assert.same({first, second}, vexids(Focus.focus(first, second)))
+        end)
+
+        it("unions a list of names and replays it once saved", function()
+            Focus.focus({first, second}):write()
+            assert.same({first, second}, vexids(Focus.read()))
+        end)
+
+        it("parses a comma list of names from the CLI", function()
+            assert.same({first, second}, vexids(Focus.parse(cli:parse(first .. "," .. second))))
+        end)
+
+        it("selects every field in a comma list from the CLI", function()
+            local selected = Focus.parse(cli:parse(first .. " --select status,wordcount")):get()
+            assert.same({{vexid = first, status = "todo", wordcount = 3}}, selected)
+        end)
+
     end)
 
     it("rejects parsing when the saved focus has nothing to replay", function()
-        local cli = require 'lib.cli'
         local vexdex = require 'core.vexdex'
         stub(cli, 'throw', function(self, name) error(name) end)
         vexdex:setfocus({operations = {}})

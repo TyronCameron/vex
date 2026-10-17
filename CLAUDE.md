@@ -67,7 +67,7 @@ Task type schemas live in `src/core/taskdefinitions.lua`: base `task` (has `vexi
 
 ### Focus: the query layer (`src/core/focus.lua`)
 
-A `Focus` is a lazy, composable, **persisted** query over the task index (`.vex/vexdex/focus.bin`). Every operation (`select`, `filter`, `fuzzy`, `between`, `tree`, `reversetree`, `backlinks`, `forwardlinks`, set ops) returns a new `Focus` and records itself in `self.operations`, so a focus can be serialized/deserialized and replayed. Named focuses: `all`, `none`, `updated`, `initial`/`interim`/`final` (a filter on the `phase` transient: where each task's `status` sits in its type's state machine, i.e. the initial state, a sink with no outgoing transitions, or neither), `prev` (the default when a verb's `[focus]` arg is omitted), a bare `vexid`, or a file/folder path. `vex focus <name> [--flags]` builds and saves one; most other verbs (`show`, `get`, `set`, `view`, `resolve`, `remove`) read the saved focus back when no argument is given.
+A `Focus` is a lazy, composable, **persisted** query over the task index (`.vex/vexdex/focus.bin`). Every operation (`select`, `filter`, `fuzzy`, `between`, `tree`, `reversetree`, `backlinks`, `forwardlinks`, set ops) returns a new `Focus` and records itself in `self.operations`, so a focus can be serialized/deserialized and replayed. Named focuses: `all`, `none`, `updated`, `initial`/`interim`/`final` (a filter on the `phase` transient: where each task's `status` sits in its type's state machine, i.e. the initial state, a sink with no outgoing transitions, or neither), `prev` (the default when a verb's `[focus]` arg is omitted), a bare `vexid`, a file/folder path, or a list of any of these (unioned; the CLI turns `a,b` into one). `vex focus <name> [--flags]` builds and saves one; most other verbs (`show`, `get`, `set`, `view`, `resolve`, `remove`) read the saved focus back when no argument is given.
 
 ### Transients (`src/core/task.lua`)
 
@@ -82,7 +82,8 @@ Pluggable display formats over a focus's task list: `csv`, `tabular`, `json`, `k
 A from-scratch verb/error registry, not a wrapper around an existing arg-parsing library:
 - `cli:verb "name" { fn, doc = ..., args = ..., example = ... }` registers a command.
 - `cli:error "name" { fn, hint = ... }` registers a named error type; `cli:throw('name', ...)` prints the formatted message + hint to stderr and `os.exit(1)`. All of vex's user-facing errors go through this (see `src/core/errors.lua` for the full catalog) — prefer adding a new named error over an ad hoc `assert`/`error` when something is a user-facing failure rather than a bug.
-- Arguments parse into a mixed array/hash `Arguments` table (`args:positional()`, `args:flags()`); shell quoting survives, so `--vexbody "two words"` is one value.
+- Arguments parse into a mixed array/hash `Arguments` table (`args:positional()`, `args:flags()`, `args:text()` for prose, `args:modifiers()`); flag entries carry their own metatable, so tell them apart with `cli.isflag(word)`. Shell quoting survives, so `--vexbody "two words"` is one value.
+- A comma outside quotes splits a word into a list, for positionals and flag values alike: `--children a,b` gives `{"a", "b"}` and `vex focus a,b` unions both. Any argv word with whitespace was quoted in the shell, so its commas stay literal (`--vexbody "Fixed, then tested"`); `\,` escapes a comma otherwise. A valueless flag right before another flag modifies it: `vex set x --insert --children a,b` / `--remove --children a` edit a list by value (`TaskManager:set`'s `modifiers`).
 - `cli:call` wraps every verb body in `xpcall`, converting any Lua error into a `bug` CLI error with a traceback — a verb function crashing doesn't need its own top-level pcall.
 
 ### Storage (`.vex/` and `src/core/vexdex.lua`)
