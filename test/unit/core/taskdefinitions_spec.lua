@@ -142,12 +142,6 @@ describe("taskdefinitions", function()
             assert.same({}, task.tasks[grandparent].ancestors)
         end)
 
-        it("gives a task that is not indexed yet no ancestors", function()
-            local vexid = task:add({description = "unindexed ancestry task"})
-            assert.same({}, task.tasks[vexid].ancestors)
-            task:remove(vexid)
-        end)
-
         it("gives the path of the task file", function()
             local vexid = create({description = "located task"})
             assert.equal(task:getabspath(vexid), task.tasks[vexid].path)

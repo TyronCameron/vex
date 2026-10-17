@@ -200,7 +200,7 @@ task:transient 'phase' {
 task:transient 'ancestors' {
     vextype = 'task',
     definition = function(t)
-        local lineage = focus.of(t):reversetree('children'):get()
+        local lineage = focus.focus(t.vexid):reversetree('children'):get()
         return func.imap(func.slice(lineage, 2, 'end'), function(ancestor) return ancestor.vexid end)
     end
 }

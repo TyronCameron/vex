@@ -2,7 +2,7 @@
   add-transient-fields-computed-1 = {
     created = 1792202853,
     description = "Add transient fields computed on read",
-    modified = 1792203149,
+    modified = 1792215406,
     status = "done",
     vexbody = "Transients are task fields that are never stored but computed every time they are read, from the task itself and the vexdex. Unlike schema `derive` fields, nothing about them reaches the task file or the index.\
 \
@@ -10,7 +10,9 @@ A transient is registered on a task type, kept apart from the task type's schema
 \
 They work through `Task.__index`: reading a field a task doesn't hold falls back to the transient of that name for the task's type, so stored fields always win, only the transient asked for is computed, transients can use each other, and they work from the moment a task exists in memory (before it is resolved, indexed or written). Focuses read `task[field]`, so `filter`, `fuzzy`, `select`, `tree` and views get transients with no extra code. `vex get <vexid> --<transient>` reads them too.\
 \
-Built-in transients on `task`: `wordcount` (words in the description), `phase` (initial, interim or final in the status state machine; the `initial`/`interim`/`final` focuses filter on it), `ancestors` (parent vexids, nearest first), `path` (absolute path of the task file) and `age` (whole days since creation).",
+Built-in transients on `task`: `wordcount` (words in the description), `phase` (initial, interim or final in the status state machine; the `initial`/`interim`/`final` focuses filter on it), `ancestors` (parent vexids, nearest first), `path` (absolute path of the task file) and `age` (whole days since creation).\
+\
+Transients that only read the task itself work in memory, before it is indexed. One that queries the vexdex, like `ancestors`, needs the task to be indexed. A task can't have a parent before it is linked, and linking is a `set`, so that is always the case.",
     vexid = "add-transient-fields-computed-1",
     vextype = "task"
   },
@@ -285,7 +287,7 @@ Note: this only fixes the disk round-trip. Setting a list field directly via a C
   fix-status-transition-enforcement-1 = {
     created = 1783339200,
     description = "Status state machine doesn't actually reject invalid transitions",
-    modified = 1792203107,
+    modified = 1791881078,
     status = "done",
     vexbody = "\
 Fixed. The `statemachine` schema (`core/taskdefinitions.lua`) used to cache one machine on `self.extra`, shared by every task, and seed it from `context.task.status`, which `TaskManager:set` had already overwritten. Now `set` builds a new task instead of changing the indexed one, `resolve` passes the indexed version as `context.previous`, and `prevalidate` builds a fresh `statemachine.new` from that previous status. `todo -> done` and `doing -> todo` now fail with `resolution-failed-validation`. An unchanged status is always valid, so `vex resolve all` accepts whatever is on disk, and a new task with no status gets `todo`. `lib/statemachine.lua`'s `preprocess` copies state definitions instead of mutating them, so a machine can be built more than once from the same definition. `version-01-1` got `children: []` so `vex resolve all` completes. Covered by `test/unit/core/taskdefinitions_spec.lua`, `test/unit/core/task_spec.lua` and an e2e test in `test/e2e/lifecycle_spec.lua`.\

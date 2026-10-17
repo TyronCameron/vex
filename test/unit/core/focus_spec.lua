@@ -135,11 +135,6 @@ describe("Focus", function()
         assert.same({{vexid = vexid, wordcount = 4}}, selected)
     end)
 
-    it("of focuses on a task that is not indexed", function()
-        local task = {vexid = "unindexed"}
-        assert.same({task}, Focus.of(task):get())
-    end)
-
     it("replays a saved focus with the same operations", function()
         local task = require 'core.task'
         for _, description in ipairs({"saved focus todo task", "saved focus doing task"}) do

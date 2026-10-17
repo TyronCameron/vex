@@ -48,10 +48,6 @@ for _, phase in ipairs {'initial', 'interim', 'final'} do
     end)
 end
 
-function Focus.of(task)
-    return Focus.new(task.vexid, function() return {task} end)
-end
-
 -----------------------------------------
 -- Binary Operations 
 -----------------------------------------
