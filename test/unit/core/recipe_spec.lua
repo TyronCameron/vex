@@ -26,6 +26,24 @@ describe("Recipe", function()
         assert.equal('todo', task.tasks[tasks[1].vexid].status)
     end)
 
+    it("resolves and focuses on every task a recipe adds", function()
+        recipe:recipe '__specpipeline' {
+            add = function(taskmanager, properties)
+                local spike = taskmanager:add({description = "spike the " .. properties.description})
+                local build = taskmanager:add({description = "build the " .. properties.description})
+                return taskmanager:add({description = properties.description, vextype = 'abstract', children = {spike, build}})
+            end
+        }
+        local vexids = {}
+        recipe:add('__specpipeline', {description = "release pipeline"}):each(function(vexid)
+            table.insert(vexids, vexid)
+        end)
+        assert.same({"spike-release-pipeline-1", "build-release-pipeline-1", "release-pipeline-1"}, vexids)
+        for _, vexid in ipairs(vexids) do
+            assert.equal('todo', task.tasks[vexid].status)
+        end
+    end)
+
     it("makes an abstract with the abstract recipe", function()
         local tasks = recipe:add('abstract', {description = "plan the release"}):get()
         assert.equal('abstract', tasks[1].vextype)

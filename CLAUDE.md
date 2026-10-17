@@ -99,7 +99,7 @@ Required at the end of `core.verbs`, once every manager exists. It runs each `.l
 
 ### Recipes (`src/core/recipe.lua`)
 
-A recipe is a named shortcut producing a task with some fields pre-filled (`Recipe:recipe 'name' { add = function(task, taskproperties) ... end }`). Only `abstract` ships (`src/core/taskdefinitions.lua`), which forces `vextype = 'abstract'`. `Recipe:add` resolves the vexid the recipe's `add` function returns and focuses on it. Projects add their own in `.vex/recipes/*.lua` (see Extensions).
+A recipe is a named shortcut producing a task with some fields pre-filled (`Recipe:recipe 'name' { add = function(task, taskproperties) ... end }`). Only `abstract` ships (`src/core/taskdefinitions.lua`), which forces `vextype = 'abstract'`. `Recipe:add` resolves every task the recipe's `add` function adds, in order, and focuses on all of them. Projects add their own in `.vex/recipes/*.lua` (see Extensions).
 
 ### Singletons
 
