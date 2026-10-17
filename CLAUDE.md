@@ -116,7 +116,7 @@ Putting code in the right place matters more here than anywhere else. Each modul
 - **Verbs → `src/core/verbs.lua`.** Thin orchestration of the modules above. Verbs don't know about field names, link formats or other details.
 - **Display → `src/core/view.lua`.** Views only present tasks they get from a focus.
 - **User-facing errors → `src/core/errors.lua`.**
-- **Generic helpers → `src/lib/func.lua`** (and the other `src/lib` modules). Check what exists (e.g. `func.ifilter`, `func.ireduce`, `optic.traverse`) before writing a loop.
+- **Generic helpers → `src/lib/func.lua`** (and the other `src/lib` modules). Check what exists (e.g. `func.ifilter`, `func.ireduce`, `func.imerge`) before writing a loop.
 
 If a new concept appears and it isn't clear which of these it belongs to, stop and discuss it with the user before writing code.
 

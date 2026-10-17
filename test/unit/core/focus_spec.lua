@@ -211,6 +211,14 @@ describe("Focus", function()
             assert.same({"leaf", "other"}, vexids(f:tree('children'):get(linked)))
         end)
 
+        it("tree visits each task once on a cycle", function()
+            local first = {vexid = "first", children = {"second"}}
+            local second = {vexid = "second", children = {"first"}}
+            Focus.getalltasks = function() return {first, second} end
+            local f = Focus.new("first", function() return {first} end)
+            assert.same({"first", "second"}, vexids(f:tree('children'):get()))
+        end)
+
         it("reversetree collects each task and everything above it", function()
             local f = Focus.new("leaf", function() return {leaf} end)
             assert.same({"leaf", "mid", "root"}, vexids(f:reversetree('children'):get(linked)))

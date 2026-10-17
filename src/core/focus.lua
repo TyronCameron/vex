@@ -1,6 +1,5 @@
 
 local func = require 'lib.func'
-local optic = require 'lib.optic'
 local lfs = require 'lib.lfs'
 local lfsext = require 'lib.lfsext'
 local cli = require 'lib.cli'
@@ -393,9 +392,22 @@ local function get_children(field)
     end 
 end
 
+local function walk(tasks, linksof)
+    local walked = {}
+    local function visit(task, visited)
+        visited[task] = true
+        table.insert(walked, task)
+        for _, linked in ipairs(linksof(task)) do
+            if not visited[linked] then visit(linked, visited) end
+        end
+    end
+    for _, task in ipairs(tasks) do visit(task, {}) end
+    return walked
+end
+
 function Focus:tree(field)
     return self:chain('tree', function(tasks) 
-        return optic.chain(optic.ipairs(), optic.traverse(get_children(field))):get(tasks)
+        return walk(tasks, get_children(field))
     end, field)
 end
 
@@ -414,7 +426,7 @@ end
 
 function Focus:reversetree(field)
     return self:chain('reversetree', function(tasks) 
-        return optic.chain(optic.ipairs(), optic.traverse(get_parents(field))):get(tasks)
+        return walk(tasks, get_parents(field))
     end, field)
 end
 
