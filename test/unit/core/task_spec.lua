@@ -121,6 +121,22 @@ describe("task", function()
         assert.same({dependency}, vexdex:get(vexid).dependencies)
     end)
 
+    it("runs each prevalidate step once per resolve", function()
+        local schema = require 'lib.schema'
+        local calls = 0
+        task:task 'countedtype':extends 'task' {
+            schema = schema.atleast {
+                counted = schema.derive {
+                    schema.num,
+                    derive = function() calls = calls + 1 return calls end
+                }
+            }
+        }
+        local vexid = task:add({description = "counted prevalidate task", vextype = 'countedtype'})
+        task:resolve(vexid)
+        assert.equal(1, calls)
+    end)
+
     describe("transients", function()
 
         local schema = require 'lib.schema'

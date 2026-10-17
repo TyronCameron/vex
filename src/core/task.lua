@@ -292,7 +292,6 @@ function TaskManager:reindexall()
 end
 
 local function normalise(vextype, task, context)
-    vextype.schema.prevalidate(vextype.schema, task, context)
     local ok, res = pcall(vextype.schema.prevalidate, vextype.schema, task, context)
     if not ok then cli:throw('resolution-failed-normalisation', context.vexid, context.path, tostring(res)) end 
     return res
