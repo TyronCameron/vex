@@ -356,13 +356,17 @@ local function normalised(task, field, value)
     return value
 end
 
--- between field:begin:end
+local function bound(value)
+    if value ~= '' then return value end
+end
+
+-- between field:begin:end, where an empty begin or end leaves that side open
 function Focus:between(field, start, finish)
     return self:chain('between', function(tasks) 
         return func.ifilter(tasks, function(task) 
             local value = task[field]
             if value == nil then return false end
-            local lower, upper = normalised(task, field, start), normalised(task, field, finish)
+            local lower, upper = normalised(task, field, bound(start)), normalised(task, field, bound(finish))
             return (not lower or lower <= value) and (not upper or value <= upper)
         end)
     end, field, start, finish)
@@ -481,7 +485,7 @@ end
 
 local function split(str, sep)
     local parts = {}
-    for part in str:gmatch('([^' .. sep .. ']+)') do
+    for part in (str .. sep):gmatch('(.-)' .. sep) do
         table.insert(parts, part)
     end
     return unpack(parts)
