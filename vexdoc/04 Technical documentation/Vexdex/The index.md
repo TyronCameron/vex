@@ -1,28 +1,35 @@
-VexDex (`src/core/vexdex.lua`) is vex's index — conceptually the same role git's index plays: an in-memory map of `vexid → task data`, mirrored to disk so it doesn't have to be rebuilt from scratch on every run.
+The vexdex (`src/core/vexdex.lua`) is vex's index: a map from each vexid to its task data, kept in `.vex/vexdex` so that commands don't read every task file on every run. It is derived entirely from the task files, so keep it out of git and rebuild it with `vex resolve all`.
 
 ## On disk
 
-Two things live under `.vex/vexdex/`:
+| File | Holds |
+| --- | --- |
+| `index.bin` | Every task's fields, unformatted: timestamps as numbers, links as bare vexids. |
+| `backlinks.bin` | For every task, the tasks that link to it. |
+| `paths.bin` | Where each task file is, relative to `taskfolder`. |
+| `focus.bin` | The saved focus, as the list of operations that rebuild it. |
 
-- **`index.bin`** — the index itself, serialized with `binser` (a binary Lua-table serializer). This is what vex actually reads on startup.
-- **`index.lua`** — a human-readable mirror of the exact same data, written with `pretty.write` alongside every binary write. It's never read back by vex — it exists so you can open it and see what the index contains without any tooling.
-- **`focus.bin`** / **`focus.lua`** — the same binary+mirror pattern, but for your currently-saved [[01 CLI reference#Focuses|focus]] rather than the task index.
+Each `.bin` file is written with `binser` and is what vex reads. Next to it, a `.lua` file holds the same data in readable form. vex never reads the `.lua` files; they exist so you can inspect the index.
 
-## Writes are atomic
+With `paths.groupby` set, a file's location depends on its fields and on other tasks, so vex records it in `paths.bin`. If a file isn't where it was recorded, because it was moved by hand or after a merge, vex finds it by its filename and moves it back.
 
-Every write to `index.bin`, `index.lua`, `focus.bin`, or `focus.lua` goes through `VexDex:atomic`: it writes to a throwaway file in `.vex/tmp/` first (named from the current timestamp plus a random number), then `os.rename`s it into place. A crash or interrupted write can leave a stray file in `tmp/`, but it can't leave `index.bin` itself half-written.
+## Atomic writes
+
+Every write goes through `VexDex:atomic`. The data is written to a new file in `.vex/tmp` and then renamed into place, so an interrupted write never leaves a half-written file. If the rename fails, vex stops with the `write` error and leaves the data in `.vex/tmp`.
 
 ## Loading and rebuilding
 
-On first use in a project, `VexDex.new()` calls `ensureindex()`: if `index.bin` doesn't exist yet it starts from an empty index, otherwise it reads the existing one back in. Nothing incrementally verifies the index matches what's on disk in the task folder — that's what a full reindex is for:
+When a command starts, vex loads the index from `.vex/vexdex`. If the folder or the index doesn't exist yet, as in a fresh clone, vex creates it, starting empty.
+
+`add`, `set`, `remove` and `resolve` update the index for the tasks they touch. To pick up changes made outside vex, such as files edited, added or deleted by hand, a script or an AI agent, run:
 
 ```txt
 vex resolve all
 ```
 
-`resolve all` (`TaskManager:reindexall`, `src/core/task.lua`) clears the in-memory index entirely, walks every file under the project's `taskfolder` (see [[01 Configuring vex (config.lua)]]), reads and resolves each one it can parse as a task, and rebuilds the index from that — then writes it back out. This is the step to run after editing task files directly (by hand, by script, or by an AI agent) rather than through `vex add`/`vex set`, since nothing else notices those edits until something asks the index to catch up.
+This clears the index, reads and resolves every task file under `taskfolder`, and writes the index again.
 
 ## See also
 
-- [[01 Configuring vex (config.lua)]] — the config file VexDex's owning project reads (only `taskfolder` matters to VexDex directly).
-- [[Plugin architecture]] — `sortdata`, `frontmatter`, and `taskformat` are the pluggable pieces VexDex depends on for reading/writing the tasks it indexes.
+- [[01 Configuring vex (config.lua)]] for `taskfolder` and `paths.groupby`.
+- [[Plugin architecture]] for the `taskformat`, `frontmatter` and `sortdata` plugins used to read and write task files.

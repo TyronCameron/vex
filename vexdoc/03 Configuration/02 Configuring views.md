@@ -1,22 +1,19 @@
-> [!WARNING] Not yet implemented
-> `vex init` creates a `.vex/views` folder, but nothing in vex currently reads from it. The 6 built-in views (`csv`, `tabular`, `json`, `kanban`, `overview`, `singular`) are registered directly in `src/core/view.lua`. Tracked as [[implement-view-loader-1]].
-
-## Intended design
-
-`View:view(name)` (`src/core/view.lua`) requires a table with a `display(focus, flags)` function — exactly the pattern every built-in view already uses:
+Each `.lua` file in `.vex/views` can register views. A view is a `display` function that takes the focus and the command's flags and returns the text to print:
 
 ```lua
--- src/core/view.lua (real, working code, one of six views defined this way)
-v:view 'csv' {
+view:view 'count' {
     display = function(focus, flags)
-        local tasks = focus:get()
-        return format.csv(tasks)
+        return #focus:get() .. ' tasks'
     end
 }
 ```
 
-A project-defined view in `.vex/views` would presumably follow this same `{ display = function(focus, flags) ... end }` shape, loaded automatically and selectable through `vex view <focus> <your-view>` alongside the 6 built-ins.
+```txt
+vex view all count
+```
 
-## What exists today instead
+`focus:get()` returns the focus's tasks. Read any field from them, transients included. Flags arrive as a table: `vex view all count --field status` gives `flags.field == 'status'`.
 
-Pick a built-in view explicitly every time: `vex view <focus> <view-name>`, one of the 6 covered in [[04 Views]]. `config.lua`'s `default.view` key looks like it should let you skip naming a view each time, but nothing in vex currently reads `default.view` (or any other key under `default`) — see the callout on [[01 Configuring vex (config.lua)]]. There's also no shorthand for "focus only, default view" today: giving `vex view` exactly one positional argument treats it as the *view* name (defaulting the focus to `prev`), not the other way around — see [[01 CLI reference]].
+A view only presents tasks: choose which tasks with a focus, and keep the view to formatting them. Views load after task types, recipes and focuses, and a view with the name of a built-in replaces it.
+
+Set `default.view` in `.vex/config.lua` to make your view the default ([[01 Configuring vex (config.lua)]]).

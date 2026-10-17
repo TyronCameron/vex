@@ -1,25 +1,23 @@
-> [!WARNING] Not yet implemented
-> `vex init` creates a `.vex/events` folder, but nothing in vex currently reads from it. `src/lib/event.lua` — the module that would dispatch hooks — is a stub that just `return {}`. Tracked as [[implement-event-hooks-1]].
-
-## Intended design
-
-Per [[Vex]]'s design notes, every verb would fire two events: `pre-<verb>` and `post-<verb>` (e.g. `pre-add`, `post-resolve`). A hook would be a Lua function taking the task (or focus) being acted on, registered from a file in `.vex/events`:
+Each `.lua` file in `.vex/events` can register hooks. Every command fires two events, `pre-<command>` before it runs and `post-<command>` after, such as `pre-add` and `post-resolve`. A hook receives the focus the command acts on:
 
 ```lua
--- .vex/events/on-resolve.lua (illustrative — this file is not read today)
-return {
-    ["post-resolve"] = function(task)
-        -- e.g. reject a resolve that leaves a due date in the past
-    end
-}
+event:on 'post-resolve' (function(focus)
+    focus:each_task(function(t)
+        if t.due and t.due < os.time() and t.phase ~= 'final' then
+            print(t.vexid .. ' is overdue')
+        end
+    end)
+end)
 ```
 
-The intent is that hooks would let a project enforce its own rules on top of vex's built-in [[01 CLI reference#Resolution|resolution]] — for example, rejecting a task with no `owner`, or auto-tagging tasks created from a certain folder.
+A `pre-` hook that raises an error stops the command before it changes anything, so hooks can enforce project rules on top of resolution, for example requiring every task to have an `owner`:
 
-## What exists today instead
+```lua
+event:on 'pre-set' (function(focus)
+    focus:each_task(function(t)
+        assert(t.owner, t.vexid .. ' needs an owner')
+    end)
+end)
+```
 
-There's no per-project hook mechanism yet. The closest thing you can do today is external: run `vex resolve all` as a `git pre-commit` step (see [[01 CLI reference]]) and let a non-zero exit code from vex block the commit — that gives you validation-as-a-gate without needing hooks wired into vex itself.
-
-## See also
-
-- [[Events and hooks]] — the technical-documentation counterpart, covering the internals of the (currently empty) hook dispatch module.
+Hooks for the same event run in the order their files load, sorted by path. See [[Events and hooks]] for how events are dispatched.

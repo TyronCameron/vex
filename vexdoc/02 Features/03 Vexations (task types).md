@@ -1,44 +1,54 @@
-Every task has a `vextype`. The base type is just `task`, but vexations ships four opinionated subtypes that each answer a different question.
+Every task has a `vextype`. The base type is `task`. The vexations plugin adds four types on top of it, each answering a different question about the work. Every type keeps all of `task`'s fields (see [[02 Frontmatter schema]]).
 
-You can create your own subtypes too (see [[03 Configuring task types]] for the current status of doing that from a project rather than from vex's own source).
+| `vextype` | Answers | Body | Structure |
+| --- | --- | --- | --- |
+| `exploration` | What do I need to know? | Empty | No `children` |
+| `abstract` | What needs to happen? | Empty | `children`: the tasks it groups |
+| `decision` | Which path do we take? | Free | `options`, and a `decision` from among them |
+| `atom` | What do I actually do? | Free | No `children` |
 
-## The four built-in types
-
-| `vextype`     | Answers                          | Body                          | Structural field                              |
-| ------------- | ---------------------------------- | -------------------------------- | ---------------------------------------------- |
-| `exploration` | *What do I need to know?*         | Must be empty                   | No `children` allowed                          |
-| `abstract`    | *What needs to happen?*           | Must be empty                   | `children` — a list of task links              |
-| `decision`    | *Which path do we take?*          | Free-form                       | `options` (required) and `decision` (must be one of `options`) |
-| `atom`        | *What do I actually do?*          | Free-form                       | No `children` allowed                          |
-
-All four still carry the base `task` fields (`due`, `dependencies`, `cost`, `benefit`, etc. — see [[02 Frontmatter schema]]) on top of the above.
-
-> [!WARNING] Linking fields can't be set via a CLI flag yet
-> `children`, `dependencies`, and `options` all round-trip through disk correctly now, but none of them can be set directly with a flag (`--children`/`--dependencies`/`--options`) — a CLI flag value is always a single string. Populate them by hand-editing the YAML list into the file and running `vex resolve`. Tracked as [[implement-cli-list-fields-1]].
+Switch the four types off with `plugins.vexations = false` in `.vex/config.lua`, leaving only `task` and your own types.
 
 ### Exploration
 
-For when the landscape itself is uncertain — you don't yet know what needs to happen, only that something needs figuring out first. An exploration's body is required to be empty by schema, on the theory that the exploring happens in an outliner or in your notes, and the task file itself is just a marker that the question exists and hasn't been answered yet.
+Use an exploration when you don't yet know what needs to happen. The task marks an open question. The exploring itself happens in your notes or an outliner, so the body stays empty.
 
 ### Abstract
 
-A container. An abstract holds no information of its own — schema forces its body to stay empty — it exists purely to group other tasks together via its `children` list. Fast to create (`vex add "Ship v0.2" --vextype abstract`), meant to be: jot down the shape of the work now, decompose it into `atom`/`decision`/`exploration` children later, by hand-editing `children` into the file and running `vex resolve` (see the warning above about flag support).
+An abstract groups other tasks through its `children` and holds nothing else. Capture the shape of the work first and fill it in later:
 
-> [!NOTE] Children, not parent
-> The tree/reversetree machinery ([[01 CLI reference]]'s `--tree`/`--reversetree`, and the `singular` [[04 Views|view]]'s parent diagram) is *designed* to walk the `children` list on the *abstract*, not a `parent` field on the child.
+```txt
+vex add Ship the beta --vextype abstract
+vex set ship-beta-1 --insert --children write-release-notes-1
+```
+
+Parents are always found through `children`. `--reversetree children` walks up from a task, and the `lineage` transient lists its abstracts.
 
 ### Decision
 
-For when the path forward branches and something — you, a teammate, or a future you — needs to actually choose. A decision's `options` list is a set of other tasks (often `atom`s representing the different paths), and its `decision` field, once set, must be one of those options. Nothing else in vex enforces *when* a decision gets made — resolution only checks that `decision`, if present, is a legal choice. `options` is required with no default, and there's no way to hand it a list via a CLI flag (see the warning above), so `vex add ... --vextype decision` still fails resolution immediately, before any file is written — instead, hand-write the task file with an `options:` list of existing `vexid`s and bring it into the index with `vex resolve all`.
+Use a decision when the path forward branches. `options` lists the candidate tasks, often atoms, and `decision` records the choice:
+
+```txt
+vex add Choose a database --vextype decision --options use-postgres-1,use-sqlite-1
+vex set choose-database-1 --decision use-sqlite-1
+```
 
 ### Atom
 
-A single, fully-specified, doable action. No `children` — if you find yourself wanting to break an atom down further, that's a sign it should have been an `abstract` instead. Atoms are where `dependencies` and `due` dates matter most, since they're the leaves of the graph that `--tree`/`--reversetree` walk.
+An atom is one concrete, doable action. If you want to break an atom down, it should have been an abstract. Atoms are where `due` and `dependencies` matter most.
 
-### How they chain together
+### How they fit together
 
-A common shape, borrowed from [[Vex]]'s own design notes: an `abstract` for the overall goal, an `exploration` child while the approach is still unclear, a `decision` once the exploration turns up more than one viable path, and `atom`s (with `dependencies` between them) once the decision is made. There's no automation that creates this chain for you today, and the CLI can't set `children`/`options`/`dependencies` directly (see the warning above) — each task would be added by hand, then linked by hand-editing the relevant list field into the file and running `vex resolve`.
+A typical piece of work starts as an abstract with an exploration under it. When the exploration turns up more than one approach, a decision follows, and once that's made, atoms carry out the chosen path, with `dependencies` between them.
 
 ## Custom types
 
-`task:task 'name':extends 'existing-type' { schema = ... }` (in vex's own Lua source) is how the four built-ins above are defined, and it's the same mechanism a project-specific type would use. Today that means writing Lua against `src/core/taskdefinitions.lua`'s pattern directly; a project-local way to register new types from `.vex/tasks` is planned but not wired up yet — see [[03 Configuring task types]].
+Define your own types in `.vex/tasks`, extending any existing type:
+
+```lua
+task:task 'bug':extends 'atom' {
+    schema = schema.atleast { severity = schema.any {'low', 'high'} }
+}
+```
+
+See [[03 Configuring task types]].

@@ -1,22 +1,31 @@
-> [!WARNING] Not yet implemented
-> `vex init` creates a `.vex/recipes` folder, but nothing in vex currently reads from it — the only recipe that exists is `abstract`, registered directly in `src/core/taskdefinitions.lua`. Tracked as [[implement-recipe-loader-1]].
-
-## Intended design
-
-`Recipe:recipe(name)` (`src/core/recipe.lua`) requires a table with an `add` function — this is precisely how the built-in `abstract` recipe is defined:
+Each `.lua` file in `.vex/recipes` can register recipes. A recipe is an `add` function that receives the task manager and the properties from the command line, and adds tasks:
 
 ```lua
--- src/core/taskdefinitions.lua (real, working code — the pattern a project recipe would presumably follow)
-recipe:recipe 'abstract' {
+recipe:recipe 'chore' {
     add = function(task, taskproperties)
-        taskproperties.vextype = 'abstract'
+        taskproperties.vextype = 'atom'
         return task:add(taskproperties)
     end
 }
 ```
 
-A project-defined recipe in `.vex/recipes` would presumably be a Lua file following the same `{ add = function(task, taskproperties) ... end }` shape, loaded and registered automatically the way vex's own built-in plugins are (see [[Plugin architecture]]) — letting `vex recipe <name>` create more than a single task (e.g. a whole milestone skeleton) in one call.
+```txt
+vex recipe chore Take out the bins
+```
 
-## What exists today instead
+`taskproperties` holds the description and every flag. A recipe can add as many tasks as it likes and link them through their fields. vex resolves and writes each task in the order the recipe added it, then focuses on all of them:
 
-`vex recipe abstract <Description>` gives you a single pre-typed parent task. Building out the rest of a repeatable structure means adding the remaining tasks by hand — wiring them into the abstract's `children` isn't possible yet, by any means, today (see [[02 Frontmatter schema]]'s warning) — see [[03 Using a recipe to create a sequence of tasks]] for the full walkthrough.
+```lua
+recipe:recipe 'release' {
+    add = function(task, taskproperties)
+        local name = taskproperties.description
+        local stages = {}
+        for _, stage in ipairs({'Spike', 'Build', 'Test'}) do
+            table.insert(stages, task:add({description = stage .. ' ' .. name, vextype = 'atom'}))
+        end
+        return task:add({description = name, vextype = 'abstract', children = stages})
+    end
+}
+```
+
+The built-in `abstract` recipe is defined the same way.
