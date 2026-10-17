@@ -4,6 +4,7 @@ local cli = require "lib.cli"
 local pretty = require 'lib.pretty'
 local binser = require 'lib.binser'
 local lfsext = require 'lib.lfsext'
+local func = require 'lib.func'
 
 local VexDex = {}
 VexDex.__index = VexDex
@@ -89,10 +90,14 @@ function VexDex:readindex()
     return self 
 end
 
+local function data(task)
+    return func.map(task, function(value) return value end)
+end
+
 function VexDex:writeindex()
     self.modified = os.time()
     self:atomic(self:vexpath("vexdex/index.bin"), function(path)
-        binser.writeFile(path, self.index)
+        binser.writeFile(path, func.map(self.index, data))
     end)
     self:atomic(self:vexpath("vexdex/index.lua"), function(path)
         pretty.write(path, self.index)

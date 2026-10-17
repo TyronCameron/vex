@@ -126,6 +126,20 @@ describe("Focus", function()
         assert.same({{vexid = "t1", status = "todo"}}, f:select("status"):get({{vexid = "t1", status = "todo", cost = 3}}))
     end)
 
+    it("filters and selects on a transient", function()
+        local task = require 'core.task'
+        local vexid = task:add({description = "focus on transient words"})
+        task:resolve(vexid)
+        task:write(vexid)
+        local selected = Focus.focus('all'):filter('wordcount', 4):select('wordcount'):get()
+        assert.same({{vexid = vexid, wordcount = 4}}, selected)
+    end)
+
+    it("of focuses on a task that is not indexed", function()
+        local task = {vexid = "unindexed"}
+        assert.same({task}, Focus.of(task):get())
+    end)
+
     it("replays a saved focus with the same operations", function()
         local task = require 'core.task'
         for _, description in ipairs({"saved focus todo task", "saved focus doing task"}) do

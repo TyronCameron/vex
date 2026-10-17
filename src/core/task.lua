@@ -15,12 +15,19 @@ local vexdex = require 'core.vexdex'
 local focus = require 'core.focus'
 local config = require 'core.config'
 
+local taskmanager
+
 ------------------------------------------------
 --- Tasks
 ------------------------------------------------
 
 local Task = {}
-Task.__index = Task
+
+function Task:__index(key)
+    if Task[key] then return Task[key] end
+    local transient = taskmanager:transientof(rawget(self, 'vextype'), key)
+    return transient and transient.definition(self)
+end
 
 -- construction
 function Task.new(task)
@@ -82,8 +89,10 @@ end
 function TaskManager:transient(name)
     return function(tab)
         assert(type(tab) == "table", "transient: expected a table")
-        assert(tab.derive, "Field definition must include at least a derive function.")        
-        self.transients[name] = tab
+        assert(type(tab.definition) == "function", "Transient definition must include a definition function.")
+        assert(self.tasktypes[tab.vextype], "Unknown vextype of name " .. tostring(tab.vextype) .. " for transient " .. tostring(name))
+        self.transients[name] = self.transients[name] or {}
+        self.transients[name][tab.vextype] = tab
     end
 end
 
@@ -154,6 +163,15 @@ function TaskManager:schemaof(vextype, field)
     end
 end
 
+function TaskManager:transientof(vextype, name)
+    local tasktype = self.tasktypes[vextype]
+    local definitions = self.transients[name] or {}
+    while tasktype do
+        if definitions[tasktype.name] then return definitions[tasktype.name] end
+        tasktype = self.tasktypes[tasktype.parent]
+    end
+end
+
 -- Get a table of tasks 
 function TaskManager:gettasks(focus)
     
@@ -217,7 +235,7 @@ end
 
 -- gets data from a task and returns it as a string for the command line
 function TaskManager:get(vexid, fields)
-    return Task.new(self:format(vexid)):tostring(fields)
+    return self:format(vexid):tostring(fields)
 end
 
 -- sets task properties for a given focus
@@ -237,7 +255,7 @@ end
 -- shows task, basically cat 'filename'
 function TaskManager:show(vexid)
     assert(vexid, "show() requires an vexid")
-    return Task.new(self:format(vexid)):show(self:getabspath(vexid))
+    return self:format(vexid):show(self:getabspath(vexid))
 end
 
 ---------------------------------------------------
@@ -354,7 +372,7 @@ function TaskManager:format(vexid)
     for _, parent in ipairs(parents) do
         formatted = parent.schema:apply('format', formatted)
     end
-    return formatted
+    return setmetatable(formatted, {__index = task})
 end
 
 function TaskManager:unformat(task)
@@ -421,4 +439,6 @@ end
 -- Create single instance and init 
 ---------------------------------------------------
 
-return TaskManager.new()
+focus.focus('all'):each_task(Task.new)
+taskmanager = TaskManager.new()
+return taskmanager

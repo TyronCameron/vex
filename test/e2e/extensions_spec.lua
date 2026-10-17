@@ -57,6 +57,20 @@ describe("vex extensions in .vex (e2e, subprocess)", function()
     assert.is_not_nil(helper.strip_ansi(result.stdout):find("Focusing on 1 vex", 1, true))
   end)
 
+  it("loads transients from .vex/tasks and focuses on them", function()
+    extension("tasks/urgent.lua", [[
+      task:transient 'urgent' {
+        vextype = 'task',
+        definition = function(t) return t.description:find('!') and 'yes' or 'no' end
+      }
+    ]])
+    helper.run_vex(dir, {"add", "Fix", "it", "now!"})
+    helper.run_vex(dir, {"add", "Fix", "it", "later"})
+    local result = helper.run_vex(dir, {"focus", "all", "--filter", "urgent:yes"})
+    assert.are.equal(0, result.code)
+    assert.is_not_nil(helper.strip_ansi(result.stdout):find("Focusing on 1 vex", 1, true))
+  end)
+
   it("loads custom views from .vex/views", function()
     extension("views/count.lua", [[
       view:view 'count' {

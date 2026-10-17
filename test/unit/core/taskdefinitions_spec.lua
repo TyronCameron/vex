@@ -117,4 +117,50 @@ describe("taskdefinitions", function()
 
     end)
 
+    describe("transients", function()
+
+        it("counts the words in the description", function()
+            local vexid = task:add({description = "count  these four words"})
+            assert.equal(4, task.tasks[vexid].wordcount)
+            task:remove(vexid)
+        end)
+
+        it("places the status in its phase of the state machine", function()
+            local vexid = create({description = "phased task"})
+            assert.equal("initial", task.tasks[vexid].phase)
+            setstatus(vexid, "doing")
+            assert.equal("interim", task.tasks[vexid].phase)
+            setstatus(vexid, "done")
+            assert.equal("final", task.tasks[vexid].phase)
+        end)
+
+        it("lists a task's ancestors, nearest first", function()
+            local child = create({description = "ancestry child task"})
+            local parent = create({description = "ancestry parent abstract", vextype = 'abstract', children = {child}})
+            local grandparent = create({description = "ancestry grandparent abstract", vextype = 'abstract', children = {parent}})
+            assert.same({parent, grandparent}, task.tasks[child].ancestors)
+            assert.same({}, task.tasks[grandparent].ancestors)
+        end)
+
+        it("gives a task that is not indexed yet no ancestors", function()
+            local vexid = task:add({description = "unindexed ancestry task"})
+            assert.same({}, task.tasks[vexid].ancestors)
+            task:remove(vexid)
+        end)
+
+        it("gives the path of the task file", function()
+            local vexid = create({description = "located task"})
+            assert.equal(task:getabspath(vexid), task.tasks[vexid].path)
+        end)
+
+        it("gives the task's age in whole days, once it has been created", function()
+            local fresh = task:add({description = "unresolved aged task"})
+            assert.is_nil(task.tasks[fresh].age)
+            task:remove(fresh)
+            local vexid = create({description = "aged task", created = os.time() - 3 * 86400 - 60})
+            assert.equal(3, task.tasks[vexid].age)
+        end)
+
+    end)
+
 end)

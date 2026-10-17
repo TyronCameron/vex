@@ -71,6 +71,11 @@ describe("vex user-facing errors (e2e, subprocess)", function()
     fails(dir, "cannot be a child of both", "resolve", "all")
   end)
 
+  it("rejects a task file without a vextype", function()
+    helper.write_file(dir .. "/no-type-1.md", "---\nvexid: no-type-1\ndescription: No type here\nstatus: todo\n---\n")
+    fails(dir, "field = vextype", "resolve", "all")
+  end)
+
   it("rejects a dependency cycle", function()
     local first = vex(dir, "add", "Cycle", "first", "task")
     local second = vex(dir, "add", "Cycle", "second", "task")

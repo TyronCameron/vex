@@ -179,6 +179,46 @@ recipe:recipe 'abstract' {
     end 
 }
 
+task:transient 'wordcount' {
+    vextype = 'task',
+    definition = function(t)
+        return select(2, t.description:gsub('%S+', ''))
+    end
+}
+
+task:transient 'phase' {
+    vextype = 'task',
+    definition = function(t)
+        local status = task:schemaof(t.vextype, 'status').specification
+        local machine = statemachine.new(status.states, t.status, status.initial)
+        if machine:isinitial() then return 'initial' end
+        if machine:isfinal() then return 'final' end
+        return 'interim'
+    end
+}
+
+task:transient 'ancestors' {
+    vextype = 'task',
+    definition = function(t)
+        local lineage = focus.of(t):reversetree('children'):get()
+        return func.imap(func.slice(lineage, 2, 'end'), function(ancestor) return ancestor.vexid end)
+    end
+}
+
+task:transient 'path' {
+    vextype = 'task',
+    definition = function(t)
+        return task:getabspath(t.vexid)
+    end
+}
+
+task:transient 'age' {
+    vextype = 'task',
+    definition = function(t)
+        return t.created and math.floor((os.time() - t.created) / 86400)
+    end
+}
+
 -- task:field 'due' {
 --     normalise = function(value, context)
 --         if type(value) == "number" then return math.floor(value) end
