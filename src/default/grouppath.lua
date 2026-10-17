@@ -21,7 +21,7 @@ end
 
 return {
     path = function(taskmanager, config, vexid)
-        local groupby = config.groupby or {}
+        local groupby = (config.paths or {}).groupby or {}
         if type(groupby) ~= 'table' or not func.all(groupby, function(field) return type(field) == 'string' end) then
             cli:throw('bad-groupby', groupby)
         end

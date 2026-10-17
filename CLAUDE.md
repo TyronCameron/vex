@@ -91,9 +91,9 @@ A from-scratch verb/error registry, not a wrapper around an existing arg-parsing
 
 ### Config (`src/core/config.lua` / `src/lib/config.lua`)
 
-`Config:loadall()` `dofile`s each registered path (currently just `.vex/config.lua`) and merges the returned tables, later paths overwriting earlier ones. Read values as fields: `config.taskfolder`, `config.users`, `config.groupby`.
+`Config:loadall()` `dofile`s each registered path (currently just `.vex/config.lua`) and merges the returned tables, later paths overwriting earlier ones. Read values as fields: `config.taskfolder`, `config.users`, `config.paths`.
 
-`groupby` (read by `src/default/grouppath.lua`, the only `taskpath` member) is a list of field names, transients included, that nests task files in folders, e.g. `groupby = {'lineage', 'status'}` puts a task at `<root>/<parent>/<status>/<vexid>.md`. A list value nests one folder per element; unset values and empty lists are skipped; each value is kept to a single folder name (`/`, `\`, `:` and the like become `-`). Without `groupby`, files sit flat at `<vexid>.md`. Anything but a list of strings throws `bad-groupby`.
+`paths.groupby` (read by `src/default/grouppath.lua`, the only `taskpath` member) is a list of field names, transients included, that nests task files in folders, e.g. `paths = { groupby = {'lineage', 'status'} }` puts a task at `<root>/<parent>/<status>/<vexid>.md`. A list value nests one folder per element; unset values and empty lists are skipped; each value is kept to a single folder name (`/`, `\`, `:` and the like become `-`). Without `paths.groupby`, files sit flat at `<vexid>.md`. Anything but a list of strings throws `bad-groupby`.
 
 ### Extensions (`src/core/extensions.lua`)
 

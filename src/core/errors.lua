@@ -38,9 +38,9 @@ cli:error "move-failed" {
 
 cli:error "bad-groupby" {
     function(groupby)
-        return 'The `groupby` setting in your config must be a list of field names, but it is `' .. tostring(groupby) .. '`.'
+        return 'The `paths.groupby` setting in your config must be a list of field names, but it is `' .. tostring(groupby) .. '`.'
     end,
-    hint = "Write it as a list, e.g. `groupby = {'lineage', 'status'}`, or remove it to keep task files flat."
+    hint = "Write it as a list, e.g. `paths = { groupby = {'lineage', 'status'} }`, or remove it to keep task files flat."
 }
 
 cli:error "write" {

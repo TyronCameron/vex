@@ -19,9 +19,9 @@ Transients that only read the task itself work in memory, before it is indexed. 
   check-grouped-task-paths-windows-1 = {
     created = 1792226232,
     description = "Check grouped task paths on Windows",
-    modified = 1792226275,
+    modified = 1792236692,
     status = "todo",
-    vexbody = "Grouped task paths (`groupby`, see [[group-task-files-into-1]]) are only tested on Linux. On Windows, two things in `src/core/task.lua` are unverified:\
+    vexbody = "Grouped task paths (`paths.groupby`, see [[group-task-files-into-1]]) are only tested on Linux. On Windows, two things in `src/core/task.lua` are unverified:\
 \
 - `lfs.mkdir` shells out to `mkdir \"<path>\"`, where `<path>` mixes the backslashes of `vexdex.path` with the forward slashes vex joins paths with. cmd may not create the nested folders.\
 - `tidy` removes emptied folders with `os.remove`, which can't delete a directory on Windows, so empty group folders would pile up.\

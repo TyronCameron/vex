@@ -7,7 +7,7 @@ Two things live under `.vex/vexdex/`:
 - **`index.bin`** — the index itself, serialized with `binser` (a binary Lua-table serializer). This is what vex actually reads on startup.
 - **`index.lua`** — a human-readable mirror of the exact same data, written with `pretty.write` alongside every binary write. It's never read back by vex — it exists so you can open it and see what the index contains without any tooling.
 - **`focus.bin`** / **`focus.lua`** — the same binary+mirror pattern, but for your currently-saved [[01 CLI reference#Focuses|focus]] rather than the task index.
-- **`paths.bin`** / **`paths.lua`** — where each task file actually is, relative to `taskfolder`. With `groupby` set (see [[01 Configuring vex (config.lua)]]) a file's location depends on its fields and on other tasks, so vex records it rather than working it out from the vexid. If a file isn't where it was recorded (you moved it by hand, or `paths.bin` is stale after a merge), vex finds it by its filename and moves it back where `groupby` puts it.
+- **`paths.bin`** / **`paths.lua`** — where each task file actually is, relative to `taskfolder`. With `paths.groupby` set (see [[01 Configuring vex (config.lua)]]) a file's location depends on its fields and on other tasks, so vex records it rather than working it out from the vexid. If a file isn't where it was recorded (you moved it by hand, or `paths.bin` is stale after a merge), vex finds it by its filename and moves it back where `paths.groupby` puts it.
 
 ## Writes are atomic
 

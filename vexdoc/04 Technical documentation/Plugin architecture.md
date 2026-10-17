@@ -44,7 +44,7 @@ Not everything registered is part of a named set. `Plugin:add(name)` / `Plugin:a
 | Slot          | Default module                     | What it controls                                          |
 | ------------- | ------------------------------------ | ------------------------------------------------------------ |
 | `tagger`      | `default.canonicalvexid`            | Turns a description into a `vexid` — see the algorithm in [[01 CLI reference]]. |
-| `taskpath`    | `default.grouppath`                 | Where a task's file lives on disk relative to `taskfolder`: flat by default, nested by the config's `groupby` (see [[01 Configuring vex (config.lua)]]). |
+| `taskpath`    | `default.grouppath`                 | Where a task's file lives on disk relative to `taskfolder`: flat by default, nested by the config's `paths.groupby` (see [[01 Configuring vex (config.lua)]]). |
 | `taskformat`  | `default.obsidian`                  | How a task's fields are serialized to and from a file.       |
 | `dataformat`  | `default.csvdata`                   | The format the `csv` [[04 Views|view]] emits.                    |
 | `sortdata`    | `default.canonicalsort`             | The field order used when printing frontmatter.               |

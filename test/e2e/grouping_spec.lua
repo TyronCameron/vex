@@ -16,7 +16,7 @@ describe("vex grouped task paths (e2e, subprocess)", function()
 
   local function groupby(fields)
     local config = dir .. "/.vex/config.lua"
-    helper.write_file(config, helper.read_file(config):gsub("^return {", "return {\n  groupby = " .. fields .. ","))
+    helper.write_file(config, helper.read_file(config):gsub("^return {", "return {\n  paths = { groupby = " .. fields .. " },"))
   end
 
   local function exists(path)
