@@ -394,6 +394,25 @@ describe("schema", function()
         assert.equal(os.time({year = 2026, month = 1, day = 1, hour = 0, isdst = false}), s:prevalidate("2026-01-01"))
     end)
 
+    it("`schema.datetime` interprets a phrase through containers, relative to now", function()
+        local naturaltime = require 'lib.naturaltime'
+        local s = schema.maybe { schema.formatted { schema.datetime } }
+        assert.equal(naturaltime.parse("next year"), s:unapply('interpret', "next year"))
+        assert.equal(60, s:unapply('interpret', 60))
+        assert.equal("in 3 days", s:apply('interpret', os.time() + 3 * 86400))
+    end)
+
+    it("`schema.date` interprets a phrase as the midnight of its day", function()
+        local naturaltime = require 'lib.naturaltime'
+        local t = os.date('*t', naturaltime.parse("tomorrow"))
+        local midnight = os.time({year = t.year, month = t.month, day = t.day, hour = 0, isdst = false})
+        assert.equal(midnight, schema.date:unapply('interpret', "tomorrow arvo"))
+    end)
+
+    it("`schema.datetime` rejects a phrase it cannot interpret", function()
+        assert.has_error(function() schema.datetime:unapply('interpret', "tomorrow blorp") end)
+    end)
+
     it("`schema.all` prevalidates through each of its subschemas", function()
         local s = schema.all { schema.num, schema.rng {0, 20} }
         assert.equal(15, s:prevalidate("15"))

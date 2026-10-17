@@ -286,13 +286,32 @@ function Focus:select(...)
     end, ...)
 end 
 
+local function normalised(task, field, value, iso)
+    local fieldschema = value and require('core.task'):schemaof(task.vextype, field)
+    if not fieldschema then return value end
+    if iso then
+        local ok, result = pcall(fieldschema.unapply, fieldschema, iso, value)
+        if not ok then cli:throw('uninterpretable', value, field) end
+        value = result
+    end
+    local ok, result = pcall(fieldschema.prevalidate, fieldschema, value, {})
+    if ok and result ~= nil then value = result end
+    if type(value) ~= type(task[field]) then
+        cli:throw('usage', 'Cannot compare `' .. field .. '` with `' .. tostring(value) .. '`.')
+    end
+    return value
+end
+
 -- filter key:value
 function Focus:filter(field, value)
     if value == nil then 
         cli:throw('usage', 'You need to provide a field and value to filter on. We saw field = ' .. tostring(field) .. ' and value ' .. tostring(value)) 
     end 
+    local iso = self.iso
     return self:chain('filter', function(tasks)
-        return func.ifilter(tasks, function(task) return task[field] == value end)
+        return func.ifilter(tasks, function(task)
+            return task[field] ~= nil and task[field] == normalised(task, field, value, iso)
+        end)
     end, field, value)
 end 
 
@@ -345,28 +364,18 @@ function Focus:fuzzy(field, fuzz, n)
     end, field, fuzz, n)
 end 
 
-local function normalised(task, field, value)
-    local fieldschema = value and require('core.task'):schemaof(task.vextype, field)
-    if not fieldschema then return value end
-    local ok, result = pcall(fieldschema.prevalidate, fieldschema, value, {})
-    if ok and result ~= nil then value = result end
-    if type(value) ~= type(task[field]) then
-        cli:throw('usage', 'Cannot compare `' .. field .. '` with `' .. tostring(value) .. '`.')
-    end
-    return value
-end
-
 local function bound(value)
     if value ~= '' then return value end
 end
 
 -- between field:begin:end, where an empty begin or end leaves that side open
 function Focus:between(field, start, finish)
+    local iso = self.iso
     return self:chain('between', function(tasks) 
         return func.ifilter(tasks, function(task) 
             local value = task[field]
             if value == nil then return false end
-            local lower, upper = normalised(task, field, bound(start)), normalised(task, field, bound(finish))
+            local lower, upper = normalised(task, field, bound(start), iso), normalised(task, field, bound(finish), iso)
             return (not lower or lower <= value) and (not upper or value <= upper)
         end)
     end, field, start, finish)
@@ -452,9 +461,11 @@ end
 -- Modifiers
 -----------------------------------------
 
--- interpret before any flag will convert values where possible. E.g. `--interpret --filter due:tomorrow` will check for tasks due tomorrow.
+-- interpret reads the next operation's values as phrases through each field's interpret iso, e.g. `--interpret --between due:now:"next tuesday"`
 function Focus:interpret()
-    assert(false, "this is a hard feature that I don't know how to do yet ... for later down the track")
+    local interpreted = Focus.new(self.name, self._get, func.imerge(self.operations, {{ operation = 'interpret', args = {} }}))
+    interpreted.iso = 'interpret'
+    return interpreted
 end 
 
 -----------------------------------------

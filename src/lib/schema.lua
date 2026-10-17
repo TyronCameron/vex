@@ -1,6 +1,7 @@
 
 local func = require 'lib.func'
 local pretty = require "lib.pretty"
+local naturaltime = require 'lib.naturaltime'
 
 -----------------------------------------------
 -- Context
@@ -603,6 +604,16 @@ Schema.register 'date' {
             forward = function(self, epoch)
                 return os.date("%Y-%m-%d", epoch)
             end,
+        },
+        interpret = {
+            backward = function(self, phrase)
+                if type(phrase) ~= "string" then return phrase end
+                local t = os.date("*t", naturaltime.parse(phrase))
+                return os.time({year = t.year, month = t.month, day = t.day, hour = 0, isdst = false})
+            end,
+            forward = function(self, epoch)
+                return naturaltime.describe(epoch)
+            end,
         }
     }
 }
@@ -630,6 +641,15 @@ Schema.register 'datetime' {
             end,
             forward = function(self, epoch)
                 return os.date("%Y-%m-%d %H:%M:%S", epoch)
+            end,
+        },
+        interpret = {
+            backward = function(self, phrase)
+                if type(phrase) ~= "string" then return phrase end
+                return naturaltime.parse(phrase)
+            end,
+            forward = function(self, epoch)
+                return naturaltime.describe(epoch)
             end,
         }
     }

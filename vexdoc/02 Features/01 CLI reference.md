@@ -120,6 +120,36 @@ Values are separated by `:`.
 | `--xor focus` | Tasks in exactly one. |
 | `--notin focus` | Tasks in this focus but not the other. |
 | `--onlyin focus` | Tasks in the other focus but not this one. |
+| `--interpret` | Reads the next flag's values as natural-language times (see below). |
+
+### Interpreting times
+
+`--interpret` before `--filter` or `--between` reads that flag's values as times, relative to now:
+
+```txt
+vex focus all --interpret --between "due:now:next tuesday"
+vex focus all --interpret --between "due::yesterday"
+vex focus all --interpret --filter due:tomorrow
+```
+
+A saved focus is read again each time it is used, so "next tuesday" always means the coming Tuesday. Phrases combine a day, a time of day and an offset, in any order:
+
+| Kind | Examples |
+| --- | --- |
+| Now and nearby days | `now`, `today`, `tonight`, `tomorrow`, `yesterday` |
+| Weekdays | `wed`, `friday`, `next tuesday`, `last monday`, `weekend` |
+| Periods | `next week`, `last month`, `next year`, `this year`, `next fall`, `winter` |
+| Dates | `26 July`, `July 26th`, `the 26th of December 2026`, `the 3rd`, `2026-07-26` |
+| Times of day | `first light`, `dawn`, `morning`, `morn`, `noon`, `arvo`, `afternoon`, `end of day`, `eve`, `dusk`, `night`, `midnight` |
+| Clock times | `5pm`, `3:30pm`, `15:00`, `at 9` |
+| Offsets | `fifteen minutes`, `in 3 days`, `half day`, `an hour and a half`, `2 weeks ago` |
+
+- A weekday or date means its next occurrence. A date with no year falls on or after today; a weekday falls after today.
+- A time of day on its own means the next time it comes round.
+- A day without a time means its first moment, 00:00.
+- Weeks start on Monday, and seasons start on the first of March, June, September and December.
+- Joining words such as `by`, `before`, `on`, `at`, `in`, `the`, `until` and `due` are skipped, so `by 26 July` and `before 26 July` mean 26 July.
+- Any other word fails with the `uninterpretable` error.
 
 ## Views
 

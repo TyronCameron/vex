@@ -67,6 +67,7 @@ local focuses = {
   {"focus", "all", "--onlyin", "all"},
   {"focus", "./" .. CHILD .. ".md", count = 1},
   {"focus", "./"},
+  {"focus", "all", "--interpret", "--between", "due:yesterday:next year"},
 }
 
 local function name(row)
