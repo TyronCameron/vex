@@ -98,6 +98,7 @@ vex focus --select vexid:status:description
 - `--between field:begin:end` — keeps tasks where `begin <= field <= end`. Omit `begin` for "less than or equal to `end`"; omit `end` for "greater than or equal to `begin`".
 - `--tree field` — walks *forward* along `field` (e.g. `children`), collecting every task reachable by following it.
 - `--reversetree field` — walks *backward* along `field` — collects every task that has the current task(s) somewhere in that field (this is how the `singular` view finds an abstract's ancestors, by reverse-treeing over `children`).
+- `--forwardlinks` — the tasks the current task(s) link to through any link field (`children`, `dependencies`, `options`, …); the reverse of `--backlinks` (takes no value).
 - `--complement` — everything *not* in the current focus (takes no value).
 - `--union`, `--intersect`, `--xor`, `--notin`, `--onlyin` — meant to combine the current focus with another named focus given as the flag's value. These currently crash with an internal error ("attempt to call method 'get' (a nil value)") via the CLI, because the flag's raw string value is passed straight through instead of being resolved to an actual focus first. Tracked as [[fix-focus-binary-ops-cli-1]].
 - `--interpret` — **not implemented**. The intent (per `focus.lua`'s own comment) is to convert natural-language values like `tomorrow` before matching; today it hard-throws "this is a hard feature that I don't know how to do yet." Tracked as [[implement-focus-interpret-1]].

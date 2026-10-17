@@ -4,7 +4,7 @@ package.cpath = script_dir .. "?.dll;"  .. script_dir .. "?.so;"       .. packag
 
 local plugin = require 'lib.plugin'
 plugin:addenum("tagger", {"canonicalvexid"})
-plugin:addenum("taskpath", {"flatpath"})
+plugin:addenum("taskpath", {"grouppath"})
 plugin:addenum("taskformat", {"obsidian"})
 plugin:addenum("dataformat", {"csvdata"})
 plugin:addenum("sortdata", {"canonicalsort"})
