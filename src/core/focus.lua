@@ -59,12 +59,22 @@ local function asfocus(focus)
     return focus
 end
 
+-- a focus can split its tasks into groups: a list of task lists with this metatable
+local Groups = {}
+
+-- runs the operation within each group
 function Focus:chain(operation, focus, ...)
     if type(focus) == "function" then 
         focus = Focus.new(operation, focus)
     end 
     return Focus.new('chain', function(tasks) 
-        return focus:get(self:get(tasks))
+        local groups = setmetatable({}, Groups)
+        for _, group in ipairs(self:groups(tasks)) do
+            for _, subgroup in ipairs(focus:groups(group)) do
+                if #subgroup > 0 then table.insert(groups, subgroup) end
+            end
+        end
+        return groups
     end, func.imerge(self.operations or {}, {{ operation = operation, args = {...} }}))
 end
 
@@ -381,6 +391,90 @@ function Focus:between(field, start, finish)
     end, field, start, finish)
 end 
 
+local function sortkey(value)
+    if type(value) == "table" then return table.concat(value, ",") end
+    if type(value) == "boolean" then return tostring(value) end
+    return value
+end
+
+-- -1, 0 or 1 as x sorts before, with or after y; a missing value sorts last either way
+local function compare(x, y, descending)
+    x, y = sortkey(x), sortkey(y)
+    if x == y then return 0 end
+    if x == nil then return 1 end
+    if y == nil then return -1 end
+    if descending then x, y = y, x end
+    if type(x) ~= type(y) then x, y = type(x), type(y) end
+    return x < y and -1 or 1
+end
+
+local function orderings(...)
+    local orders = {}
+    for _, word in ipairs({...}) do
+        if (word == 'asc' or word == 'desc') and #orders > 0 then
+            orders[#orders].descending = word == 'desc'
+        else
+            table.insert(orders, {field = word})
+        end
+    end
+    return orders
+end
+
+-- -1, 0 or 1 as task a sorts before, with or after task b
+local function order(a, b, orders)
+    for _, o in ipairs(orders) do
+        local comparison = compare(a[o.field], b[o.field], o.descending)
+        if comparison ~= 0 then return comparison end
+    end
+    return 0
+end
+
+-- orderby field[:asc|:desc]:field..., keeping tied tasks in order
+function Focus:orderby(...)
+    local orders = orderings(...)
+    return self:chain('orderby', function(tasks)
+        local positions = {}
+        for i, task in ipairs(tasks) do positions[task] = i end
+        local ordered = func.imap(tasks, function(task) return task end)
+        table.sort(ordered, function(a, b)
+            local comparison = order(a, b, orders)
+            if comparison ~= 0 then return comparison < 0 end
+            return positions[a] < positions[b]
+        end)
+        return ordered
+    end, ...)
+end
+
+-- groupby field[:asc|:desc]:field..., ordering the groups as orderby would
+function Focus:groupby(...)
+    local orders = orderings(...)
+    return self:chain('groupby', function(tasks)
+        local groups, keyed = setmetatable({}, Groups), {}
+        for _, task in ipairs(tasks) do
+            local key = table.concat(func.imap(orders, function(o) return tostring(sortkey(task[o.field])) end), "\0")
+            if not keyed[key] then
+                keyed[key] = {}
+                table.insert(groups, keyed[key])
+            end
+            table.insert(keyed[key], task)
+        end
+        table.sort(groups, function(a, b) return order(a[1], b[1], orders) < 0 end)
+        return groups
+    end, ...)
+end
+
+-- rn numbers each group's tasks from 1 in the field `rn`, on copies of the tasks
+function Focus:rn()
+    return self:chain('rn', function(tasks)
+        return func.imap(tasks, function(task, i)
+            local numbered = setmetatable({}, getmetatable(task))
+            for field, value in pairs(task) do numbered[field] = value end
+            numbered.rn = i
+            return numbered
+        end)
+    end)
+end
+
 -- tree field
 local function links(task, field)
     if type(task[field]) == "string" then return {task[field]} end
@@ -472,8 +566,18 @@ end
 -- Universal 
 -----------------------------------------
 
+function Focus:groups(tasks)
+    local result = self._get(tasks or Focus.getalltasks())
+    if getmetatable(result) == Groups then return result end
+    return setmetatable({result}, Groups)
+end
+
 function Focus:get(tasks)
-    return self._get(tasks or Focus.getalltasks())
+    local tasklist = {}
+    for _, group in ipairs(self:groups(tasks)) do
+        for _, task in ipairs(group) do table.insert(tasklist, task) end
+    end
+    return tasklist
 end
 
 function Focus:each_task(f, ...)

@@ -219,6 +219,14 @@ task:transient 'age' {
     end
 }
 
+task:transient 'urgency' {
+    vextype = 'task',
+    definition = function(t)
+        local ranked = focus.focus('final'):complement():groupby('owner'):orderby('due'):rn():filter('vexid', t.vexid):get()[1]
+        return ranked and ranked.rn
+    end
+}
+
 -- task:field 'due' {
 --     normalise = function(value, context)
 --         if type(value) == "number" then return math.floor(value) end

@@ -39,6 +39,7 @@ Transients are fields vex works out each time they are read. They are never stor
 | `lineage` | The vexids of the abstracts above the task, root first. |
 | `path` | Where the task file is. |
 | `age` | Whole days since `created`. |
+| `urgency` | The task's rank among its owner's open tasks by `due`, soonest first: 1 is the most urgent. Tasks without a due date rank last, and finished tasks have none. |
 
 Add your own in `.vex/tasks` ([[03 Configuring task types]]).
 

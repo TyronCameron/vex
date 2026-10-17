@@ -121,6 +121,20 @@ Values are separated by `:`.
 | `--notin focus` | Tasks in this focus but not the other. |
 | `--onlyin focus` | Tasks in the other focus but not this one. |
 | `--interpret` | Reads the next flag's values as natural-language times (see below). |
+| `--orderby field[:desc]:field...` | The tasks sorted by each field in turn, ascending unless followed by `desc`. Ties keep their order, and missing values sort last. |
+| `--groupby field[:desc]:field...` | The tasks in groups that share those fields' values, ordered as `--orderby` would order them. |
+| `--rn` | Each task numbered from 1 within its group, in the field `rn`. |
+
+### Grouping and ordering
+
+`--groupby` splits a focus into groups. Every later flag then works within each group, so `--orderby` sorts each group and `--rn` numbers each group from 1. This is like SQL's `ROW_NUMBER() OVER (PARTITION BY ... ORDER BY ...)`:
+
+```txt
+vex focus all --groupby owner --orderby due --rn --select owner,due,rn
+vex view tabular
+```
+
+Commands and views list the groups one after another. A set operation (`--union`, `--intersect`, `--xor`, `--notin`, `--onlyin`, `--complement`) gathers the groups back into one.
 
 ### Interpreting times
 

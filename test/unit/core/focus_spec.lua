@@ -174,6 +174,78 @@ describe("Focus", function()
 
     end)
 
+    describe("ordering, grouping and numbering", function()
+
+        local a = {vexid = "a", owner = "bob", cost = 3}
+        local b = {vexid = "b", owner = "alice", cost = 1}
+        local c = {vexid = "c", cost = 2}
+        local d = {vexid = "d", owner = "bob"}
+        local e = {vexid = "e", owner = "alice", cost = 1}
+        local tasks = {a, b, c, d, e}
+        local f = Focus.new("all", function(t) return t end)
+
+        local function vexids(list)
+            return func.imap(list, function(t) return t.vexid end)
+        end
+
+        it("orderby sorts by a field, keeping ties in order and missing values last", function()
+            assert.same({"b", "e", "c", "a", "d"}, vexids(f:orderby('cost'):get(tasks)))
+        end)
+
+        it("orderby desc reverses the order and still puts missing values last", function()
+            assert.same({"a", "c", "b", "e", "d"}, vexids(f:orderby('cost', 'desc'):get(tasks)))
+        end)
+
+        it("orderby breaks ties with the next field", function()
+            assert.same({"e", "b", "c", "a", "d"}, vexids(f:orderby('cost', 'vexid', 'desc'):get(tasks)))
+        end)
+
+        it("groupby gathers tasks sharing a value, ordering the groups by it", function()
+            assert.same({{"b", "e"}, {"a", "d"}, {"c"}}, func.imap(f:groupby('owner'):groups(tasks), vexids))
+        end)
+
+        it("groupby orders its groups descending, with missing values last", function()
+            assert.same({{"a", "d"}, {"b", "e"}, {"c"}}, func.imap(f:groupby('owner', 'desc'):groups(tasks), vexids))
+        end)
+
+        it("groupby takes several fields", function()
+            assert.same({{"b", "e"}, {"a"}, {"d"}, {"c"}}, func.imap(f:groupby('owner', 'cost'):groups(tasks), vexids))
+        end)
+
+        it("runs each later operation within each group, and get flattens the groups", function()
+            assert.same({"e", "b", "d", "a", "c"}, vexids(f:groupby('owner'):orderby('vexid', 'desc'):get(tasks)))
+            assert.same({{"b", "e"}}, func.imap(f:groupby('owner'):filter('cost', 1):groups(tasks), vexids))
+        end)
+
+        it("rn numbers the tasks in each group from 1, without changing the tasks", function()
+            local numbered = f:groupby('owner'):orderby('cost'):rn():get(tasks)
+            assert.same({"b", "e", "a", "d", "c"}, vexids(numbered))
+            assert.same({1, 2, 1, 2, 1}, func.imap(numbered, function(t) return t.rn end))
+            assert.is_nil(b.rn)
+        end)
+
+        it("a set operation gathers the groups back into one", function()
+            local none = Focus.new("none", function() return {} end)
+            assert.same({{"b", "e", "a", "d", "c"}}, func.imap(f:groupby('owner'):union(none):groups(tasks), vexids))
+        end)
+
+        it("numbers saved tasks, keeping their transients, and replays from the saved focus", function()
+            local task = require 'core.task'
+            local first = task:add({description = "numbered first task", cost = 1})
+            local second = task:add({description = "numbered second task", cost = 2})
+            for _, vexid in ipairs({first, second}) do
+                task:resolve(vexid)
+                task:write(vexid)
+            end
+            Focus.focus(first):union(second):orderby('cost', 'desc'):rn():write()
+            local replayed = Focus.read():get()
+            assert.same({second, first}, vexids(replayed))
+            assert.same({1, 2}, func.imap(replayed, function(t) return t.rn end))
+            assert.equal(3, replayed[1].wordcount)
+        end)
+
+    end)
+
     it("select keeps only the chosen fields plus the vexid", function()
         local f = Focus.new("all", function(t) return t end)
         assert.same({{vexid = "t1", status = "todo"}}, f:select("status"):get({{vexid = "t1", status = "todo", cost = 3}}))

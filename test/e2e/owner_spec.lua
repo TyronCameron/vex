@@ -42,4 +42,15 @@ describe("vex owner (e2e, subprocess)", function()
     users("alice")
     assert.are.equal(0, helper.run_vex(dir, {"add", "Unowned", "task"}).code)
   end)
+
+  it("ranks each owner's open tasks by due date as their urgency", function()
+    users("alice", "bob")
+    local first = helper.vex(dir, "add", "Alice", "first", "job", "--owner", "alice", "--due", "2026-01-01")
+    local second = helper.vex(dir, "add", "Alice", "second", "job", "--owner", "alice", "--due", "2026-02-01")
+    local only = helper.vex(dir, "add", "Bob", "only", "job", "--owner", "bob", "--due", "2026-03-01")
+    local undated = helper.vex(dir, "add", "Alice", "undated", "job", "--owner", "alice")
+    for vexid, urgency in pairs({[first] = "1", [second] = "2", [only] = "1", [undated] = "3"}) do
+      assert.equal(urgency, helper.vex(dir, "get", vexid, "--urgency"), vexid)
+    end
+  end)
 end)
