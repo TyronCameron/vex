@@ -137,6 +137,15 @@ describe("task", function()
         assert.equal(1, calls)
     end)
 
+    it("resolves a type two levels below task through every ancestor's schema", function()
+        local schema = require 'lib.schema'
+        task:task 'grandchildtype':extends 'atom' { schema = schema.atleast { tier = schema.default {schema.num, default = function() return 3 end} } }
+        local vexid = task:add({description = "grandchild typed task", vextype = 'grandchildtype'})
+        task:resolve(vexid)
+        assert.equal(3, task.tasks[vexid].tier)
+        assert.equal('todo', task.tasks[vexid].status)
+    end)
+
     describe("transients", function()
 
         local schema = require 'lib.schema'

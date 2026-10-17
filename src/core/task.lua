@@ -338,8 +338,7 @@ function TaskManager:resolve(vexid)
 
     local parents = {vextype} 
     while parents[1].parent do
-        local parent = self.tasktypes[parents[#parents].parent]
-        table.insert(parents, 1, parent)
+        table.insert(parents, 1, self.tasktypes[parents[1].parent])
     end 
 
     for _, parent in ipairs(parents) do 
