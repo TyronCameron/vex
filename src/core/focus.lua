@@ -417,6 +417,20 @@ function Focus:backlinks()
     end)
 end
 
+-- forwardlinks
+function Focus:forwardlinks()
+    return self:chain('forwardlinks', function(tasks) 
+        local indexed = byvexid()
+        local linked = {}
+        for _, task in ipairs(tasks) do
+            for target, sources in pairs(vexdex.backlinks) do
+                if sources[task.vexid] then table.insert(linked, indexed[target]) end
+            end
+        end
+        return linked
+    end)
+end
+
 -----------------------------------------
 -- Modifiers
 -----------------------------------------

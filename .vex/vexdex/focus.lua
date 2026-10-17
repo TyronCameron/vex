@@ -2,7 +2,7 @@
   operations = {
     [1] = {
       args = {
-        [1] = "let-vex-set-insert-remove-list-1"
+        [1] = "check-grouped-task-paths-windows-1"
       },
       operation = "focus"
     }

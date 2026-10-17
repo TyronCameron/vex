@@ -168,8 +168,15 @@ function M.copy_tree(from, to)
   assert(os.execute("mkdir -p " .. M.shell_escape(to) .. " && cp -R " .. M.shell_escape(from) .. "/. " .. M.shell_escape(to)))
 end
 
+function M.task_file(dir, vexid)
+  local handle = assert(io.popen("find " .. M.shell_escape(dir) .. " -name " .. M.shell_escape(vexid .. ".md")))
+  local path = handle:read("*l")
+  handle:close()
+  return path
+end
+
 function M.link(dir, vexid, field, targets)
-  local path = dir .. "/" .. vexid .. ".md"
+  local path = assert(M.task_file(dir, vexid), "no task file for " .. vexid)
   local items = {field .. ":"}
   for _, target in ipairs(targets) do
     table.insert(items, '  - "[[' .. target .. ']]"')

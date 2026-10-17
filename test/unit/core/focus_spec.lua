@@ -271,6 +271,15 @@ describe("Focus", function()
             assert.same({"mid"}, result)
         end)
 
+        it("forwardlinks collects the tasks each task links to", function()
+            local vexdex = require 'core.vexdex'
+            vexdex:unsafe_link("mid", {"other"})
+            local f = Focus.new("mid", function() return {mid} end)
+            local result = vexids(f:forwardlinks():get(linked))
+            vexdex:unsafe_remove("mid")
+            assert.same({"other"}, result)
+        end)
+
     end)
 
 end)
