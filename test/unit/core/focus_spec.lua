@@ -118,7 +118,7 @@ describe("Focus", function()
         end
         local result = Focus.focus('all'):between("cost", "1", "9"):get()
         assert.equal(1, #result)
-        assert.equal("between-cheap-task-1", result[1].vexid)
+        assert.equal("between cheap task", result[1].description)
     end)
 
     it("select keeps only the chosen fields plus the vexid", function()
