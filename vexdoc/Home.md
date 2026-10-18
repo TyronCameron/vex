@@ -89,7 +89,8 @@ recipe:recipe 'release' {
         for _, stage in ipairs({'Spike', 'Build', 'Test'}) do
             table.insert(stages, task:add({description = stage .. ' ' .. name, vextype = 'atom'}))
         end
-        return task:add({description = name, vextype = 'abstract', children = stages})
+        local release = task:add({description = name, vextype = 'abstract', children = stages})
+        return {release, unpack(stages)}
     end
 }
 ```

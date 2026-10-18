@@ -175,7 +175,7 @@ task:task 'atom':extends 'task' {
 recipe:recipe 'abstract' {
     add = function(task, taskproperties)
         taskproperties.vextype = 'abstract'
-        return task:add(taskproperties)
+        return {task:add(taskproperties)}
     end 
 }
 

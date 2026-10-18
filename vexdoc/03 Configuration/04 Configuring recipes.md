@@ -4,7 +4,7 @@ Each `.lua` file in `.vex/recipes` can register recipes. A recipe is an `add` fu
 recipe:recipe 'chore' {
     add = function(task, taskproperties)
         taskproperties.vextype = 'atom'
-        return task:add(taskproperties)
+        return {task:add(taskproperties)}
     end
 }
 ```
@@ -13,7 +13,7 @@ recipe:recipe 'chore' {
 vex recipe chore Take out the bins
 ```
 
-`taskproperties` holds the description and every flag. A recipe can add as many tasks as it likes and link them through their fields. vex resolves and writes each task in the order the recipe added it, then focuses on all of them:
+`taskproperties` holds the description and every flag. `add` returns the list of vexids it added. A recipe can add as many tasks as it likes and link them through their fields; vex resolves and writes each returned task in the order of the list, then focuses on all of them:
 
 ```lua
 recipe:recipe 'release' {
@@ -23,7 +23,8 @@ recipe:recipe 'release' {
         for _, stage in ipairs({'Spike', 'Build', 'Test'}) do
             table.insert(stages, task:add({description = stage .. ' ' .. name, vextype = 'atom'}))
         end
-        return task:add({description = name, vextype = 'abstract', children = stages})
+        local release = task:add({description = name, vextype = 'abstract', children = stages})
+        return {release, unpack(stages)}
     end
 }
 ```

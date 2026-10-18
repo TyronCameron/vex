@@ -16,7 +16,7 @@ describe("Recipe", function()
         recipe:recipe '__specchore' {
             add = function(taskmanager, properties)
                 properties.vextype = 'atom'
-                return taskmanager:add(properties)
+                return {taskmanager:add(properties)}
             end
         }
         local f = recipe:add('__specchore', {description = "take out the bins"})
@@ -26,19 +26,20 @@ describe("Recipe", function()
         assert.equal('todo', task.tasks[tasks[1].vexid].status)
     end)
 
-    it("resolves and focuses on every task a recipe adds", function()
+    it("resolves and focuses on every vexid the recipe returns, in that order", function()
         recipe:recipe '__specpipeline' {
             add = function(taskmanager, properties)
                 local spike = taskmanager:add({description = "spike the " .. properties.description})
                 local build = taskmanager:add({description = "build the " .. properties.description})
-                return taskmanager:add({description = properties.description, vextype = 'abstract', children = {spike, build}})
+                local parent = taskmanager:add({description = properties.description, vextype = 'abstract', children = {spike, build}})
+                return {parent, spike, build}
             end
         }
         local vexids = {}
         recipe:add('__specpipeline', {description = "release pipeline"}):each(function(vexid)
             table.insert(vexids, vexid)
         end)
-        assert.same({"spike-release-pipeline-1", "build-release-pipeline-1", "release-pipeline-1"}, vexids)
+        assert.same({"release-pipeline-1", "spike-release-pipeline-1", "build-release-pipeline-1"}, vexids)
         for _, vexid in ipairs(vexids) do
             assert.equal('todo', task.tasks[vexid].status)
         end

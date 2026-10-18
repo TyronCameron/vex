@@ -17,26 +17,13 @@ function Recipe:recipe(name)
     end
 end
 
-local function recording(added)
-    return setmetatable({
-        add = function(_, taskproperties)
-            local vexid = task:add(taskproperties)
-            table.insert(added, vexid)
-            return vexid
-        end
-    }, {__index = task})
-end
-
 function Recipe:add(name, taskproperties)
     if not self.recipes[name] then cli:throw('unknown-recipe', name) end 
-    local added = {}
-    self.recipes[name].add(recording(added), taskproperties)
-    local f = focus.focus('none')
-    for _, vexid in ipairs(added) do
+    local vexids = self.recipes[name].add(task, taskproperties)
+    for _, vexid in ipairs(vexids) do
         task:resolve(vexid)
-        f = f:union(vexid)
     end
-    return f
+    return focus.focus(vexids)
 end
 
 return Recipe.new()

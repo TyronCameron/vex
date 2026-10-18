@@ -35,7 +35,7 @@ describe("vex extensions in .vex (e2e, subprocess)", function()
       recipe:recipe 'chore' {
         add = function(task, taskproperties)
           taskproperties.vextype = 'atom'
-          return task:add(taskproperties)
+          return {task:add(taskproperties)}
         end
       }
     ]])
