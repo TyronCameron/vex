@@ -24,8 +24,10 @@ make-coffee-wife-1
 `add` also sets your focus to the new task, so the next command applies to it without naming it. Set more fields with flags:
 
 ```txt
-vex set --cost 15 --benefit 40 --due "2026-08-01 09:00:00"
+vex set --cost 15 --benefit 40 --due "tomorrow 8am"
 ```
+
+A date or time can be `YYYY-MM-DD HH:MM:SS`, `YYYY-MM-DD`, or a phrase such as `tomorrow 8am`, `friday arvo` or `in 3 days`, read relative to now (see [[01 CLI reference#Interpreting times]]).
 
 ## 3. Look at the task
 

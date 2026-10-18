@@ -156,6 +156,7 @@ function Schema:prevalidate(value, context)
     local snap = context:snapshot()
     if not self._prevalidate then return value end 
     local ok, res = pcall(self._prevalidate, self, value, context)
+    if not ok and type(res) == "table" then error(res, 0) end
     if not ok then self:error(value, snap, "Prevalidation step errored:\n" .. tostring(res)) end 
     return res 
 end
@@ -597,7 +598,7 @@ Schema.register 'date' {
             backward = function(self, value)
                 if type(value) ~= "string" then return value end
                 local y, mo, d = value:match("^(%d%d%d%d)-(%d%d)-(%d%d)$")
-                if not y then return end
+                if not y then return value end
                 return os.time({
                     year = tonumber(y), month = tonumber(mo), day = tonumber(d),
                     hour = tonumber(0), min = tonumber(0), sec = tonumber(0), 
@@ -635,7 +636,7 @@ Schema.register 'datetime' {
                     y, mo, d = value:match("^(%d%d%d%d)-(%d%d)-(%d%d)$")
                     h, mi, s = 0, 0, 0
                 end
-                if not y then return end
+                if not y then return value end
                 return os.time({
                     year = tonumber(y), month = tonumber(mo), day = tonumber(d),
                     hour = tonumber(h), min = tonumber(mi), sec = tonumber(s), 
@@ -752,6 +753,11 @@ Schema.register 'formatted' {
     prevalidate = function(self, instance, context) 
         if self:validate(instance) then return instance end 
         local result = self:unapply('format', instance, context)
+        if not self:validate(result) then
+            local ok, interpreted = pcall(self.unapply, self, 'interpret', result, context)
+            if not ok then error({uninterpretable = result, field = table.concat(context.path, '.')}, 0) end
+            result = interpreted
+        end
         for childschema, childinstance in self:iterate(result, context) do
             result = childschema:prevalidate(childinstance, context)
         end

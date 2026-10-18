@@ -415,6 +415,20 @@ describe("schema", function()
         assert.equal(midnight, schema.date:unapply('interpret', "tomorrow arvo"))
     end)
 
+    it("`schema.formatted` reads a value its format iso cannot through its interpret iso", function()
+        local naturaltime = require 'lib.naturaltime'
+        local s = schema.atleast { due = schema.maybe { schema.formatted { schema.datetime } } }
+        assert.equal(naturaltime.parse("next year"), s:prevalidate({due = "next year"}).due)
+        assert.equal(os.time({year = 2026, month = 1, day = 1, hour = 0, isdst = false}), s:prevalidate({due = "2026-01-01"}).due)
+    end)
+
+    it("`schema.formatted` raises which value and field it could not read", function()
+        local s = schema.atleast { due = schema.maybe { schema.formatted { schema.datetime } } }
+        local ok, err = pcall(s.prevalidate, s, {due = "garbage words"})
+        assert.is_false(ok)
+        assert.same({uninterpretable = "garbage words", field = "due"}, err)
+    end)
+
     it("`schema.datetime` rejects a phrase it cannot interpret", function()
         assert.has_error(function() schema.datetime:unapply('interpret', "tomorrow blorp") end)
     end)

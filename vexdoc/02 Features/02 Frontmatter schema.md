@@ -11,12 +11,12 @@ Every task is validated against the schema of its `vextype` and of each type tha
 | `created` | datetime | Set when the task is added. |
 | `modified` | datetime | Updated whenever vex touches the task: on add, set and every resolve, a reindex included. |
 | `vexbody` | text | Optional. The markdown body below the frontmatter. |
-| `due` | datetime | Optional. `YYYY-MM-DD HH:MM:SS`; a `T` may replace the space. |
+| `due` | datetime | Optional. |
 | `cost`, `benefit` | number | Optional. |
 | `owner` | text | Optional. Must be one of the `taskowners` in `.vex/config.lua`. |
 | `dependencies` | list of links | Optional. Each entry must be an existing task, and dependencies can't form a cycle. |
 
-Datetimes are stored as timestamps and written as `YYYY-MM-DD HH:MM:SS`. Links are written as `[[vexid]]`, so the task files form an Obsidian vault.
+Datetimes are stored as timestamps and written as `YYYY-MM-DD HH:MM:SS`. vex reads `YYYY-MM-DD HH:MM:SS` (a `T` may replace the space), `YYYY-MM-DD`, or a phrase such as `tomorrow 8am`, relative to the moment the task is resolved ([[01 CLI reference#Interpreting times]]). A value it can't read fails resolution with the `uninterpretable` error, and the task file is left as it was. Links are written as `[[vexid]]`, so the task files form an Obsidian vault.
 
 ## Fields by type
 

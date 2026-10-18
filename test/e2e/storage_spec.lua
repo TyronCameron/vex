@@ -57,6 +57,16 @@ describe("vex storage (e2e, subprocess)", function()
     assert.truthy(vex(dir, "get", vexid, "--cost"):find("9", 1, true))
   end)
 
+  it("keeps a hand-written natural-language time until vex next writes the task as a date", function()
+    local vexid = vex(dir, "add", "Hand", "dated", "task")
+    local path = dir .. "/" .. vexid .. ".md"
+    helper.write_file(path, helper.read_file(path):gsub("\nstatus: todo\n", "\nstatus: todo\ndue: tomorrow 8am\n"))
+    vex(dir, "resolve", "all")
+    vex(dir, "set", vexid, "--cost", "1")
+    local t = os.date("*t", os.time() + 86400)
+    assert.equal(string.format("%04d-%02d-%02d 08:00:00", t.year, t.month, t.day), helper.frontmatter(path).due)
+  end)
+
   it("rebuilds a deleted index from the task files", function()
     linked_project()
     os.execute("rm -f " .. helper.shell_escape(dir) .. "/.vex/vexdex/*")
