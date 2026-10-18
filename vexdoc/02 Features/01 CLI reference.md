@@ -52,7 +52,7 @@ The task file goes in `taskfolder`. Its vexid comes from the description's first
 - "Make coffee for wife" → `make-coffee-wife-1`
 - "Investigate why the login page is slow on mobile" → `investigate-login-page-slow-1`
 
-`--vextype` picks the task type, and with it the schema the task is validated against (see [[03 Vexations (task types)]]).
+`--vextype` picks the task type, and with it the schema the task is validated against (see [[03 Task types (and vexations)]]).
 
 ## Editing tasks
 
@@ -138,11 +138,11 @@ Commands and views list the groups one after another. A set operation (`--union`
 
 ### Interpreting times
 
-`--interpret` before `--filter` or `--between` reads that flag's values as times, relative to now:
+Dates and times can be written as phrases, read relative to now: in `add` and `set` (`--due "friday arvo"`), in a hand-edited task file, and in focus values. `--interpret` before `--filter` or `--between` reads that flag's values through each field's interpret iso:
 
 ```txt
-vex focus all --interpret --between "due:now:next tuesday"
-vex focus all --interpret --between "due::yesterday"
+vex focus all --interpret --between due:now:"next tuesday"
+vex focus all --interpret --between due::yesterday
 vex focus all --interpret --filter due:tomorrow
 ```
 

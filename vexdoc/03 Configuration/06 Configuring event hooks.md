@@ -21,3 +21,7 @@ end)
 ```
 
 Hooks for the same event run in the order their files load, sorted by path. See [[Events and hooks]] for how events are dispatched.
+
+## Writing a file
+
+Each example on this page is a complete file: save it as a `.lua` file in `.vex/events` and vex loads it on the next command, with nothing else required. Every file runs with these already in scope, alongside Lua's standard globals: `task` (the task manager), `recipe` (the recipe manager), `focus` (the `Focus` class), `view` (the view manager) and `schema` (the schema library), plus `event` for registering hooks.

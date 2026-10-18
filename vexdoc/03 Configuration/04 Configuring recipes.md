@@ -30,3 +30,7 @@ recipe:recipe 'release' {
 ```
 
 The built-in `abstract` recipe is defined the same way.
+
+## Writing a file
+
+Each example on this page is a complete file: save it as a `.lua` file in `.vex/recipes` and vex loads it on the next command, with nothing else required. Every file runs with these already in scope, alongside Lua's standard globals: `task` (the task manager), `recipe` (the recipe manager), `focus` (the `Focus` class), `view` (the view manager) and `schema` (the schema library).

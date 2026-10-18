@@ -14,7 +14,7 @@ Because a task is a text file, anything that reads and writes text can work with
 - **Features**
   - [[01 CLI reference]]: every command and flag.
   - [[02 Frontmatter schema]]: every field a task can hold.
-  - [[03 Vexations (task types)]]: `exploration`, `abstract`, `decision` and `atom`.
+  - [[03 Task types (and vexations)]]: `exploration`, `abstract`, `decision` and `atom`.
   - [[04 Views]]: tables, CSV, JSON, kanban boards, statistics and dependency diagrams.
 - **Configuration**
   - [[01 Configuring vex (config.lua)]]: the project config file.

@@ -92,10 +92,10 @@ vex add Reorder the pantry
 vex remove
 ```
 
-`remove` deletes every task in the focus, removes links to them from other tasks, and clears your focus. It doesn't ask for confirmation, so check a wide focus with `vex show` first.
+`remove` deletes every task in the focus, removes links to them from other tasks, and clears your focus. It doesn't ask for confirmation, so check a wide focus with `vex focus` or `vex view tabular` first.
 
 ## Next steps
 
 - [[03 Using a recipe to create a sequence of tasks]]
-- [[03 Vexations (task types)]]
+- [[03 Task types (and vexations)]]
 - [[04 Views]]

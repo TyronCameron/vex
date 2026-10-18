@@ -1,4 +1,4 @@
-Every task is validated against the schema of its `vextype` and of each type that type extends (see [[03 Vexations (task types)]]). This page lists the fields vex defines. Any other field you set is stored as given.
+Every task is validated against the schema of its `vextype` and of each type that type extends (see [[03 Task types (and vexations)]]). This page lists the fields vex defines. Any other field you set is stored as given.
 
 ## Fields on every task
 

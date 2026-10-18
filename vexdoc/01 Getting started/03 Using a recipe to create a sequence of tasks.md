@@ -1,4 +1,4 @@
-A recipe is a named shortcut that creates one or more tasks with fields already filled in. Use one whenever you set up the same kind of work again and again.
+A recipe is a named shortcut that creates one or more tasks with fields already filled in. Use one whenever you set up the same kind of work repeatedly.
 
 ## Listing recipes
 
@@ -42,5 +42,5 @@ See [[04 Configuring recipes]] for the details.
 
 ## Next steps
 
-- [[03 Vexations (task types)]] for what `abstract`, `decision`, `exploration` and `atom` are for.
+- [[03 Task types (and vexations)]] for what `abstract`, `decision`, `exploration` and `atom` are for.
 - [[01 CLI reference]] for the `recipe` command.

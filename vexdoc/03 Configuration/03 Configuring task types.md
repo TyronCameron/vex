@@ -17,7 +17,7 @@ task:task 'bug':extends 'atom' {
 vex add Crash on start --vextype bug --severity high
 ```
 
-`schema` provides the building blocks:
+A `schema` is a composable mechanism for nested data validation, normalisation, derivation, and conversion. Any time a task is resolved, it is checked (normalised, validated, derived, and/or converted) against the schema. You can make up your own schemas from the following building blocks, amongst others:
 
 | Schema | Accepts |
 | --- | --- |
@@ -48,3 +48,7 @@ vex focus all --select shouting
 ```
 
 A definition can read other fields and transients, and query other tasks through `focus`.
+
+## Writing a file
+
+Each example on this page is a complete file: save it as a `.lua` file in `.vex/tasks` and vex loads it on the next command, with nothing else required. Every file runs with these already in scope, alongside Lua's standard globals: `task` (the task manager), `recipe` (the recipe manager), `focus` (the `Focus` class), `view` (the view manager) and `schema` (the schema library).
