@@ -3,8 +3,8 @@ vexid: implement-priorityorder-variables-1
 vextype: task
 description: Implement priority/order variables
 created: "2026-07-10 22:13:20"
-modified: "2026-07-10 22:13:20"
-status: todo
+modified: "2026-10-19 07:39:55"
+status: done
 ---
 Implement ordering variables which can have either or both of: 1) no gaps between orderings and 2) no ties between orderings
 
