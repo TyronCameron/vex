@@ -205,6 +205,13 @@ describe("vex CLI lifecycle (e2e, subprocess)", function()
     assert.equal("done", task(vexid).status)
   end)
 
+  it("vex focus with no arguments counts the vexes in the saved focus", function()
+    vex(dir, "add", "Buy", "milk")
+    vex(dir, "add", "Buy", "eggs")
+    vex(dir, "focus", "all")
+    assert.truthy(vex(dir, "focus"):find("2 vexes", 1, true))
+  end)
+
   it("vex focus --between leaves a side open when its bound is empty (fix-ignoring-open-lower-bound-1)", function()
     local cheap = vex(dir, "add", "Cheap", "task", "--cost", "2")
     local pricey = vex(dir, "add", "Pricey", "task", "--cost", "20")

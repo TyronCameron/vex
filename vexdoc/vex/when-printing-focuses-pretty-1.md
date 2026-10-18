@@ -6,3 +6,6 @@ created: "2026-07-10 22:12:35"
 modified: "2026-10-17 22:15:23"
 status: done
 ---
+
+
+`vex focus` with no arguments also counts the vexes in the saved focus.

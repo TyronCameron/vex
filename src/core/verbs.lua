@@ -41,19 +41,20 @@ cli:verb "show" {
 cli:verb "focus" {
     function(args)
         local lines = {}
+        local function count(f)
+            local vex_cnt = #f:get()
+            return pretty.string(vex_cnt, "bold") .. (vex_cnt == 1 and " vex" or " vexes")
+        end
         if #args == 0 then
             local f = focus.read()
-            table.insert(lines, pretty.any('Current focus'))
+            table.insert(lines, pretty.any('Current focus on ' .. count(f)))
             for _, op in ipairs(f.operations) do
                 table.insert(lines, pretty.any(pretty.string(op.operation, 'cyan'), pretty.string('args = ', 'green'), op.args))
             end
         else
             local f = focus.parse(args)
             f:write()
-            local vex_cnt = #f:get()
-            local ending = " vexes"
-            if vex_cnt == 1 then ending = " vex" end
-            table.insert(lines, pretty.any("Focusing on " .. pretty.string(vex_cnt, "bold") .. ending))
+            table.insert(lines, pretty.any("Focusing on " .. count(f)))
         end
         return join_lines(lines)
     end,
