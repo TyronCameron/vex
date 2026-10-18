@@ -227,7 +227,12 @@ describe("Focus", function()
 
         it("a set operation gathers the groups back into one", function()
             local none = Focus.new("none", function() return {} end)
-            assert.same({{"b", "e", "a", "d", "c"}}, func.imap(f:groupby('owner'):union(none):groups(tasks), vexids))
+            assert.same({"e", "d", "c", "b", "a"}, vexids(f:groupby('owner'):union(none):orderby('vexid', 'desc'):get(tasks)))
+        end)
+
+        it("interprets the next operation within each group", function()
+            local dated = {{vexid = "x", owner = "bob", cost = 2}, {vexid = "y", owner = "alice", cost = 2}, {vexid = "z", owner = "alice", cost = 5}}
+            assert.same({{"y"}, {"x"}}, func.imap(f:groupby('owner'):interpret():between('cost', '', 3):groups(dated), vexids))
         end)
 
         it("numbers saved tasks, keeping their transients, and replays from the saved focus", function()
