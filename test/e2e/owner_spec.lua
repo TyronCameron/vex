@@ -18,7 +18,7 @@ describe("vex owner (e2e, subprocess)", function()
     local names = {}
     for _, name in ipairs({...}) do table.insert(names, string.format("%q", name)) end
     local f = assert(io.open(dir .. "/.vex/config.lua", "w"))
-    f:write("return { taskfolder = '.', users = {" .. table.concat(names, ", ") .. "} }")
+    f:write("return { taskfolder = '.', taskowners = {" .. table.concat(names, ", ") .. "} }")
     f:close()
   end
 
@@ -41,6 +41,14 @@ describe("vex owner (e2e, subprocess)", function()
   it("leaves owner optional", function()
     users("alice")
     assert.are.equal(0, helper.run_vex(dir, {"add", "Unowned", "task"}).code)
+  end)
+
+  it("gives a new task the config's default tasktype", function()
+    local f = assert(io.open(dir .. "/.vex/config.lua", "w"))
+    f:write("return { taskfolder = '.', taskowners = {}, default = { tasktype = 'atom' } }")
+    f:close()
+    local vexid = helper.vex(dir, "add", "Typed", "by", "default")
+    assert.equal("atom", helper.frontmatter(dir .. "/" .. vexid .. ".md").vextype)
   end)
 
   it("ranks each owner's open tasks by due date as their urgency", function()

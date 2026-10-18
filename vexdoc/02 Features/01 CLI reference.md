@@ -197,4 +197,4 @@ Write a task where the work is, in any text file:
 -- #atom Retry the upload --due 2026-08-01
 ```
 
-`vex inline <file>` creates a task for each new tag. The tag word sets the type (`#vex`, `#abstract`, `#atom`, `#explore`, `#decision`), the rest of the line works like `vex add`, and an indented tag becomes a child of the tag above it. vex then rewrites each tag to carry the task's vexid, so later runs update the same task, and `vex open` jumps from a task back to its tag. Inline tags are the `inline` plugin; switch it off with `plugins.inline = false` ([[01 Configuring vex (config.lua)]]).
+`vex inline <file>` creates a task for each new tag. The tag word sets the type (`#vex`, `#abstract`, `#atom`, `#explore`, `#decision`), the rest of the line works like `vex add`, and an indented tag becomes a child of the tag above it. vex then rewrites each tag to carry the task's vexid, so later runs update the same task, and `vex open` jumps from a task back to its tag.

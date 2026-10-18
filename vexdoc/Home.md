@@ -56,7 +56,7 @@ vex view all overview
 List the people on the project in `.vex/config.lua`:
 
 ```lua
-users = {'alice', 'bob'}
+taskowners = {'alice', 'bob'}
 ```
 
 `owner` must then be one of those names. Assigning work is a commit:

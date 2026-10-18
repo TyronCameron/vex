@@ -13,7 +13,7 @@ Every task is validated against the schema of its `vextype` and of each type tha
 | `vexbody` | text | Optional. The markdown body below the frontmatter. |
 | `due` | datetime | Optional. `YYYY-MM-DD HH:MM:SS`; a `T` may replace the space. |
 | `cost`, `benefit` | number | Optional. |
-| `owner` | text | Optional. Must be one of the `users` in `.vex/config.lua`. |
+| `owner` | text | Optional. Must be one of the `taskowners` in `.vex/config.lua`. |
 | `dependencies` | list of links | Optional. Each entry must be an existing task, and dependencies can't form a cycle. |
 
 Datetimes are stored as timestamps and written as `YYYY-MM-DD HH:MM:SS`. Links are written as `[[vexid]]`, so the task files form an Obsidian vault.

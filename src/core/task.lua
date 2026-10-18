@@ -206,7 +206,7 @@ function TaskManager:add(task)
     task.vexid = tagger.generate(task.description, vexdex.index)
     local existing_task = self:getsingle(task.vexid)
     if existing_task then cli:throw('task-already-exists', task.vexid, existing_task.path) end 
-    task.vextype = task.vextype or 'task'
+    task.vextype = task.vextype or (config.default and config.default.tasktype) or 'task'
 
     self.tasks[task.vexid] = Task.new(task)
     return task.vexid

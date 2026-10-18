@@ -15,19 +15,13 @@ describe("init", function()
         init(dir)
         local config = dofile(dir .. "/.vex/config.lua")
         assert.equal('.', config.taskfolder)
-        assert.same({}, config.users)
+        assert.same({}, config.taskowners)
+        assert.same({tasktype = 'task'}, config.default)
+        assert.is_nil(config.plugins)
         for _, folder in ipairs({"vexdex", "tasks", "recipes", "focuses", "views", "tmp"}) do
             assert.truthy(io.open(dir .. "/.vex/" .. folder .. "/."), folder .. " was not created")
         end
         os.execute("rm -rf '" .. dir .. "'")
-    end)
-
-    it("writes a default view that names a real view", function()
-        local dir = tmpdir()
-        init(dir)
-        local config = dofile(dir .. "/.vex/config.lua")
-        os.execute("rm -rf '" .. dir .. "'")
-        assert.truthy(require('core.view').views[config.default.view])
     end)
 
     it("refuses to set up a folder that already has a .vex", function()

@@ -41,6 +41,6 @@ end
 
 ## Standalone plugins
 
-`Plugin:add(name)` and `Plugin:addall(dir)` register plugins outside any slot. At startup, `src/vex.lua` registers every file in `src/plugin`. That includes `vexcomplete`, which provides `vex autocomplete` and `vex suggest`, and the `vexations` and `inline` plugins that `plugins.*` in `.vex/config.lua` switches on and off.
+`Plugin:add(name)` and `Plugin:addall(dir)` register plugins outside any slot. At startup, `src/vex.lua` registers every file in `src/plugin`. That includes `vexcomplete`, which provides `vex autocomplete` and `vex suggest`, and the `vexations` and `inline` plugins.
 
 `Plugin:enable` and `Plugin:disable` switch a plugin without unregistering it. `Plugin:reload` loads its module from disk again.

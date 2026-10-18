@@ -1,15 +1,7 @@
 return {
   default = {
-    dataformat = "csv",
-    option = "prev",
-    taskformat = "obsidian",
-    tasktype = "task",
-    view = "tabular"
-  },
-  plugins = {
-    inline = true,
-    vexations = true
+    tasktype = "task"
   },
   taskfolder = "vexdoc/vex",
-  users = {}
+  taskowners = {}
 }

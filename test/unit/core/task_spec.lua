@@ -30,6 +30,16 @@ describe("task", function()
         task:remove(vexid)
     end)
 
+    it("add gives a task the config's default tasktype when it has none", function()
+        local config = require 'core.config'
+        local default = config.properties.default
+        config.properties.default = {tasktype = 'atom'}
+        local vexid = task:add({description = "default typed task"})
+        config.properties.default = default
+        assert.equal('atom', task.tasks[vexid].vextype)
+        task:remove(vexid)
+    end)
+
     it("set updates fields on an in-memory task", function()
         local vexid = task:add({description = "another test task for set"})
         task:set(vexid, {status = "done"})

@@ -7,8 +7,6 @@ Every task has a `vextype`. The base type is `task`. The vexations plugin adds f
 | `decision` | Which path do we take? | Free | `options`, and a `decision` from among them |
 | `atom` | What do I actually do? | Free | No `children` |
 
-Switch the four types off with `plugins.vexations = false` in `.vex/config.lua`, leaving only `task` and your own types.
-
 ### Exploration
 
 Use an exploration when you don't yet know what needs to happen. The task marks an open question. The exploring itself happens in your notes or an outliner, so the body stays empty.

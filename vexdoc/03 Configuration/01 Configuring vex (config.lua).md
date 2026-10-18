@@ -4,17 +4,9 @@
 return {
     taskfolder = '.',
     default = {
-        taskformat = 'obsidian',
-        view = 'tabular',
-        dataformat = 'csv',
-        option = 'prev',
         tasktype = 'task'
     },
-    plugins = {
-        vexations = true,
-        inline = true
-    },
-    users = {}
+    taskowners = {}
 }
 ```
 
@@ -23,14 +15,8 @@ return {
 | Setting | Effect |
 | --- | --- |
 | `taskfolder` | The folder, relative to the project root, that holds the task files. |
-| `users` | The names `owner` may take. With no users, tasks can't have an owner. |
-| `default.taskformat` | The `taskformat` plugin used to read and write task files. |
-| `default.view` | The view `vex view` uses when you don't name one. |
-| `default.dataformat` | The `dataformat` plugin the `csv` view writes with. |
-| `default.option` | The focus a command uses when you don't give one. |
+| `taskowners` | The names `owner` may take. With no task owners, tasks can't have an owner. |
 | `default.tasktype` | The `vextype` of a task added without one. |
-| `plugins.vexations` | Enables the `exploration`, `abstract`, `decision` and `atom` types ([[03 Vexations (task types)]]). |
-| `plugins.inline` | Enables `#vex` tags in source files ([[01 CLI reference#Inline tags]]). |
 | `paths.groupby` | Nests task files in folders by their fields (see below). |
 
 For example, to keep tasks in a `todo` folder and assign them to two people:
@@ -38,7 +24,7 @@ For example, to keep tasks in a `todo` folder and assign them to two people:
 ```lua
 return {
     taskfolder = 'todo',
-    users = {'alice', 'bob'},
+    taskowners = {'alice', 'bob'},
 }
 ```
 
@@ -65,6 +51,6 @@ With this config, a task sits under its ancestors and then in a folder named aft
 
 ## Layered config
 
-vex reads every config on the way down to the project: your user config (`~/.vex/config.lua`), then the `config.lua` of each enclosing `.vex` folder, outermost first. Later files override earlier ones key by key. Shared settings such as `users` can live in a parent folder and be refined per project.
+vex reads every config on the way down to the project: your user config (`~/.vex/config.lua`), then the `config.lua` of each enclosing `.vex` folder, outermost first. Later files override earlier ones key by key. Shared settings such as `taskowners` can live in a parent folder and be refined per project.
 
 This repository's own config sets `taskfolder = "vexdoc/vex"`: its backlog is the `vex` folder of this wiki.

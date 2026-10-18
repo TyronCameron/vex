@@ -5,17 +5,9 @@ local cli = require "lib.cli"
 local default_config = {
     taskfolder = '.',
     default = {
-        taskformat = 'obsidian',
-        view = 'tabular',
-        dataformat = 'csv',
-        option = 'prev',
         tasktype = 'task'
-    }, 
-    plugins = {
-        vexations = true,
-        inline = true
     },
-    users = {}
+    taskowners = {}
 }
 
 local function setup_vex_dir(path)

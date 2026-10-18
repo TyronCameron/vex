@@ -121,7 +121,7 @@ task:task 'task' {
         due = schema.maybe {schema.formatted {schema.datetime}},
         cost = schema.maybe {schema.num},
         benefit = schema.maybe {schema.num},
-        owner = schema.maybe {schema.any(config.users)},
+        owner = schema.maybe {schema.any(config.taskowners)},
     }
 }
 
