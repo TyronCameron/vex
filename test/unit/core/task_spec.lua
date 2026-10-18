@@ -1,5 +1,7 @@
 local task = require 'core.task'
 local vexdex = require 'core.vexdex'
+local event = require 'lib.event'
+local func = require 'lib.func'
 
 local function create(properties)
     local vexid = task:add(properties)
@@ -277,6 +279,96 @@ describe("task", function()
         task.tasks = {}
         task:reindexall()
         assert.equal(7, vexdex:get(vexid).cost)
+    end)
+
+    describe("events", function()
+
+        local fired
+
+        before_each(function()
+            fired = {}
+            event:register('*', 'spec', function(name, ...)
+                fired[name] = fired[name] or {}
+                table.insert(fired[name], {...})
+            end)
+        end)
+
+        after_each(function()
+            event:remove('*', 'spec')
+        end)
+
+        it("fires pre- and post-task-add with the properties, then the vexid and task", function()
+            local properties = {description = "evented added task"}
+            local vexid = task:add(properties)
+            assert.equal(properties, fired['pre-task-add'][1][1])
+            assert.equal(vexid, fired['post-task-add'][1][1])
+            assert.equal(task.tasks[vexid], fired['post-task-add'][1][2])
+            task:remove(vexid)
+        end)
+
+        it("fires pre- and post-task-set with the changes, then the new task", function()
+            local vexid = create({description = "evented set task"})
+            local properties, modifiers = {cost = 3}, {}
+            task:set(vexid, properties, modifiers)
+            assert.same({vexid, properties, modifiers}, fired['pre-task-set'][1])
+            assert.same({vexid, task.tasks[vexid]}, fired['post-task-set'][1])
+        end)
+
+        it("fires pre- and post-task-resolve with the vexid, then the resolved task", function()
+            local vexid = task:add({description = "evented resolved task"})
+            task:resolve(vexid)
+            assert.same({vexid}, fired['pre-task-resolve'][1])
+            assert.equal(vexid, fired['post-task-resolve'][1][1])
+            assert.equal(task.tasks[vexid], fired['post-task-resolve'][1][2])
+        end)
+
+        it("fires pre- and post-task-write with the vexid, then the path written", function()
+            local vexid = create({description = "evented written task"})
+            assert.same({vexid}, fired['pre-task-write'][1])
+            assert.same({vexid, task:getcurrentpath(vexid)}, fired['post-task-write'][1])
+        end)
+
+        it("fires pre- and post-task-move with the vexid, then where the file moved from and to", function()
+            local vexid = create({description = "evented moved task"})
+            fired = {}
+            task:move(vexid)
+            assert.same({vexid}, fired['pre-task-move'][1])
+            assert.same({vexid, task:getabspath(vexid), task:getabspath(vexid)}, fired['post-task-move'][1])
+        end)
+
+        it("fires pre- and post-task-get and task-show with what was asked and the result", function()
+            local vexid = create({description = "evented gotten task"})
+            local got = task:get(vexid, {'vexid'})
+            local shown = task:show(vexid)
+            assert.same({vexid, {'vexid'}}, fired['pre-task-get'][1])
+            assert.same({vexid, {'vexid'}, got}, fired['post-task-get'][1])
+            assert.same({vexid}, fired['pre-task-show'][1])
+            assert.same({vexid, shown}, fired['post-task-show'][1])
+        end)
+
+        it("fires pre- and post-task-remove and task-delete with the vexid, then the deleted path", function()
+            local vexid = create({description = "evented deleted task"})
+            local path = task:getcurrentpath(vexid)
+            task:remove(vexid)
+            task:delete(vexid)
+            assert.same({vexid}, fired['pre-task-remove'][1])
+            assert.same({vexid}, fired['post-task-remove'][1])
+            assert.same({vexid}, fired['pre-task-delete'][1])
+            assert.same({vexid, path}, fired['post-task-delete'][1])
+        end)
+
+        it("fires pre- and post-task-reindexall, and task-read for each file read", function()
+            local vexid = create({description = "evented reindexed task"})
+            local path = task:getcurrentpath(vexid)
+            task:reindexall()
+            assert.same({}, fired['pre-task-reindexall'][1])
+            assert.same({}, fired['post-task-reindexall'][1])
+            assert.truthy(func.any(fired['pre-task-read'], function(args) return args[1] == path end))
+            assert.truthy(func.any(fired['post-task-read'], function(args)
+                return args[1] == path and args[2] and args[2].vexid == vexid
+            end))
+        end)
+
     end)
 
 end)

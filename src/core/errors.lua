@@ -15,6 +15,13 @@ cli:error "not-vexed" {
     hint = "Did you mean to write `vex init` first?"
 }
 
+cli:error "hook-failed" {
+    function(event, hook, err)
+        return "Event hook '" .. tostring(hook) .. "' failed on '" .. tostring(event) .. "': " .. tostring(err)
+    end,
+    hint = "This came from a hook in .vex/events, not from vex itself."
+}
+
 cli:error "unimplemented" {
     function(msg)
         return "CLI command not currently implemented."

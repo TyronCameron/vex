@@ -10,6 +10,7 @@ local env = setmetatable({
     focus = require 'core.focus',
     view = require 'core.view',
     schema = require 'lib.schema',
+    event = require 'lib.event',
 }, {__index = _G})
 
 local function scripts(folder)
@@ -20,7 +21,7 @@ local function scripts(folder)
     return paths
 end
 
-for _, folder in ipairs {'tasks', 'recipes', 'focuses', 'views'} do
+for _, folder in ipairs {'tasks', 'recipes', 'focuses', 'views', 'events'} do
     for _, path in ipairs(scripts(folder)) do
         local ok, err = pcall(function() setfenv(assert(loadfile(path)), env)() end)
         if not ok then cli:throw('bad-extension', path, err) end

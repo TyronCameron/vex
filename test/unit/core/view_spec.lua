@@ -1,3 +1,4 @@
+local event = require 'lib.event'
 local view = require 'core.view'
 local focus = require 'core.focus'
 local task = require 'core.task'
@@ -64,6 +65,18 @@ describe("view", function()
                 assert.truthy(result:find(vexid, 1, true), name .. " is missing " .. vexid)
             end
         end
+    end)
+
+    it("fires pre- and post-view-display with the view, focus and flags, then the result", function()
+        local fired = {}
+        for _, name in ipairs {'pre-view-display', 'post-view-display'} do
+            event:register(name, 'spec', function(...) fired[name] = {...} end)
+        end
+        local f, flags = focus.focus('all'), {}
+        local result = view:display('csv', f, flags)
+        for _, name in ipairs {'pre-view-display', 'post-view-display'} do event:remove(name, 'spec') end
+        assert.same({'csv', f, flags}, fired['pre-view-display'])
+        assert.same({'csv', f, flags, result}, fired['post-view-display'])
     end)
 
 end)

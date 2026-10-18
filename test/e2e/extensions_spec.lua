@@ -85,6 +85,15 @@ describe("vex extensions in .vex (e2e, subprocess)", function()
     assert.are.equal("1 tasks", helper.trim(result.stdout))
   end)
 
+  it("runs hooks from .vex/events", function()
+    extension("events/announce.lua", [[
+      event:on 'post-task-resolve' (function(vexid) print('resolved ' .. vexid) end)
+    ]])
+    local result = helper.run_vex(dir, {"add", "Hooked", "task"})
+    assert.are.equal(0, result.code)
+    assert.is_not_nil(result.stdout:find("resolved hooked-task-1", 1, true))
+  end)
+
   it("reports an extension that fails to load", function()
     extension("tasks/broken.lua", "this is not lua")
     local result = helper.run_vex(dir, {"focus", "all"})

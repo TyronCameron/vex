@@ -1,4 +1,5 @@
 local func = require 'lib.func'
+local event = require 'lib.event'
 
 -- ---------------------------------------------------------------------------
 -- Arguments
@@ -373,13 +374,20 @@ function CLI:call(verbname, args)
     end
     table.insert(self.verbstack, verbname)
     local ok, result = xpcall(
-        function() return self.verbs[verbname][1](args) end,
+        function()
+            event:trigger('pre-verb-' .. verbname, args)
+            local result = self.verbs[verbname][1](args)
+            event:trigger('post-verb-' .. verbname, args, result)
+            return result
+        end,
         function(err)
             return { msg = err, trace = debug.traceback("", 2) }
         end
     )
     table.remove(self.verbstack)
-    if not ok then
+    if not ok and event.ishookerror(result.msg) then
+        self:throw("hook-failed", result.msg.event, result.msg.hook, result.msg.err)
+    elseif not ok then
         self:throw("bug", result.msg, result.trace)
     end
     return result

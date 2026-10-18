@@ -5,6 +5,7 @@ local lfsext = require 'lib.lfsext'
 local cli = require 'lib.cli'
 local pretty = require 'lib.pretty'
 local vexdex = require 'core.vexdex'
+local event = require 'lib.event'
 
 local Focus = {
     named = {}
@@ -684,7 +685,9 @@ local function serialize(focus)
 end
 
 function Focus:write()
+    event:trigger('pre-focus-write', self)
     vexdex:setfocus(serialize(self))
+    event:trigger('post-focus-write', self)
 end
 
 -- function Focus.read()

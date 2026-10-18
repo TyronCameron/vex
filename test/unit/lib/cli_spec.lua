@@ -1,6 +1,7 @@
 -- Test file for lib/cli.lua
 local busted = require 'busted'
 local cli = require 'lib.cli'
+local event = require 'lib.event'
 
 describe("CLI", function()
 
@@ -29,6 +30,20 @@ describe("CLI", function()
         end
     end)
 
+    it("fires pre-verb-<name> before a verb and post-verb-<name> after it", function()
+        local seen = {}
+        cli:verb("_test_events") {
+            function(args) table.insert(seen, 'verb'); return "done" end,
+            doc = "events test"
+        }
+        event:register('pre-verb-_test_events', 'spec', function(args) table.insert(seen, {'pre', args[1]}) end)
+        event:register('post-verb-_test_events', 'spec', function(args, result) table.insert(seen, {'post', args[1], result}) end)
+        cli:call("_test_events", {"arg"})
+        event:remove('pre-verb-_test_events', 'spec')
+        event:remove('post-verb-_test_events', 'spec')
+        assert.same({{'pre', 'arg'}, 'verb', {'post', 'arg', 'done'}}, seen)
+    end)
+
     describe("failures", function()
 
         before_each(function()
@@ -54,6 +69,23 @@ describe("CLI", function()
             assert.equal('bug', name)
             assert.truthy(tostring(message):find("boom", 1, true))
             assert.truthy(trace:find("traceback", 1, true))
+        end)
+
+        it("reports a failing hook as hook-failed, naming the hook, without running the verb", function()
+            local ran = false
+            cli:verb("_test_hooked") {
+                function(args) ran = true end,
+                doc = "hook test"
+            }
+            event:register('pre-verb-_test_hooked', 'spec-hook', function() error("owner required") end)
+            assert.has_error(function() cli:call("_test_hooked", {}) end)
+            event:remove('pre-verb-_test_hooked', 'spec-hook')
+            local _, name, hookevent, hook, err = unpack(cli.throw.calls[1].vals)
+            assert.equal('hook-failed', name)
+            assert.equal('pre-verb-_test_hooked', hookevent)
+            assert.equal('spec-hook', hook)
+            assert.truthy(tostring(err):find("owner required", 1, true))
+            assert.is_false(ran)
         end)
 
     end)

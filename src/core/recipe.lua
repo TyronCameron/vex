@@ -1,6 +1,7 @@
 local cli = require 'lib.cli'
 local task = require 'core.task'
 local focus = require 'core.focus'
+local event = require 'lib.event'
 
 local Recipe = {}
 Recipe.__index = Recipe
@@ -19,11 +20,14 @@ end
 
 function Recipe:add(name, taskproperties)
     if not self.recipes[name] then cli:throw('unknown-recipe', name) end 
+    event:trigger('pre-recipe-add', name, taskproperties)
     local vexids = self.recipes[name].add(task, taskproperties)
     for _, vexid in ipairs(vexids) do
         task:resolve(vexid)
     end
-    return focus.focus(vexids)
+    local f = focus.focus(vexids)
+    event:trigger('post-recipe-add', name, f)
+    return f
 end
 
 return Recipe.new()

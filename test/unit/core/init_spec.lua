@@ -17,8 +17,9 @@ describe("init", function()
         assert.equal('.', config.taskfolder)
         assert.same({}, config.taskowners)
         assert.same({tasktype = 'task'}, config.default)
+        assert.equal(1000, config.loglimit)
         assert.is_nil(config.plugins)
-        for _, folder in ipairs({"vexdex", "tasks", "recipes", "focuses", "views", "tmp"}) do
+        for _, folder in ipairs({"vexdex", "tasks", "recipes", "focuses", "views", "events", "tmp"}) do
             assert.truthy(io.open(dir .. "/.vex/" .. folder .. "/."), folder .. " was not created")
         end
         os.execute("rm -rf '" .. dir .. "'")

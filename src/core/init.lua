@@ -7,7 +7,8 @@ local default_config = {
     default = {
         tasktype = 'task'
     },
-    taskowners = {}
+    taskowners = {},
+    loglimit = 1000
 }
 
 local function setup_vex_dir(path)

@@ -102,7 +102,11 @@ A from-scratch verb/error registry, not a wrapper around an existing arg-parsing
 
 ### Extensions (`src/core/extensions.lua`)
 
-Required at the end of `core.verbs`, once every manager exists. It runs each `.lua` file in the project's `.vex/tasks/`, `.vex/recipes/`, `.vex/focuses/` then `.vex/views/` (each sorted by path) through `loadfile` + `setfenv`, in an environment that exposes `task`, `recipe`, `focus` (the `Focus` class: `focus.register_focus(name, get)`), `view` and `schema` on top of `_G`, so a file registers things directly (`task:task 'bug':extends 'task' { ... }`) without any `require`. A file that fails to load throws `bad-extension`.
+Required at the end of `core.verbs`, once every manager exists. It runs each `.lua` file in the project's `.vex/tasks/`, `.vex/recipes/`, `.vex/focuses/`, `.vex/views/` then `.vex/events/` (each sorted by path) through `loadfile` + `setfenv`, in an environment that exposes `task`, `recipe`, `focus` (the `Focus` class: `focus.register_focus(name, get)`), `view`, `schema` and `event` on top of `_G`, so a file registers things directly (`task:task 'bug':extends 'task' { ... }`) without any `require`. A file that fails to load throws `bad-extension`.
+
+### Events (`src/lib/event.lua`)
+
+A singleton event manager: `event:register(event, handle, fn)` (or `event:on 'name' (fn)`), `event:remove(event, handle)`, `event:trigger(event, ...)`. Handlers run in registration order, then every `*` handler with `(event, ...)`. A failing handler raises a hook error, which `cli:call` turns into the `hook-failed` error, so a hook can stop a command. Every event fires as a `pre-`/`post-` pair: `lib.cli` fires `pre-verb-<verb>` (args) and `post-verb-<verb>` (args, result) around each verb, and each manager fires `<pre|post>-task-<action>`, `focus-write`, `view-display` and `recipe-add` around its public actions (the table with every event's args is in `vexdoc/03 Configuration/06 Configuring event hooks.md`). A new public action on a manager fires its own pair. The vexdex listens on `*`: every event goes to `.vex/vexdex/event-log.txt`, and every `pre-verb-*`'s `args.raw` goes to `verb-log.txt`, which can be replayed to rebuild a project. Both logs are trimmed to `config.loglimit` (default 1000) once per command.
 
 ### Recipes (`src/core/recipe.lua`)
 
