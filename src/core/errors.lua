@@ -84,6 +84,13 @@ cli:error "unknown-focus" {
     hint = "Use one of the standard focus names ('all', 'none', 'prev') or a valid vexid which is in the vexdex. Use vex resolve all if your vexdex is out of date."
 }
 
+cli:error "uninterpretable" {
+    function(value, field)
+        return 'Cannot interpret `' .. tostring(value) .. '` as a value of `' .. tostring(field) .. '`.'
+    end,
+    hint = "Use a phrase such as `tomorrow`, `next tuesday`, `friday arvo`, `in 3 days`, `26 July` or `2026-07-26 09:00`."
+}
+
 cli:error "missing-required-field" {
     function(vexid, field)
         return "A required field is missing from a task. Vexid = " .. tostring(vexid) .. ', field = ' .. tostring(field)

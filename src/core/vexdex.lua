@@ -129,6 +129,9 @@ function VexDex:writeindex()
 end
 
 function VexDex:ensureindex()
+    if lfs.attributes(self:vexpath("vexdex"), "mode") ~= "directory" then
+        lfs.mkdir(self:vexpath("vexdex"))
+    end
     local path = self:vexpath("vexdex/index.bin")
     if lfs.attributes(path, "mode") ~= "file" then
         self.index = {}
@@ -169,7 +172,9 @@ function VexDex:atomic(path, func)
     if package.config:sub(1,1) == '\\' then 
         os.remove(path) -- on windows, need to remove the file first
     end
-    os.rename(vexpath, path)
+    if not os.rename(vexpath, path) then
+        cli:throw('write', path, vexpath)
+    end
     return res
 end
 

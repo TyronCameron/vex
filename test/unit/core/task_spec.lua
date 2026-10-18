@@ -30,6 +30,16 @@ describe("task", function()
         task:remove(vexid)
     end)
 
+    it("add gives a task the config's default tasktype when it has none", function()
+        local config = require 'core.config'
+        local default = config.properties.default
+        config.properties.default = {tasktype = 'atom'}
+        local vexid = task:add({description = "default typed task"})
+        config.properties.default = default
+        assert.equal('atom', task.tasks[vexid].vextype)
+        task:remove(vexid)
+    end)
+
     it("set updates fields on an in-memory task", function()
         local vexid = task:add({description = "another test task for set"})
         task:set(vexid, {status = "done"})
@@ -168,6 +178,31 @@ describe("task", function()
         task:read(vexid)
         assert.is_number(vexdex:get(vexid).created)
         assert.same({dependency}, vexdex:get(vexid).dependencies)
+    end)
+
+    it("runs each prevalidate step once per resolve", function()
+        local schema = require 'lib.schema'
+        local calls = 0
+        task:task 'countedtype':extends 'task' {
+            schema = schema.atleast {
+                counted = schema.derive {
+                    schema.num,
+                    derive = function() calls = calls + 1 return calls end
+                }
+            }
+        }
+        local vexid = task:add({description = "counted prevalidate task", vextype = 'countedtype'})
+        task:resolve(vexid)
+        assert.equal(1, calls)
+    end)
+
+    it("resolves a type two levels below task through every ancestor's schema", function()
+        local schema = require 'lib.schema'
+        task:task 'grandchildtype':extends 'atom' { schema = schema.atleast { tier = schema.default {schema.num, default = function() return 3 end} } }
+        local vexid = task:add({description = "grandchild typed task", vextype = 'grandchildtype'})
+        task:resolve(vexid)
+        assert.equal(3, task.tasks[vexid].tier)
+        assert.equal('todo', task.tasks[vexid].status)
     end)
 
     describe("transients", function()

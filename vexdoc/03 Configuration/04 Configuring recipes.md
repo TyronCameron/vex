@@ -1,22 +1,36 @@
-> [!WARNING] Not yet implemented
-> `vex init` creates a `.vex/recipes` folder, but nothing in vex currently reads from it — the only recipe that exists is `abstract`, registered directly in `src/core/taskdefinitions.lua`. Tracked as [[implement-recipe-loader-1]].
-
-## Intended design
-
-`Recipe:recipe(name)` (`src/core/recipe.lua`) requires a table with an `add` function — this is precisely how the built-in `abstract` recipe is defined:
+Each `.lua` file in `.vex/recipes` can register recipes. A recipe is an `add` function that receives the task manager and the properties from the command line, and adds tasks:
 
 ```lua
--- src/core/taskdefinitions.lua (real, working code — the pattern a project recipe would presumably follow)
-recipe:recipe 'abstract' {
+recipe:recipe 'chore' {
     add = function(task, taskproperties)
-        taskproperties.vextype = 'abstract'
-        return task:add(taskproperties)
+        taskproperties.vextype = 'atom'
+        return {task:add(taskproperties)}
     end
 }
 ```
 
-A project-defined recipe in `.vex/recipes` would presumably be a Lua file following the same `{ add = function(task, taskproperties) ... end }` shape, loaded and registered automatically the way vex's own built-in plugins are (see [[Plugin architecture]]) — letting `vex recipe <name>` create more than a single task (e.g. a whole milestone skeleton) in one call.
+```txt
+vex recipe chore Take out the bins
+```
 
-## What exists today instead
+`taskproperties` holds the description and every flag. `add` returns the list of vexids it added. A recipe can add as many tasks as it likes and link them through their fields; vex resolves and writes each returned task in the order of the list, then focuses on all of them:
 
-`vex recipe abstract <Description>` gives you a single pre-typed parent task. Building out the rest of a repeatable structure means adding the remaining tasks by hand — wiring them into the abstract's `children` isn't possible yet, by any means, today (see [[02 Frontmatter schema]]'s warning) — see [[03 Using a recipe to create a sequence of tasks]] for the full walkthrough.
+```lua
+recipe:recipe 'release' {
+    add = function(task, taskproperties)
+        local name = taskproperties.description
+        local stages = {}
+        for _, stage in ipairs({'Spike', 'Build', 'Test'}) do
+            table.insert(stages, task:add({description = stage .. ' ' .. name, vextype = 'atom'}))
+        end
+        local release = task:add({description = name, vextype = 'abstract', children = stages})
+        return {release, unpack(stages)}
+    end
+}
+```
+
+The built-in `abstract` recipe is defined the same way.
+
+## Writing a file
+
+Each example on this page is a complete file: save it as a `.lua` file in `.vex/recipes` and vex loads it on the next command, with nothing else required. Every file runs with these already in scope, alongside Lua's standard globals: `task` (the task manager), `recipe` (the recipe manager), `focus` (the `Focus` class), `view` (the view manager) and `schema` (the schema library).

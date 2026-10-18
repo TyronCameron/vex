@@ -63,7 +63,7 @@ local focuses = {
   {"focus", CHILD, "--complement"},
   {"focus", "all", "--filter", "vextype:task", "--select", "cost"},
   {"focus", "all", "--between", "cost:1:9"},
-  {"focus", "all", "--between", "due:2026-01-01:2026-12-31", count = 1, pending = "decide-how-between-takes-1"},
+  {"focus", "all", "--between", "due:2026-01-01:2026-12-31", count = 1},
   {"focus", "all", "--union", "none"},
   {"focus", "all", "--intersect", "all"},
   {"focus", "all", "--xor", "none"},
@@ -71,6 +71,8 @@ local focuses = {
   {"focus", "all", "--onlyin", "all"},
   {"focus", "./" .. CHILD .. ".md", count = 1},
   {"focus", "./"},
+  {"focus", "all", "--interpret", "--between", "due:yesterday:next year"},
+  {"focus", "all", "--groupby", "owner", "--orderby", "due:desc:cost", "--rn"},
 }
 
 local function name(row)

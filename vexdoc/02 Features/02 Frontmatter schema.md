@@ -1,39 +1,48 @@
-Every task file's frontmatter is validated against the schema for its `vextype`, defined in `src/core/taskdefinitions.lua`. This page documents what's actually enforced today; see [[03 Vexations (task types)]] for what each `vextype` means and when to use it.
+Every task is validated against the schema of its `vextype` and of each type that type extends (see [[03 Task types (and vexations)]]). This page lists the fields vex defines. Any other field you set is stored as given.
 
 ## Fields on every task
 
-| **Property**  | **Type**              | **Description**                                                                                     |
-| ------------- | ---------------------- | ------------------------------------------------------------------------------------------------------ |
-| `vexid`       | text                   | The unique id, generated from the description by the tagger. Doubles as the filename. Only user-settable indirectly (by editing the description before the first resolve) — `set` refuses to change it. |
-| `description` | text                   | The only field you actually have to supply. Must be more than 3 characters and at least 2 words.       |
-| `vextype`     | text                   | Which task type this is. Defaults to `task` if omitted. Must be a registered type (`task`, `abstract`, `decision`, `exploration`, `atom`, or a custom one — see [[03 Configuring task types]]). |
-| `status`      | text (state machine)  | Intended to be `todo → doing → done`, in that order only, with `done` terminal. Defaults to `todo`. This isn't actually enforced today — `todo` can currently be set straight to `done`, and `doing` back to `todo`, with no error. Tracked as [[fix-status-transition-enforcement-1]]. |
-| `created`     | datetime              | Stamped automatically the first time a task is resolved. Not user-settable in practice — the schema always derives it from the current time. |
-| `modified`    | datetime              | Re-derived on every resolve. Same caveat as `created`.                                                 |
+| Field | Type | Description |
+| --- | --- | --- |
+| `vexid` | text | Unique id and filename, generated from the description when the task is added. It can't be changed. |
+| `description` | text | Required. At least 2 words and more than 3 characters. |
+| `vextype` | text | The task type. Defaults to `task` and must be a registered type. |
+| `status` | state | `todo`, then `doing`, then `done`. vex rejects any other move. Defaults to `todo`. |
+| `created` | datetime | Set when the task is added. |
+| `modified` | datetime | Updated whenever vex touches the task: on add, set and every resolve, a reindex included. |
+| `vexbody` | text | Optional. The markdown body below the frontmatter. |
+| `due` | datetime | Optional. |
+| `cost`, `benefit` | number | Optional. |
+| `owner` | text | Optional. Must be one of the `taskowners` in `.vex/config.lua`. |
+| `dependencies` | list of links | Optional. Each entry must be an existing task, and dependencies can't form a cycle. |
 
-`due` is set via `--due` on `add`/`set`, or by hand-editing the YAML and running `vex resolve` — either way, a `YYYY-MM-DD HH:MM:SS` string (`T` instead of the space also works, and is the only option as a single CLI token — see the flag-values-can't-contain-spaces warning on [[01 CLI reference]]) gets parsed into an epoch number on resolve and reformatted back for display. There is no natural-language parsing (`tomorrow`, `next week`, etc.) despite a source comment describing it as a goal.
+Datetimes are stored as timestamps and written as `YYYY-MM-DD HH:MM:SS`. vex reads `YYYY-MM-DD HH:MM:SS` (a `T` may replace the space), `YYYY-MM-DD`, or a phrase such as `tomorrow 8am`, relative to the moment the task is resolved ([[01 CLI reference#Interpreting times]]). A value it can't read fails resolution with the `uninterpretable` error, and the task file is left as it was. Links are written as `[[vexid]]`, so the task files form an Obsidian vault.
 
-## Optional fields (validated, but not present on every type)
+## Fields by type
 
-| **Property**  | **Type**                     | **Applies to**                | **Description**                                                                 |
-| ------------- | ------------------------------ | -------------------------------- | ---------------------------------------------------------------------------------- |
-| `vexbody`     | text                          | `task` (optional); forced empty on `abstract`/`exploration` | Free-form markdown body. Resolution rejects a non-empty body on `abstract` and `exploration` tasks. |
-| `due`         | datetime                     | `task` and everything that extends it | `YYYY-MM-DD HH:MM:SS` (or `T` in place of the space), coerced to an epoch number on resolve. |
-| `cost`, `benefit` | number                    | `task` and everything that extends it | Plain numbers, no unit or currency semantics attached. A CLI flag value arrives as a string and is coerced to a number on resolve. |
-| `dependencies`| list of links (`vexlink`)    | `task` and everything that extends it | Each entry must be an existing task's `vexid`. |
-| `children`    | list of links (`vexlink`)    | `abstract`                      | The mechanism the `tree`/`reversetree`/`singular` view machinery actually walks to find parent/child relationships — see [[03 Vexations (task types)]]. Defaults to an empty list. |
-| `options`     | list of links (`vexlink`)    | `decision`                      | The candidate tasks a decision is choosing between. Required (not optional) on a `decision` task. |
-| `decision`    | link (`vexlink`)              | `decision`                      | Which `options` entry was chosen. Must be one of `options` — resolution rejects any other value. (Earlier drafts of this page called this field `choice`; the real field name is `decision`.) |
+| Field | Type | Types | Description |
+| --- | --- | --- | --- |
+| `children` | list of links | `abstract` | The tasks this one groups. Defaults to an empty list. A task can be the child of only one abstract. |
+| `options` | list of links | `decision` | Required. The tasks being chosen between. |
+| `decision` | link | `decision` | Optional. The chosen option; it must be one of `options`. |
 
-`children`, `dependencies`, and `options` round-trip correctly through disk now, including the empty list `children` defaults to on a fresh `abstract` task — `vex resolve all` can be run repeatedly without issue. What still doesn't work: setting one of these list fields directly via a CLI flag (`--dependencies some-task`) — a flag value is always a single string, and turning that into a list needs its own parsing convention, tracked separately as [[implement-cli-list-fields-1]]. Until that lands, populate a list field by hand-editing the YAML and running `vex resolve` (or, for `children`, by adding tasks with the `abstract` recipe/vextype and linking them in afterwards).
+`abstract` and `exploration` tasks must have an empty body. `decision`, `exploration` and `atom` tasks can't have `children`.
 
-## Fields that are *not* schema-validated (yet)
+## Transients
 
-Anything else you pass to `add`/`set`, or write into a file by hand, is stored in frontmatter as-is with no checking — vex's schemas use `schema.atleast`, which validates the fields it knows about and lets anything extra through untouched. Two worth calling out specifically because they show up elsewhere in this wiki:
+Transients are fields vex works out each time they are read. They are never stored, and you can use them anywhere a field is accepted: `--filter phase:final`, `--select age`, `vex get --wordcount`.
 
-- **`parent`** — despite showing up in the "overview" view's structure stats (which just count how many tasks have a nil `parent` key) and in early design notes, `parent` has no schema entry and nothing derives or checks it. The actual parent/child relationship vex's tree-walking logic uses is `children` on the *abstract*, walked in reverse — not a `parent` field on the child. Treat any `parent` you set today as a plain label, not a real link.
-- **`owner`** — free-form text, "who this is for," with no validation and no built-in notion of users at all (vex has no concept of accounts). It's genuinely useful anyway: because it's just an ordinary field, `--filter owner:alice` works on it like any other field, which is the basis for the team workflow on [[Home]]. Making `owner` a real, `vexlink`-style validated field is tracked as [[implement-owner-assignment-1]] — until then, nothing stops you from misspelling a name and getting silently filtered out.
+| Transient | Value |
+| --- | --- |
+| `wordcount` | The number of words in the description. |
+| `phase` | `initial`, `interim` or `final`: where `status` sits in the type's state machine. |
+| `lineage` | The vexids of the abstracts above the task, root first. |
+| `path` | Where the task file is. |
+| `age` | Whole days since `created`. |
+| `urgency` | The task's rank among its owner's open tasks by `due`, soonest first: 1 is the most urgent. Tasks without a due date rank last, and finished tasks have none. |
 
-## Field format
+Add your own in `.vex/tasks` ([[03 Configuring task types]]).
 
-This is the schema vex validates against; it isn't the same thing as the file format on disk. The concrete markdown-plus-YAML-frontmatter layout you'll see in `.vex` projects today is just the current default implementation of a pluggable `taskformat` slot (`src/default/obsidian.lua`) — see [[Plugin architecture]]. Nothing above depends on that choice; a different `taskformat` plugin could store the same fields in a completely different structure.
+## Schema and file format
+
+The schema describes the fields, not the file. Task files are markdown with YAML frontmatter because that is the default `taskformat` plugin (`default.obsidian`); another plugin could store the same fields differently. See [[Plugin architecture]].

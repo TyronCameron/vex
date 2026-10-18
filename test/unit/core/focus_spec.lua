@@ -1,4 +1,5 @@
 local Focus = require 'core.focus'
+local func = require 'lib.func'
 local cli = require 'lib.cli'
 
 describe("Focus", function()
@@ -120,6 +121,135 @@ describe("Focus", function()
         local result = Focus.focus('all'):between("cost", "1", "9"):get()
         assert.equal(1, #result)
         assert.equal("between cheap task", result[1].description)
+    end)
+
+    describe("interpret", function()
+
+        local task = require 'core.task'
+        local naturaltime = require 'lib.naturaltime'
+        local soon, later
+
+        setup(function()
+            soon = task:add({description = "interpreted soon task", due = naturaltime.parse("tomorrow")})
+            later = task:add({description = "interpreted later task", due = naturaltime.parse("in 3 years")})
+            for _, vexid in ipairs({soon, later}) do
+                task:resolve(vexid)
+                task:write(vexid)
+            end
+        end)
+
+        local function vexids(f)
+            return func.imap(f:get(), function(t) return t.vexid end)
+        end
+
+        it("reads the next between's bounds as phrases relative to now", function()
+            assert.same({soon}, vexids(Focus.focus('all'):interpret():between('due', 'now', 'next year')))
+        end)
+
+        it("reads the next filter's value as a phrase", function()
+            assert.same({soon}, vexids(Focus.focus('all'):interpret():filter('due', 'tomorrow')))
+        end)
+
+        it("leaves an open bound open", function()
+            assert.same({later}, vexids(Focus.focus('all'):interpret():between('due', 'next year', '')))
+        end)
+
+        it("applies to the next operation only", function()
+            local f = Focus.focus('all'):interpret():filter('vextype', 'task')
+            assert.is_nil(f.iso)
+        end)
+
+        it("replays from the saved focus", function()
+            Focus.focus('all'):interpret():between('due', 'now', 'next year'):write()
+            assert.same({soon}, vexids(Focus.read()))
+        end)
+
+        it("rejects a phrase it cannot interpret", function()
+            local cli = require 'lib.cli'
+            stub(cli, 'throw', function(self, name) error(name) end)
+            local ok, err = pcall(function() Focus.focus('all'):interpret():filter('due', 'tomorrow blorp'):get() end)
+            cli.throw:revert()
+            assert.is_false(ok)
+            assert.truthy(err:find('uninterpretable', 1, true))
+        end)
+
+    end)
+
+    describe("ordering, grouping and numbering", function()
+
+        local a = {vexid = "a", owner = "bob", cost = 3}
+        local b = {vexid = "b", owner = "alice", cost = 1}
+        local c = {vexid = "c", cost = 2}
+        local d = {vexid = "d", owner = "bob"}
+        local e = {vexid = "e", owner = "alice", cost = 1}
+        local tasks = {a, b, c, d, e}
+        local f = Focus.new("all", function(t) return t end)
+
+        local function vexids(list)
+            return func.imap(list, function(t) return t.vexid end)
+        end
+
+        it("orderby sorts by a field, keeping ties in order and missing values last", function()
+            assert.same({"b", "e", "c", "a", "d"}, vexids(f:orderby('cost'):get(tasks)))
+        end)
+
+        it("orderby desc reverses the order and still puts missing values last", function()
+            assert.same({"a", "c", "b", "e", "d"}, vexids(f:orderby('cost', 'desc'):get(tasks)))
+        end)
+
+        it("orderby breaks ties with the next field", function()
+            assert.same({"e", "b", "c", "a", "d"}, vexids(f:orderby('cost', 'vexid', 'desc'):get(tasks)))
+        end)
+
+        it("groupby gathers tasks sharing a value, ordering the groups by it", function()
+            assert.same({{"b", "e"}, {"a", "d"}, {"c"}}, func.imap(f:groupby('owner'):groups(tasks), vexids))
+        end)
+
+        it("groupby orders its groups descending, with missing values last", function()
+            assert.same({{"a", "d"}, {"b", "e"}, {"c"}}, func.imap(f:groupby('owner', 'desc'):groups(tasks), vexids))
+        end)
+
+        it("groupby takes several fields", function()
+            assert.same({{"b", "e"}, {"a"}, {"d"}, {"c"}}, func.imap(f:groupby('owner', 'cost'):groups(tasks), vexids))
+        end)
+
+        it("runs each later operation within each group, and get flattens the groups", function()
+            assert.same({"e", "b", "d", "a", "c"}, vexids(f:groupby('owner'):orderby('vexid', 'desc'):get(tasks)))
+            assert.same({{"b", "e"}}, func.imap(f:groupby('owner'):filter('cost', 1):groups(tasks), vexids))
+        end)
+
+        it("rn numbers the tasks in each group from 1, without changing the tasks", function()
+            local numbered = f:groupby('owner'):orderby('cost'):rn():get(tasks)
+            assert.same({"b", "e", "a", "d", "c"}, vexids(numbered))
+            assert.same({1, 2, 1, 2, 1}, func.imap(numbered, function(t) return t.rn end))
+            assert.is_nil(b.rn)
+        end)
+
+        it("a set operation gathers the groups back into one", function()
+            local none = Focus.new("none", function() return {} end)
+            assert.same({"e", "d", "c", "b", "a"}, vexids(f:groupby('owner'):union(none):orderby('vexid', 'desc'):get(tasks)))
+        end)
+
+        it("interprets the next operation within each group", function()
+            local dated = {{vexid = "x", owner = "bob", cost = 2}, {vexid = "y", owner = "alice", cost = 2}, {vexid = "z", owner = "alice", cost = 5}}
+            assert.same({{"y"}, {"x"}}, func.imap(f:groupby('owner'):interpret():between('cost', '', 3):groups(dated), vexids))
+        end)
+
+        it("numbers saved tasks, keeping their transients, and replays from the saved focus", function()
+            local task = require 'core.task'
+            local first = task:add({description = "numbered first task", cost = 1})
+            local second = task:add({description = "numbered second task", cost = 2})
+            for _, vexid in ipairs({first, second}) do
+                task:resolve(vexid)
+                task:write(vexid)
+            end
+            Focus.focus(first):union(second):orderby('cost', 'desc'):rn():write()
+            local replayed = Focus.read():get()
+            assert.same({second, first}, vexids(replayed))
+            assert.same({1, 2}, func.imap(replayed, function(t) return t.rn end))
+            assert.equal(3, replayed[1].wordcount)
+        end)
+
     end)
 
     it("select keeps only the chosen fields plus the vexid", function()
@@ -250,6 +380,14 @@ describe("Focus", function()
         it("tree tolerates tasks without the field", function()
             local f = Focus.new("leaf", function() return {leaf, other} end)
             assert.same({"leaf", "other"}, vexids(f:tree('children'):get(linked)))
+        end)
+
+        it("tree visits each task once on a cycle", function()
+            local first = {vexid = "first", children = {"second"}}
+            local second = {vexid = "second", children = {"first"}}
+            Focus.getalltasks = function() return {first, second} end
+            local f = Focus.new("first", function() return {first} end)
+            assert.same({"first", "second"}, vexids(f:tree('children'):get()))
         end)
 
         it("reversetree collects each task and everything above it", function()

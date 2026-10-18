@@ -1,171 +1,200 @@
-## Global conventions
+## Conventions
 
-In the tables below, `monospaced` values are arguments. Arguments starting with a capital letter (e.g. `Description`) are allowed to be multiple words long — vex joins everything up to the first `--flag` back into one string. A `[focus]` argument is always optional and defaults to `prev` (your last saved focus) when omitted — see [[#Focuses]].
+`vex <command> [arguments] [--flags]`
 
-> [!NOTE] Quoting
-> vex reassembles its own argument list with `CLI:rawify(arg)`, which re-quotes any word that needs it, and re-splits that string with a small POSIX-style tokenizer (`lib/cli.lua`) that understands single quotes, double quotes (with `\"`/`\\` escapes), and backslash-escaping outside quotes — the same conventions a shell uses. So a shell-quoted flag value containing a space, e.g. `--field "two words"`, survives as one token, and `--filter status:"not done"` parses as `status:not done`. `due` examples below still use `T` as the date/time separator (`2026-08-01T09:00:00`) since it's the more common convention, but `--due "2026-08-01 09:00:00"` works too.
+- Every word up to the first `--flag` is positional. `add` and `recipe` join them into the description.
+- `[focus]` is optional everywhere. Without it, a command uses your saved focus (`prev`). See [[#Focuses]].
+- `--field value` sets a field; a `--field` without a value names one.
+- Quoting works as in a shell: `--vexbody "two words"` is one value, and `--filter status:"not done"` matches `not done`.
+- A comma outside quotes makes a list: `--children a,b` sets two children, and `vex focus a,b` focuses on both tasks. A value containing spaces keeps its commas, and `\,` writes a literal comma.
 
-## Command list
+## Commands
 
-### Core commands
+| Command | Description |
+| --- | --- |
+| `vex help [command]` | Lists every command, or describes one. |
+| `vex init` | Creates a `.vex` folder in the current folder. |
+| `vex add Description [--fields...]` | Creates and resolves a task, prints its vexid and focuses on it. |
+| `vex show [focus]` | Prints each task's frontmatter and body. |
+| `vex get [focus] [--fields...]` | Prints one tab-separated line per task. `--select a,b` names the fields as a list. Defaults to `vexid`. |
+| `vex set [focus] [--fields...]` | Sets fields on every task in the focus, then resolves them. |
+| `vex remove [focus]` | Deletes every task in the focus, removes links to them from other tasks, and clears the focus. |
+| `vex focus [focus] [--flags...]` | Builds and saves a focus. With no arguments, prints the saved focus. |
+| `vex view [focus] [view] [--flags...]` | Renders the focus with a view. With no arguments, lists the views. See [[04 Views]]. |
+| `vex resolve [focus]` | Validates and reindexes the tasks in the focus. `vex resolve all` rebuilds the whole index from disk. |
+| `vex recipe [recipe] Description [--fields...]` | Creates tasks from a recipe and focuses on them. With no recipe, lists the recipes. |
+| `vex autocomplete shell` | Prints a completion script for `bash`, `zsh`, `fish` or `powershell`. |
+| `vex suggest position words...` | Returns completions. The completion script calls it. |
+| `vex inline file` | Turns `#vex` tags in a file into tasks and links each tag to its task (see [[#Inline tags]]). |
+| `vex open [focus]` | Opens each task in the focus in your editor, at the tag that created it if there is one. |
 
-| **Command**                               | **Description**                                                                                             |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| vex help \[`verb`]                        | Lists every command; with a `verb`, prints that command's doc, args, and example.                            |
-| vex init                                  | Initialises a `.vex` directory in the current directory.                                                     |
-| vex show \[`focus`]                       | Prints a task's contents to stdout (highlighted YAML frontmatter, then the markdown body). If the focus resolves to more than one task, prints them all in sequence. |
-| vex focus \[`focus`] \[flags...]          | Creates a focus which can be used as a data query against the vex folder. With no args, prints the current focus. More detail below. |
-| vex view \[`focus`] \[`view`] \[flags...] | Prints a view of the tasks in a focus. With no args, lists the available views.                              |
-| vex resolve \[`focus`]                    | Validates, updates, and normalises fields and tasks. `vex resolve all` also triggers a full reindex first.    |
+Every user mistake, such as an unknown focus or an invalid field, fails with a named error and a hint.
 
-### Editing tasks
+## Initialisation
 
-| **Command**                                | **Description**                                                                                                                                          |
-| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| vex add `Description` \[--fields...]       | Creates a task with the `Description` provided. Automatically fills out some frontmatter and resolves it. Prints the new `vexid` _**and sets your focus to it**_. |
-| vex remove \[`focus`]                      | Deletes the tasks in the focus and drops your saved focus. Re-resolves every remaining task afterwards. Not recommended for regular use.                    |
-| vex get \[`focus`] \[--fields...]          | Presents the focus as data — one line of tab-separated field values per task. Defaults to just `vexid` if no fields are given.                              |
-| vex set \[`focus`] \[--fields...]          | Sets the given fields on every task in the focus, then resolves each one.                                                                                    |
-| vex recipe \[`recipe`] `Description` \[--fields...] | Creates a task via a named recipe (see [[#Recipes]]). With no recipe name, lists the recipes available.                                          |
+`vex init` creates `.vex` with:
 
-### Shell completion
+- `config.lua`: the project configuration ([[01 Configuring vex (config.lua)]]).
+- `vexdex/`: the index and the saved focus ([[The index]]). Keep it out of git.
+- `tasks/`, `recipes/`, `focuses/`, `views/`, `events/`: your extensions (see the Configuration pages).
+- `tmp/`: scratch space for atomic writes.
 
-| **Command**              | **Description**                                                                                     |
-| ------------------------- | ------------------------------------------------------------------------------------------------------ |
-| vex autocomplete `shell`  | Prints a ready-to-install completion snippet for `bash`, `zsh`, `fish`, or `powershell`.                |
-| vex suggest `current Command...` | Internal — returns the next-token completion suggestions. This is what the installed snippet calls; you won't normally run it by hand. |
+vex uses the nearest `.vex` in the current folder or above it. For a personal task list, create one in your home folder and point its `taskfolder` wherever you like.
 
-See [[01 Installing vex]] for how to install the snippet.
-
-### Planned / not yet implemented
-
-- **Inline mode** — the idea (from [[Vex]]) is a `#vex Description` tag left inline in any source file that vex would track back to a real task, plus an `open`/`inline` verb pair to jump to a task in your editor or scan a file for tags. Track it via [[implement-inline-plugin-1]] in the project's own vex tasks.
-- **Vexations** — an opinionated bundle of the four [[03 Vexations (task types)]] as a plugin layer on top of the base `task` type. Track it via [[implement-vexations-plugin-1]].
-
-## Discussion of commands
-
-### Initialisation
-
-Initialising a folder creates a `.vex` directory in the working directory. Inside it, `vex init` creates:
-
-- `vexdex/` — the index and your saved focus (binary + human-readable mirrors — see [[The index]]).
-- `config.lua` — the one file vex actually reads on every run (see [[01 Configuring vex (config.lua)]]).
-- `tasks/`, `recipes/`, `focuses/`, `views/`, `events/` — reserved extension points. See [[03 Configuring task types]], [[04 Configuring recipes]], [[05 Configuring focuses]], [[02 Configuring views]], and [[06 Configuring event hooks]]. 
-- `tmp/` — scratch space vex uses internally for atomic writes (write-then-rename).
-
-If you don't initialise a folder before using vex, vex looks in parent directories for an existing `.vex` folder before giving up — so subdirectories of an initialised project work without re-running `init`.
-
-> [!NOTE] Global vex
-> If you wish for a global `.vex` folder, there is nothing stopping you from creating one in your home folder and pointing its `config.lua`'s `taskfolder` at any directory of your choosing.
-
-### Focuses
-
-A focus is a lazy, composable, saveable query over your tasks — the mechanism most other commands operate on. `vex focus` builds one and persists it to `.vex/vexdex/focus.bin`; commands that take an optional `[focus]` argument default to reading that saved focus back (the named focus `prev`) when you don't pass one.
+## Adding tasks
 
 ```txt
-vex focus all --filter status:done
-vex get --vexid --status --description
+vex add Make coffee for wife --cost 5
 ```
 
-Because the focus is *persisted to disk*, not piped through stdin, this works the same whether you run the two commands separately or connect them with a shell pipe (`vex focus all --filter status:done | vex get ...`) — `vex get` doesn't read stdin at all, it just reads back the focus `vex focus` already saved. Note that `get`'s field selection works differently from `focus`/`view`'s `--select` below: `get` treats every bare `--fieldname` flag you pass as a column to print (one flag per field, no value after it), rather than taking a single flag with a list of names.
+The task file goes in `taskfolder`. Its vexid comes from the description's first sentence. vex lowercases it, drops filler words and `-ly` adverbs, and keeps the main clause ahead of any prepositional phrase, within 32 characters and 6 words. Then it hyphenates the words and appends a counter:
 
-They're composable in the sense that you can write either of these with the same meaning:
+- "Make coffee for wife" → `make-coffee-wife-1`
+- "Investigate why the login page is slow on mobile" → `investigate-login-page-slow-1`
 
-```txt
-vex focus all --filter status:done --select vexid:status:description
-```
+`--vextype` picks the task type, and with it the schema the task is validated against (see [[03 Task types (and vexations)]]).
 
-or, relying on the persisted focus:
-
-```txt
-vex focus all --filter status:done
-vex focus --select vexid:status:description
-```
-
-**Named focuses** (see `src/core/focus.lua`'s `namedfocus.focus()`):
-- `all` — every task in the index.
-- `none` — the empty set.
-- `updated` — tasks whose `modified` timestamp is newer than the index's last write.
-- `prev` — your last saved focus. This is the implicit default everywhere a `[focus]` argument is omitted (except for `vex focus` itself, which requires it the first time you use a project).
-- Any existing task's `vexid` — resolves to that single task.
-- A file or folder path (anything containing a `/`) — resolves to the task(s) at that path.
-- A comma-separated list of any of the above — unions them together.
-
-**Flags** (matched against `focus.lua` and the shell-completion suggestions in `vexcomplete.lua`):
-- `--select field:field:...` — keeps only those fields (plus `vexid`, which is always included). Fields are colon-separated, matching the same `:`-splitting `--filter`/`--between` use — not commas.
-- `--filter field:value` — keeps tasks where `field` equals `value` exactly.
-- `--fuzzy field:value` — keeps tasks where `field` is within a small Levenshtein distance of `value` (default distance `3`); add a third colon-separated part, `--fuzzy field:value:n`, to set a custom distance.
-- `--between field:begin:end` — keeps tasks where `begin <= field <= end`. Omit `begin` for "less than or equal to `end`"; omit `end` for "greater than or equal to `begin`".
-- `--tree field` — walks *forward* along `field` (e.g. `children`), collecting every task reachable by following it.
-- `--reversetree field` — walks *backward* along `field` — collects every task that has the current task(s) somewhere in that field (this is how the `singular` view finds an abstract's ancestors, by reverse-treeing over `children`).
-- `--forwardlinks` — the tasks the current task(s) link to through any link field (`children`, `dependencies`, `options`, …); the reverse of `--backlinks` (takes no value).
-- `--complement` — everything *not* in the current focus (takes no value).
-- `--union`, `--intersect`, `--xor`, `--notin`, `--onlyin` — meant to combine the current focus with another named focus given as the flag's value. These currently crash with an internal error ("attempt to call method 'get' (a nil value)") via the CLI, because the flag's raw string value is passed straight through instead of being resolved to an actual focus first. Tracked as [[fix-focus-binary-ops-cli-1]].
-- `--interpret` — **not implemented**. The intent (per `focus.lua`'s own comment) is to convert natural-language values like `tomorrow` before matching; today it hard-throws "this is a hard feature that I don't know how to do yet." Tracked as [[implement-focus-interpret-1]].
-
-All flags run in the order provided, each one narrowing (or transforming) the result of the last.
-
-Mapping and folding are reserved for focuses written in Lua rather than exposed through the CLI.
-
-You'd create new named focuses by adding files to the `focuses` subdirectory of your `.vex` folder — see [[05 Configuring focuses]].
-
-### Views
-
-Views are ways to get a high-level look at a set of tasks — tables, CSV, JSON, kanban boards, dependency diagrams, and a stats overview. See [[04 Views]] for all six built-in views with example output.
-
-Views sit on top of focuses: `vex view <focus> <view>` renders whatever tasks the focus resolves to.
-
-You'd create new views by adding Lua files to the `views` subdirectory of your `.vex` folder — see [[02 Configuring views]].
-
-### Resolution
-
-Resolution is what vex does to check data correctness — it runs automatically after `add` and `set`, and on demand via `vex resolve`. It covers:
-- **Data validation.** Fields are checked against their schema — though see the callout on this page about `status` transitions, the one check that still doesn't work as intended.
-- **Data enrichment.** `created`/`modified` timestamps are stamped in automatically; on `add`, `vextype` defaults to `task` if you didn't set one.
-- **Data normalisation.** A `due` value like `2026-07-10 09:00:00` (or hand-edited straight into the file) gets parsed into an internal epoch timestamp and reformatted back to a readable string for display; `cost`/`benefit` get coerced from a CLI string to a number the same way. There's no natural-language parsing (`tomorrow`, `next week`, etc. are not understood, despite a source comment describing that as a future goal).
-- **Link checking.** Fields typed as a `vexlink` (like a decision's `options`) are checked to confirm the referenced `vexid` actually exists.
-- **Indexing.** Once a task is resolved, `add`/`set` write it back to disk, and that write also updates its entry in `.vex/vexdex/index.bin` immediately (`TaskManager:write` → `:index` → `vexdex:add`) — see [[The index]]. A single `add` or `set` doesn't need a follow-up `resolve all` to be reflected in `all`/`updated`/other focuses; that full reindex is only needed to discover files created or deleted outside vex.
-
-`children`, `dependencies`, and `options` (all list-typed) now survive being written and read back correctly, including the empty list an `abstract` task's `children` defaults to — `vex resolve all` is safe to run repeatedly, including as a `git pre-commit` hook. You still can't set a list field directly via a CLI flag (`--children`/`--dependencies`/`--options`) — that's tracked separately as [[implement-cli-list-fields-1]] — but hand-editing the YAML list into the file and running `vex resolve` works.
-
-Resolution rules would be extended per-project via the `tasks` subdirectory of your `.vex` folder — see [[03 Configuring task types]] for the current (not-yet-implemented) status.
-
-### Adding new tasks
-
-```txt
-vex add Make coffee for wife --owner alice
-```
-
-This creates a new task file under the `taskfolder` specified in `config.lua` (see [[01 Configuring vex (config.lua)]]).
-
-The tagger runs over the description to generate the `vexid` (and filename): it lowercases each word, drops common filler/stop words (articles, conjunctions, auxiliary verbs, etc.), keeps up to the first 4 remaining words in order, joins them with hyphens, and always appends a numeric counter — so "Make coffee for wife" becomes `make-coffee-wife-1` (there's no verb-prioritisation; it's simply the first 4 non-filler words). `vexid`s are unique per project; the counter increments if the same slug comes up again.
-
-Adding a task prints its `vexid` to the screen _**and sets your focus to it**_.
-
-Arbitrary fields can be passed to `add`, and vex writes them straight into the task's frontmatter — most, like `owner` above, are just stored as-is with no validation. `due`, `cost`, and `benefit` are schema-validated real fields (see [[02 Frontmatter schema]]) and work the same way: `vex add ... --cost 15 --benefit 40 --due 2026-08-01T09:00:00`.
-
-Passing `--vextype` chooses which task type — and therefore which additional schema — resolution applies to this task. See [[03 Vexations (task types)]].
-
-### Editing existing tasks
-
-You can use `set` to edit tasks:
+## Editing tasks
 
 ```txt
 vex set make-coffee-wife-1 --status doing --owner alice
 ```
 
-This sets the fields provided, then runs resolution on the task. `status` is *meant* to be checked against the `todo → doing → done` state machine, but that check currently doesn't work (see [[02 Frontmatter schema]]) — an out-of-order transition is silently accepted rather than rejected. `owner` (not a schema field today) is stored verbatim with no checking, the same as any other arbitrary key.
-
-You can pass arbitrary fields and values through `set` the same way you can through `add`.
-
-### Recipes
-
-A recipe is a named shortcut that creates a task (or, once user-defined recipes exist, potentially several) with some fields already decided. Only one ships today: `abstract`, which forces `vextype` to `abstract`.
+`set` overwrites each field you give it, then resolves the task. To edit a list field by value, put `--insert` or `--remove` before it:
 
 ```txt
-vex recipe abstract Ship v0.2 --status todo
+vex set plan-trip-1 --insert --children book-flights-1,book-hotel-1
+vex set plan-trip-1 --remove --children book-flights-1
 ```
 
-Like `add`, this prints the new task's `vexid` _**and sets your focus to it**_.
+`--insert` skips values already in the list.
 
-You'd add project-specific recipes by creating files in the `recipes` subdirectory of your `.vex` folder — see [[04 Configuring recipes]] for the current (not-yet-implemented) status, and [[03 Using a recipe to create a sequence of tasks]] for a walkthrough of what works today.
+## Focuses
+
+A focus is a lazy, saved query over your tasks. `vex focus` builds one and saves it, and other commands read it back when you don't give them a focus:
+
+```txt
+vex focus all --filter status:done
+vex get --vexid --description
+```
+
+Flags run in order, each one working on the result of the one before. The two commands below build the same focus as `vex focus all --filter status:done --select status,description`:
+
+```txt
+vex focus all --filter status:done
+vex focus --select status,description
+```
+
+### Starting points
+
+| Focus | Tasks |
+| --- | --- |
+| `all` | Every task. |
+| `none` | No tasks. |
+| `updated` | Tasks modified since the index was last written. |
+| `initial`, `interim`, `final` | Tasks by `phase`: in their type's first status, in between, or in a status with no way out. |
+| `prev` | The saved focus. The default wherever a focus is optional. |
+| a vexid | That task. |
+| a path containing `/` | The task file, or every task file in the folder. |
+| `a,b,...` | The union of each. |
+
+Your own named focuses go in `.vex/focuses` ([[05 Configuring focuses]]).
+
+### Flags
+
+Values are separated by `:`.
+
+| Flag | Keeps |
+| --- | --- |
+| `--select field,field` | Only those fields, plus `vexid`. Transients are included once selected. |
+| `--filter field:value` | Tasks whose `field` equals `value`. |
+| `--fuzzy field:value[:n]` | Tasks whose `field` contains `value` within `n` edits (default 3). |
+| `--between field:low:high` | Tasks with `low <= field <= high`. Leave `low` or `high` empty for an open side: `cost::9`. Dates may be `YYYY-MM-DD`. |
+| `--tree field` | The tasks and everything reachable by following `field`, such as `children`. |
+| `--reversetree field` | The tasks and everything that reaches them through `field`. |
+| `--backlinks` | The tasks that link to these tasks. |
+| `--forwardlinks` | The tasks these tasks link to. |
+| `--complement` | Every task not in the focus. |
+| `--union focus` | Tasks in either focus. |
+| `--intersect focus` | Tasks in both. |
+| `--xor focus` | Tasks in exactly one. |
+| `--notin focus` | Tasks in this focus but not the other. |
+| `--onlyin focus` | Tasks in the other focus but not this one. |
+| `--interpret` | Reads the next flag's values as natural-language times (see below). |
+| `--orderby field[:desc]:field...` | The tasks sorted by each field in turn, ascending unless followed by `desc`. Ties keep their order, and missing values sort last. |
+| `--groupby field[:desc]:field...` | The tasks in groups that share those fields' values, ordered as `--orderby` would order them. |
+| `--rn` | Each task numbered from 1 within its group, in the field `rn`. |
+
+### Grouping and ordering
+
+`--groupby` splits a focus into groups. Every later flag then works within each group, so `--orderby` sorts each group and `--rn` numbers each group from 1. This is like SQL's `ROW_NUMBER() OVER (PARTITION BY ... ORDER BY ...)`:
+
+```txt
+vex focus all --groupby owner --orderby due --rn --select owner,due,rn
+vex view tabular
+```
+
+Commands and views list the groups one after another. A set operation (`--union`, `--intersect`, `--xor`, `--notin`, `--onlyin`, `--complement`) gathers the groups back into one.
+
+### Interpreting times
+
+Dates and times can be written as phrases, read relative to now: in `add` and `set` (`--due "friday arvo"`), in a hand-edited task file, and in focus values. `--interpret` before `--filter` or `--between` reads that flag's values through each field's interpret iso:
+
+```txt
+vex focus all --interpret --between due:now:"next tuesday"
+vex focus all --interpret --between due::yesterday
+vex focus all --interpret --filter due:tomorrow
+```
+
+A saved focus is read again each time it is used, so "next tuesday" always means the coming Tuesday. Phrases combine a day, a time of day and an offset, in any order:
+
+| Kind | Examples |
+| --- | --- |
+| Now and nearby days | `now`, `today`, `tonight`, `tomorrow`, `yesterday` |
+| Weekdays | `wed`, `friday`, `next tuesday`, `last monday`, `weekend` |
+| Periods | `next week`, `last month`, `next year`, `this year`, `next fall`, `winter` |
+| Dates | `26 July`, `July 26th`, `the 26th of December 2026`, `the 3rd`, `2026-07-26` |
+| Times of day | `first light`, `dawn`, `morning`, `morn`, `noon`, `arvo`, `afternoon`, `end of day`, `eve`, `dusk`, `night`, `midnight` |
+| Clock times | `5pm`, `3:30pm`, `15:00`, `at 9` |
+| Offsets | `fifteen minutes`, `in 3 days`, `half day`, `an hour and a half`, `2 weeks ago` |
+
+- A weekday or date means its next occurrence. A date with no year falls on or after today; a weekday falls after today.
+- A time of day on its own means the next time it comes round.
+- A day without a time means its first moment, 00:00.
+- Weeks start on Monday, and seasons start on the first of March, June, September and December.
+- Joining words such as `by`, `before`, `on`, `at`, `in`, `the`, `until` and `due` are skipped, so `by 26 July` and `before 26 July` mean 26 July.
+- Any other word fails with the `uninterpretable` error.
+
+## Views
+
+`vex view <focus> <view>` renders a focus. See [[04 Views]] for the built-in views and [[02 Configuring views]] for your own.
+
+## Resolution
+
+Resolution keeps every task valid. `add`, `set`, `remove` and `recipe` resolve the tasks they touch, and `vex resolve` resolves a focus on demand. For each task, vex runs the schema of its type and of every type it extends:
+
+1. **Normalise.** Fill defaults (`vextype`, `status`, `created`, `modified`) and convert values: `"15"` to `15`, `"2026-08-01 09:00:00"` to a timestamp, `[[vexid]]` to `vexid`.
+2. **Validate.** Check every field against its schema. Links must point at existing tasks, `status` must follow its state machine, `owner` must be a configured user, dependencies must not form a cycle, and a child can have only one parent.
+3. **Derive.** Compute derived fields and record the task's links.
+4. **Index.** Store the task in `.vex/vexdex` and write its file, formatted for reading.
+
+`vex resolve all` first rebuilds the index from every file under `taskfolder`, so it finds files created, edited or deleted outside vex. A failure exits non-zero with a named error, which makes `vex resolve all` a useful `git pre-commit` hook.
+
+## Recipes
+
+```txt
+vex recipe abstract Ship v0.2
+```
+
+A recipe creates one or more tasks with fields already filled in. vex ships `abstract`; add your own in `.vex/recipes` ([[04 Configuring recipes]]).
+
+## Inline tags
+
+Write a task where the work is, in any text file:
+
+```txt
+-- #vex Handle a missing config file
+-- #atom Retry the upload --due 2026-08-01
+```
+
+`vex inline <file>` creates a task for each new tag. The tag word sets the type (`#vex`, `#abstract`, `#atom`, `#explore`, `#decision`), the rest of the line works like `vex add`, and an indented tag becomes a child of the tag above it. vex then rewrites each tag to carry the task's vexid, so later runs update the same task, and `vex open` jumps from a task back to its tag.

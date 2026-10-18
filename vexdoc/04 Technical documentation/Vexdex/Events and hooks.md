@@ -1,6 +1,8 @@
-The intended design (per [[Vex]]) is that every verb fires two events:
+Every command fires two events through `src/lib/event.lua`:
 
-- `pre-[verb]`
-- `post-[verb]`
+- `pre-<command>` before the command changes anything.
+- `post-<command>` after it finishes.
 
-**Currently, this doesn't exist.** `src/lib/event.lua` — the module that would own dispatching these — is a one-line stub: `return {}`. No verb in `src/core/verbs.lua` fires anything, and `.vex/events` (created by `vex init`) is never read. Tracked as [[implement-event-hooks-1]]; see [[06 Configuring event hooks]] for the user-facing writeup of the intended design and what to do instead in the meantime.
+When a command starts, vex loads every `.lua` file in `.vex/events`, sorted by path. Each file registers handlers with `event:on '<event>' (handler)`. vex then calls the handlers for each event in the order they were registered, passing the focus the command acts on. An error raised by a `pre-` handler stops the command before anything is written.
+
+See [[06 Configuring event hooks]] for examples.

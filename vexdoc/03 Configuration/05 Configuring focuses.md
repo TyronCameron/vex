@@ -1,26 +1,26 @@
-> [!WARNING] Not yet implemented
-> `vex init` creates a `.vex/focuses` folder, but nothing in vex currently reads from it — the only named focuses that exist are the ones hardcoded in `src/core/focus.lua` (`all`, `none`, `updated`, `prev`). Tracked as [[implement-focus-loader-1]].
-
-## Intended design
-
-`Focus.register_focus(name, get)` (`src/core/focus.lua`) is the exact mechanism the 4 built-in named focuses already use — each one is just a name paired with a function that returns a list of tasks. A project-defined focus in `.vex/focuses` would presumably follow the same shape:
+Each `.lua` file in `.vex/focuses` can register named focuses. A named focus is a function that returns a list of tasks, usually built from other focuses:
 
 ```lua
--- .vex/focuses/mine.lua (illustrative — this file is not read today)
-return function()
-    -- e.g. everything owned by whoever's running vex, still todo
-    return require('core.focus').getalltasks()
-end
+focus.register_focus('mine', function()
+    return focus.focus('all'):filter('owner', 'alice'):filter('status', 'doing'):get()
+end)
 ```
-
-...loaded and registered automatically alongside the built-ins, so `vex focus mine` would work the same way `vex focus all` does today.
-
-## What exists today instead
-
-You can't name and save a custom focus for reuse under your own name yet. What you *can* do is build the equivalent query inline every time, starting from a real named focus and chaining flags:
 
 ```txt
-vex focus all --filter owner:alice --filter status:doing
+vex focus mine --select due
+vex view mine kanban
 ```
 
-...and rely on `prev` (the persisted result of your last `vex focus` call) to avoid retyping it in the very next command. See [[01 CLI reference#Focuses]] for the full flag list, and [[Home]] for a worked example of this pattern.
+A named focus works wherever a focus does: as a starting point, in a list (`mine,all`), and as the value of `--union` and the other set operations. It is evaluated each time it's used, so it always reflects the current tasks.
+
+The query methods match the CLI flags: `filter`, `fuzzy`, `between`, `select`, `tree`, `reversetree`, `backlinks`, `forwardlinks`, `orderby`, `groupby`, `rn`, `interpret`, `complement`, `union`, `intersect`, `xor`, `notin` and `onlyin` (see [[01 CLI reference#Focuses]]). After `groupby`, `focus:groups()` returns the tasks as their groups; `focus:get()` always returns them as one list.
+
+The built-in `urgency` transient is a focus of this kind:
+
+```lua
+focus.focus('final'):complement():groupby('owner'):orderby('due'):rn():filter('vexid', t.vexid)
+```
+
+## Writing a file
+
+Each example on this page is a complete file: save it as a `.lua` file in `.vex/focuses` and vex loads it on the next command, with nothing else required. Every file runs with these already in scope, alongside Lua's standard globals: `task` (the task manager), `recipe` (the recipe manager), `focus` (the `Focus` class), `view` (the view manager) and `schema` (the schema library).

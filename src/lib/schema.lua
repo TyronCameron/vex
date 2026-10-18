@@ -1,6 +1,7 @@
 
 local func = require 'lib.func'
 local pretty = require "lib.pretty"
+local naturaltime = require 'lib.naturaltime'
 
 -----------------------------------------------
 -- Context
@@ -155,6 +156,7 @@ function Schema:prevalidate(value, context)
     local snap = context:snapshot()
     if not self._prevalidate then return value end 
     local ok, res = pcall(self._prevalidate, self, value, context)
+    if not ok and type(res) == "table" then error(res, 0) end
     if not ok then self:error(value, snap, "Prevalidation step errored:\n" .. tostring(res)) end 
     return res 
 end
@@ -596,7 +598,7 @@ Schema.register 'date' {
             backward = function(self, value)
                 if type(value) ~= "string" then return value end
                 local y, mo, d = value:match("^(%d%d%d%d)-(%d%d)-(%d%d)$")
-                if not y then return end
+                if not y then return value end
                 return os.time({
                     year = tonumber(y), month = tonumber(mo), day = tonumber(d),
                     hour = tonumber(0), min = tonumber(0), sec = tonumber(0), 
@@ -605,6 +607,16 @@ Schema.register 'date' {
             end,
             forward = function(self, epoch)
                 return os.date("%Y-%m-%d", epoch)
+            end,
+        },
+        interpret = {
+            backward = function(self, phrase)
+                if type(phrase) ~= "string" then return phrase end
+                local t = os.date("*t", naturaltime.parse(phrase))
+                return os.time({year = t.year, month = t.month, day = t.day, hour = 0, isdst = false})
+            end,
+            forward = function(self, epoch)
+                return naturaltime.describe(epoch)
             end,
         }
     }
@@ -620,7 +632,11 @@ Schema.register 'datetime' {
             backward = function(self, value)
                 if type(value) ~= "string" then return value end
                 local y, mo, d, h, mi, s = value:match("^(%d%d%d%d)-(%d%d)-(%d%d)[T ](%d%d):(%d%d):(%d%d)$")
-                if not y then return end
+                if not y then
+                    y, mo, d = value:match("^(%d%d%d%d)-(%d%d)-(%d%d)$")
+                    h, mi, s = 0, 0, 0
+                end
+                if not y then return value end
                 return os.time({
                     year = tonumber(y), month = tonumber(mo), day = tonumber(d),
                     hour = tonumber(h), min = tonumber(mi), sec = tonumber(s), 
@@ -629,6 +645,15 @@ Schema.register 'datetime' {
             end,
             forward = function(self, epoch)
                 return os.date("%Y-%m-%d %H:%M:%S", epoch)
+            end,
+        },
+        interpret = {
+            backward = function(self, phrase)
+                if type(phrase) ~= "string" then return phrase end
+                return naturaltime.parse(phrase)
+            end,
+            forward = function(self, epoch)
+                return naturaltime.describe(epoch)
             end,
         }
     }
@@ -728,6 +753,11 @@ Schema.register 'formatted' {
     prevalidate = function(self, instance, context) 
         if self:validate(instance) then return instance end 
         local result = self:unapply('format', instance, context)
+        if not self:validate(result) then
+            local ok, interpreted = pcall(self.unapply, self, 'interpret', result, context)
+            if not ok then error({uninterpretable = result, field = table.concat(context.path, '.')}, 0) end
+            result = interpreted
+        end
         for childschema, childinstance in self:iterate(result, context) do
             result = childschema:prevalidate(childinstance, context)
         end

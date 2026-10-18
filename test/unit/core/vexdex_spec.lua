@@ -60,6 +60,22 @@ describe("vexdex", function()
         vexdex:remove("__object")
     end)
 
+    it("throws a write error when the written file cannot be moved into place", function()
+        local cli = require 'lib.cli'
+        stub(cli, 'throw', function(self, name) error(name) end)
+        local ok, err = pcall(vexdex.atomic, vexdex, vexdex:vexpath("no-such-folder/file.txt"), function(path)
+            local f = io.open(path, "w")
+            f:write("data")
+            f:close()
+        end)
+        cli.throw:revert()
+        for file in lfs.dir(vexdex:vexpath("tmp")) do
+            if not file:match("^%.") then os.remove(vexdex:vexpath("tmp/" .. file)) end
+        end
+        assert.is_false(ok)
+        assert.truthy(err:find('write', 1, true))
+    end)
+
     it("leaves nothing behind in .vex/tmp after writing", function()
         vexdex:link("__tmpcheck", {"__target"})
         vexdex:remove("__tmpcheck")

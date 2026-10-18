@@ -19,9 +19,11 @@ end
 
 function Recipe:add(name, taskproperties)
     if not self.recipes[name] then cli:throw('unknown-recipe', name) end 
-    local vexid = self.recipes[name].add(task, taskproperties)
-    task:resolve(vexid)
-    return focus.focus(vexid)
+    local vexids = self.recipes[name].add(task, taskproperties)
+    for _, vexid in ipairs(vexids) do
+        task:resolve(vexid)
+    end
+    return focus.focus(vexids)
 end
 
 return Recipe.new()

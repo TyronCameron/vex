@@ -43,6 +43,7 @@ function format.json(val, indent, level)
 end
 
 local function csv_field(val)
+    if val == nil then return '' end
     local s = tostring(val)
     if s:find('[,"\r\n]') then
         return '"' .. s:gsub('"', '""') .. '"'
@@ -52,7 +53,12 @@ end
 
 function format.csv(data)
     local rows = {}
-    local fields = func.keys(data[1] or {})
+    local seen = {}
+    for _, task in ipairs(data) do
+        for field in pairs(task) do seen[field] = true end
+    end
+    local fields = func.keys(seen)
+    table.sort(fields)
     table.insert(rows, table.concat(fields, ','))
     for _, task in ipairs(data) do 
         local rowdata = func.imap(fields, function(field) return csv_field(task[field]) end)

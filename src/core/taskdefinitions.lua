@@ -121,7 +121,7 @@ task:task 'task' {
         due = schema.maybe {schema.formatted {schema.datetime}},
         cost = schema.maybe {schema.num},
         benefit = schema.maybe {schema.num},
-        owner = schema.maybe {schema.any(config.users)},
+        owner = schema.maybe {schema.any(config.taskowners)},
     }
 }
 
@@ -175,7 +175,7 @@ task:task 'atom':extends 'task' {
 recipe:recipe 'abstract' {
     add = function(task, taskproperties)
         taskproperties.vextype = 'abstract'
-        return task:add(taskproperties)
+        return {task:add(taskproperties)}
     end 
 }
 
@@ -216,6 +216,14 @@ task:transient 'age' {
     vextype = 'task',
     definition = function(t)
         return t.created and math.floor((os.time() - t.created) / 86400)
+    end
+}
+
+task:transient 'urgency' {
+    vextype = 'task',
+    definition = function(t)
+        local ranked = focus.focus('final'):complement():groupby('owner'):orderby('due'):rn():filter('vexid', t.vexid):get()[1]
+        return ranked and ranked.rn
     end
 }
 

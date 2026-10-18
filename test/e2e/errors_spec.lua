@@ -32,6 +32,11 @@ describe("vex user-facing errors (e2e, subprocess)", function()
     end)
   end
 
+  it("rejects a phrase --interpret cannot read", function()
+    vex(dir, "add", "Due", "some", "day", "--due", "2026-08-01")
+    fails(dir, "Cannot interpret `tomorrow blorp`", "focus", "all", "--interpret", "--between", "due:tomorrow blorp:")
+  end)
+
   it("rejects any verb outside a project", function()
     local outside = helper.make_tmp_dir()
     fails(outside, "Not in a vex directory", "show", "all")

@@ -1,6 +1,5 @@
 
 local func = require 'lib.func'
-local optic = require 'lib.optic'
 local lfs = require 'lib.lfs'
 local lfsext = require 'lib.lfsext'
 local cli = require 'lib.cli'
@@ -11,6 +10,9 @@ local Focus = {
     named = {}
 }
 Focus.__index = Focus
+
+local FocusGroups = setmetatable({}, {__index = Focus})
+FocusGroups.__index = FocusGroups
 
 function Focus.new(name, get, operations)
     return setmetatable({
@@ -56,7 +58,7 @@ local deserialize
 
 local function asfocus(focus)
     if type(focus) == "string" then return Focus.focus(focus) end
-    if getmetatable(focus) ~= Focus then return deserialize(focus) end
+    if getmetatable(focus) ~= Focus and getmetatable(focus) ~= FocusGroups then return deserialize(focus) end
     return focus
 end
 
@@ -272,13 +274,32 @@ function Focus:select(...)
     end, ...)
 end 
 
+local function normalised(task, field, value, iso)
+    local fieldschema = value and require('core.task'):schemaof(task.vextype, field)
+    if not fieldschema then return value end
+    if iso then
+        local ok, result = pcall(fieldschema.unapply, fieldschema, iso, value)
+        if not ok then cli:throw('uninterpretable', value, field) end
+        value = result
+    end
+    local ok, result = pcall(fieldschema.prevalidate, fieldschema, value, {})
+    if ok and result ~= nil then value = result end
+    if type(value) ~= type(task[field]) then
+        cli:throw('usage', 'Cannot compare `' .. field .. '` with `' .. tostring(value) .. '`.')
+    end
+    return value
+end
+
 -- filter key:value
 function Focus:filter(field, value)
     if value == nil then 
         cli:throw('usage', 'You need to provide a field and value to filter on. We saw field = ' .. tostring(field) .. ' and value ' .. tostring(value)) 
     end 
+    local iso = self.iso
     return self:chain('filter', function(tasks)
-        return func.ifilter(tasks, function(task) return task[field] == value end)
+        return func.ifilter(tasks, function(task)
+            return task[field] ~= nil and task[field] == normalised(task, field, value, iso)
+        end)
     end, field, value)
 end 
 
@@ -331,28 +352,106 @@ function Focus:fuzzy(field, fuzz, n)
     end, field, fuzz, n)
 end 
 
-local function normalised(task, field, value)
-    local fieldschema = value and require('core.task'):schemaof(task.vextype, field)
-    if not fieldschema then return value end
-    local ok, result = pcall(fieldschema.prevalidate, fieldschema, value, {})
-    if ok and result ~= nil then value = result end
-    if type(value) ~= type(task[field]) then
-        cli:throw('usage', 'Cannot compare `' .. field .. '` with `' .. tostring(value) .. '`.')
-    end
-    return value
-end
-
--- between field:begin:end
+-- between field:begin:end, where an empty begin or end leaves that side open
 function Focus:between(field, start, finish)
+    local iso = self.iso
     return self:chain('between', function(tasks) 
         return func.ifilter(tasks, function(task) 
             local value = task[field]
             if value == nil then return false end
-            local lower, upper = normalised(task, field, start), normalised(task, field, finish)
+            local lower, upper = normalised(task, field, start ~= '' and start, iso), normalised(task, field, finish ~= '' and finish, iso)
             return (not lower or lower <= value) and (not upper or value <= upper)
         end)
     end, field, start, finish)
 end 
+
+local function sortkey(value)
+    if type(value) == "table" then return table.concat(value, ",") end
+    if type(value) == "boolean" then return tostring(value) end
+    return value
+end
+
+-- -1, 0 or 1 as x sorts before, with or after y; a missing value sorts last either way
+local function compare(x, y, descending)
+    x, y = sortkey(x), sortkey(y)
+    if x == y then return 0 end
+    if x == nil then return 1 end
+    if y == nil then return -1 end
+    if descending then x, y = y, x end
+    if type(x) ~= type(y) then x, y = type(x), type(y) end
+    return x < y and -1 or 1
+end
+
+local function orderings(...)
+    local orders = {}
+    for _, word in ipairs({...}) do
+        if (word == 'asc' or word == 'desc') and #orders > 0 then
+            orders[#orders].descending = word == 'desc'
+        else
+            table.insert(orders, {field = word})
+        end
+    end
+    return orders
+end
+
+-- -1, 0 or 1 as task a sorts before, with or after task b
+local function order(a, b, orders)
+    for _, o in ipairs(orders) do
+        local comparison = compare(a[o.field], b[o.field], o.descending)
+        if comparison ~= 0 then return comparison end
+    end
+    return 0
+end
+
+-- orderby field[:asc|:desc]:field..., keeping tied tasks in order
+function Focus:orderby(...)
+    local orders = orderings(...)
+    return self:chain('orderby', function(tasks)
+        local positions = {}
+        for i, task in ipairs(tasks) do positions[task] = i end
+        local ordered = func.imap(tasks, function(task) return task end)
+        table.sort(ordered, function(a, b)
+            local comparison = order(a, b, orders)
+            if comparison ~= 0 then return comparison < 0 end
+            return positions[a] < positions[b]
+        end)
+        return ordered
+    end, ...)
+end
+
+local function bucket(tasks, orders)
+    local groups, keyed = {}, {}
+    for _, task in ipairs(tasks) do
+        local key = table.concat(func.imap(orders, function(o) return tostring(sortkey(task[o.field])) end), "\0")
+        if not keyed[key] then
+            keyed[key] = {}
+            table.insert(groups, keyed[key])
+        end
+        table.insert(keyed[key], task)
+    end
+    table.sort(groups, function(a, b) return order(a[1], b[1], orders) < 0 end)
+    return groups
+end
+
+-- groupby field[:asc|:desc]:field..., ordering the groups as orderby would
+function Focus:groupby(...)
+    local orders = orderings(...)
+    return FocusGroups.new('groupby', function(tasks)
+        return bucket(self:get(tasks), orders)
+    end, func.imerge(self.operations, {{ operation = 'groupby', args = {...} }}))
+end
+
+-- rn numbers each group's tasks from 1 in the field `rn`, on copies of the tasks
+function Focus:rn()
+    return self:chain('rn', function(tasks)
+        return func.imap(tasks, function(task, i)
+            local numbered = setmetatable({}, getmetatable(task))
+            for field, value in pairs(task) do numbered[field] = value end
+            numbered.rn = i
+            return numbered
+        end)
+    end)
+end
 
 -- tree field
 local function links(task, field)
@@ -378,9 +477,22 @@ local function get_children(field)
     end 
 end
 
+local function walk(tasks, linksof)
+    local walked = {}
+    local function visit(task, visited)
+        visited[task] = true
+        table.insert(walked, task)
+        for _, linked in ipairs(linksof(task)) do
+            if not visited[linked] then visit(linked, visited) end
+        end
+    end
+    for _, task in ipairs(tasks) do visit(task, {}) end
+    return walked
+end
+
 function Focus:tree(field)
     return self:chain('tree', function(tasks) 
-        return optic.chain(optic.ipairs(), optic.traverse(get_children(field))):get(tasks)
+        return walk(tasks, get_children(field))
     end, field)
 end
 
@@ -399,7 +511,7 @@ end
 
 function Focus:reversetree(field)
     return self:chain('reversetree', function(tasks) 
-        return optic.chain(optic.ipairs(), optic.traverse(get_parents(field))):get(tasks)
+        return walk(tasks, get_parents(field))
     end, field)
 end
 
@@ -435,9 +547,13 @@ end
 -- Modifiers
 -----------------------------------------
 
--- interpret before any flag will convert values where possible. E.g. `--interpret --filter due:tomorrow` will check for tasks due tomorrow.
+-- interpret reads the next operation's values as phrases through each field's interpret iso, e.g. `--interpret --between due:now:"next tuesday"`
 function Focus:interpret()
-    assert(false, "this is a hard feature that I don't know how to do yet ... for later down the track")
+    local interpreted = setmetatable({}, getmetatable(self))
+    for key, value in pairs(self) do interpreted[key] = value end
+    interpreted.operations = func.imerge(self.operations, {{ operation = 'interpret', args = {} }})
+    interpreted.iso = 'interpret'
+    return interpreted
 end 
 
 -----------------------------------------
@@ -446,6 +562,48 @@ end
 
 function Focus:get(tasks)
     return self._get(tasks or Focus.getalltasks())
+end
+
+-----------------------------------------
+-- Groups
+-----------------------------------------
+
+-- a focus split into groups, which runs every operation within each group
+function FocusGroups.new(name, groups, operations)
+    return setmetatable({name = name, _groups = groups, operations = operations}, FocusGroups)
+end
+
+function FocusGroups:groups(tasks)
+    return self._groups(tasks or Focus.getalltasks())
+end
+
+function FocusGroups:get(tasks)
+    local tasklist = {}
+    for _, group in ipairs(self:groups(tasks)) do tasklist = func.imerge(tasklist, group) end
+    return tasklist
+end
+
+function FocusGroups:chain(operation, focus, ...)
+    if type(focus) == "function" then 
+        focus = Focus.new(operation, focus)
+    end 
+    return FocusGroups.new('chain', function(tasks)
+        local groups = {}
+        for _, group in ipairs(self:groups(tasks)) do
+            local result = focus:get(group)
+            if #result > 0 then table.insert(groups, result) end
+        end
+        return groups
+    end, func.imerge(self.operations, {{ operation = operation, args = {...} }}))
+end
+
+function FocusGroups:groupby(...)
+    local orders = orderings(...)
+    return FocusGroups.new('groupby', function(tasks)
+        local groups = {}
+        for _, group in ipairs(self:groups(tasks)) do groups = func.imerge(groups, bucket(group, orders)) end
+        return groups
+    end, func.imerge(self.operations, {{ operation = 'groupby', args = {...} }}))
 end
 
 function Focus:each_task(f, ...)
@@ -468,7 +626,7 @@ end
 
 local function split(str, sep)
     local parts = {}
-    for part in str:gmatch('([^' .. sep .. ']+)') do
+    for part in (str .. sep):gmatch('(.-)' .. sep) do
         table.insert(parts, part)
     end
     return unpack(parts)

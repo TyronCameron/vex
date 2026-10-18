@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 vex is **the embeddable, local-first, markdown-based task system** — a single LuaJIT CLI binary (`src/vex`). Every task is a plain-text markdown file with YAML frontmatter; every project keeps its own `.vex` folder (like a `.git` folder) holding config, a binary index, and the saved "focus" (current query). There is no server, no daemon, no account.
 
-The project is early (`v0.1.0`), single-developer, and **dogfoods itself**: this repo's own backlog lives under `vexdoc/vex/*.md` and is tracked via `vex` (see `.vex/config.lua`'s `taskfolder = "vexdoc/vex"`). The `vexdoc/` folder is an Obsidian vault that is both the project wiki *and* the live task database — don't treat `vexdoc/vex/*.md` files as throwaway docs, they are real task state with a schema.
+The project is early (`v0.0.0`), single-developer, and **dogfoods itself**: this repo's own backlog lives under `vexdoc/vex/*.md` and is tracked via `vex` (see `.vex/config.lua`'s `taskfolder = "vexdoc/vex"`). The `vexdoc/` folder is an Obsidian vault that is both the project wiki *and* the live task database — don't treat `vexdoc/vex/*.md` files as throwaway docs, they are real task state with a schema.
 
 ## Commands
 
@@ -63,11 +63,15 @@ Everything swappable in vex — id generation, file path layout, serialization f
 
 A small validation/transformation DSL, not a data-modeling library you'd recognize from elsewhere. Schemas are registered once by name (`Schema.register 'str' { validate = ... }`) and instantiated with a specification (`schema.atleast { field = schema.str, ... }`). Each schema type can define `prevalidate`/`validate`/`postvalidate`/`iterate`/`isos`. Composable primitives: `atleast`/`exactly`/`atmost` (table shape), `maybe`/`default`/`derive` (optionality), `vec` (arrays), `any`/`all`/`none` (union-style combinators), `formatted`/`serialized` (apply an iso before validating). `iterate` is what lets a container schema recurse into children — see `Context:descend` for how the validation path/type-stack is tracked for error messages. `apply`/`unapply` run an iso through containers the same way (e.g. formatting every element of a `vec`), only ever transform values through an iso, and only format values the iso's owner validates — so anything formatted can always be unformatted again.
 
-Task type schemas live in `src/core/taskdefinitions.lua`: base `task` (has `vexid`, `description`, `vextype`, `created`, `modified`, `status`, optional `due`/`cost`/`benefit`/`dependencies`/`owner`/`vexbody`; `owner` must be one of the config's `users`), extended by `abstract` (adds `children`), `decision` (adds `options`+`decision`), `exploration` and `atom`. A project adds its own types in `.vex/tasks/*.lua` with `task:task 'name':extends 'parent' { schema = ... }`, and transients with `task:transient` (see Transients and Extensions below).
+Task type schemas live in `src/core/taskdefinitions.lua`: base `task` (has `vexid`, `description`, `vextype`, `created`, `modified`, `status`, optional `due`/`cost`/`benefit`/`dependencies`/`owner`/`vexbody`; `owner` must be one of the config's `taskowners`), extended by `abstract` (adds `children`), `decision` (adds `options`+`decision`), `exploration` and `atom`. A project adds its own types in `.vex/tasks/*.lua` with `task:task 'name':extends 'parent' { schema = ... }`, and transients with `task:transient` (see Transients and Extensions below).
 
 ### Focus: the query layer (`src/core/focus.lua`)
 
 A `Focus` is a lazy, composable, **persisted** query over the task index (`.vex/vexdex/focus.bin`). Every operation (`select`, `filter`, `fuzzy`, `between`, `tree`, `reversetree`, `backlinks`, `forwardlinks`, set ops) returns a new `Focus` and records itself in `self.operations`, so a focus can be serialized/deserialized and replayed. Named focuses: `all`, `none`, `updated`, `initial`/`interim`/`final` (a filter on the `phase` transient: where each task's `status` sits in its type's state machine, i.e. the initial state, a sink with no outgoing transitions, or neither), `prev` (the default when a verb's `[focus]` arg is omitted), a bare `vexid`, a file/folder path, or a list of any of these (unioned; the CLI turns `a,b` into one). `vex focus <name> [--flags]` builds and saves one; most other verbs (`show`, `get`, `set`, `view`, `resolve`, `remove`) read the saved focus back when no argument is given.
+
+`schema.formatted` falls back to its schema's `interpret` iso when the format iso can't read a value, so every date field reads phrases on add, set and resolve, and a value neither iso reads raises `{uninterpretable = value, field = path}`, which `Schema:prevalidate` passes through and `TaskManager`'s normalise turns into the `uninterpretable` error. `Focus:interpret()` (`--interpret`) makes the next `filter` or `between` read its values through each field's `interpret` iso before comparing. `date` and `datetime` define that iso with `src/lib/naturaltime.lua`, which reads phrases such as `tomorrow arvo`, `next tuesday` or `3 days ago` relative to the current time, lazily so a saved focus stays relative, and rejects unknown words with `uninterpretable`.
+
+`Focus:groupby(fields...)` returns a `FocusGroups`: a focus split into groups, whose `__index` falls back to `Focus` so it has every operation. `FocusGroups:chain` runs each operation within each group (dropping empty ones), so `filter`, `orderby(field[, 'desc']...)`, `rn()` (which numbers copies of each group's tasks in `rn`) and the rest work per group, and `FocusGroups:groupby` refines each group. `FocusGroups:groups` returns the groups and `FocusGroups:get` flattens them. Set operations call `get`, so they return a plain `Focus`. The built-in `urgency` transient is `groupby('owner'):orderby('due'):rn()` over the tasks not in the `final` phase.
 
 ### Transients (`src/core/task.lua`)
 
@@ -92,7 +96,7 @@ A from-scratch verb/error registry, not a wrapper around an existing arg-parsing
 
 ### Config (`src/core/config.lua` / `src/lib/config.lua`)
 
-`Config:loadall()` `dofile`s each registered path (currently just `.vex/config.lua`) and merges the returned tables, later paths overwriting earlier ones. Read values as fields: `config.taskfolder`, `config.users`, `config.paths`.
+`Config:loadall()` `dofile`s each registered path (currently just `.vex/config.lua`) and merges the returned tables, later paths overwriting earlier ones. Read values as fields: `config.taskfolder`, `config.taskowners`, `config.default.tasktype` (the `vextype` `TaskManager:add` gives a task without one), `config.paths`.
 
 `paths.groupby` (read by `src/default/grouppath.lua`, the only `taskpath` member) is a list of field names, transients included, that nests task files in folders, e.g. `paths = { groupby = {'lineage', 'status'} }` puts a task at `<root>/<parent>/<status>/<vexid>.md`. A list value nests one folder per element; unset values and empty lists are skipped; each value is kept to a single folder name (`/`, `\`, `:` and the like become `-`). Without `paths.groupby`, files sit flat at `<vexid>.md`. Anything but a list of strings throws `bad-groupby`.
 
@@ -102,7 +106,7 @@ Required at the end of `core.verbs`, once every manager exists. It runs each `.l
 
 ### Recipes (`src/core/recipe.lua`)
 
-A recipe is a named shortcut producing a task with some fields pre-filled (`Recipe:recipe 'name' { add = function(task, taskproperties) ... end }`). Only `abstract` ships (`src/core/taskdefinitions.lua`), which forces `vextype = 'abstract'`. `Recipe:add` resolves the vexid the recipe's `add` function returns and focuses on it. Projects add their own in `.vex/recipes/*.lua` (see Extensions).
+A recipe is a named shortcut producing a task with some fields pre-filled (`Recipe:recipe 'name' { add = function(task, taskproperties) ... end }`). Only `abstract` ships (`src/core/taskdefinitions.lua`), which forces `vextype = 'abstract'`. A recipe's `add` returns the list of vexids it added; `Recipe:add` resolves them in that order and focuses on all of them. Projects add their own in `.vex/recipes/*.lua` (see Extensions).
 
 ### Singletons
 
@@ -119,7 +123,7 @@ Putting code in the right place matters more here than anywhere else. Each modul
 - **Verbs → `src/core/verbs.lua`.** Thin orchestration of the modules above. Verbs don't know about field names, link formats or other details.
 - **Display → `src/core/view.lua`.** Views only present tasks they get from a focus.
 - **User-facing errors → `src/core/errors.lua`.**
-- **Generic helpers → `src/lib/func.lua`** (and the other `src/lib` modules). Check what exists (e.g. `func.ifilter`, `func.ireduce`, `optic.traverse`) before writing a loop.
+- **Generic helpers → `src/lib/func.lua`** (and the other `src/lib` modules). Check what exists (e.g. `func.ifilter`, `func.ireduce`, `func.imerge`) before writing a loop.
 
 If a new concept appears and it isn't clear which of these it belongs to, stop and discuss it with the user before writing code.
 
@@ -130,6 +134,7 @@ If a new concept appears and it isn't clear which of these it belongs to, stop a
 
 ## Repo preferences
 
+- **Rebuild the index after a checkout.** `.vex/vexdex/` is git-ignored, so run `./src/vex resolve all` after cloning, pulling or switching branches.
 - **Track work with vex.** This repo's backlog is vex tasks in `vexdoc/vex/`. When new work or a new bug comes up, raise it with `./src/vex add <description>`, then give the task a body that fully describes it.
 - **Close out vex tasks** that a change addresses: move the status through `doing` to `done` with `./src/vex set <vexid> --status ...`. Append to a task's body rather than overwriting it, and only when there is something worth adding: a `done` status already says the task was fixed.
 - **Fix docs directly.** When documentation (e.g. this file) is stale or wrong, fix it in place instead of raising a vex task for it.

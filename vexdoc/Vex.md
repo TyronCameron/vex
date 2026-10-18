@@ -1,5 +1,3 @@
-> [!NOTE] Original design journal
-> This is the raw, first-person design journal vex was planned from — kept as-is for the rationale behind decisions elsewhere in this wiki. For the polished, per-topic reference (what's actually built, what still isn't), start at [[Home]].
 
 ## Philosophy 
 
@@ -161,7 +159,7 @@ Instead of adding in tasks via CLI, it may sometimes be better to link informati
 
 When vex is invoked it will then link through the ID in this spot so it can keep track of the path. 
 
-It will become `#abstract/ABC-123[[path]]` (illustrative — not a real Obsidian link, and this whole mechanism is unbuilt; see [[implement-inline-plugin-1]])
+It will become #abstract/ABC-123[[path]]
 
 This means that: 
 - exploration tasks can be done in an outliner 

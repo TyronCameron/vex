@@ -206,7 +206,7 @@ function TaskManager:add(task)
     task.vexid = tagger.generate(task.description, vexdex.index)
     local existing_task = self:getsingle(task.vexid)
     if existing_task then cli:throw('task-already-exists', task.vexid, existing_task.path) end 
-    task.vextype = task.vextype or 'task'
+    task.vextype = task.vextype or (config.default and config.default.tasktype) or 'task'
 
     self.tasks[task.vexid] = Task.new(task)
     return task.vexid
@@ -318,8 +318,8 @@ function TaskManager:reindexall()
 end
 
 local function normalise(vextype, task, context)
-    vextype.schema.prevalidate(vextype.schema, task, context)
     local ok, res = pcall(vextype.schema.prevalidate, vextype.schema, task, context)
+    if not ok and type(res) == "table" and res.uninterpretable then cli:throw('uninterpretable', res.uninterpretable, res.field) end
     if not ok then cli:throw('resolution-failed-normalisation', context.vexid, context.path, tostring(res)) end 
     return res
 end 
@@ -359,8 +359,7 @@ function TaskManager:resolve(vexid)
 
     local parents = {vextype} 
     while parents[1].parent do
-        local parent = self.tasktypes[parents[#parents].parent]
-        table.insert(parents, 1, parent)
+        table.insert(parents, 1, self.tasktypes[parents[1].parent])
     end 
 
     for _, parent in ipairs(parents) do 

@@ -44,3 +44,5 @@ luac.out
 **/.trash/
 .obsidian/
 .trash/
+# vex index, rebuilt with `vex resolve all`
+.vex/vexdex/

@@ -1,4 +1,4 @@
-A recipe is a named shortcut for creating a whole structure of tasks, with fields pre-filled. It's the fastest way to stop retyping the same setup every time you start a certain kind of work.
+A recipe is a named shortcut that creates one or more tasks with fields already filled in. Use one whenever you set up the same kind of work repeatedly.
 
 ## Listing recipes
 
@@ -6,19 +6,41 @@ A recipe is a named shortcut for creating a whole structure of tasks, with field
 vex recipe
 ```
 
-With no recipe name, `vex recipe` lists every recipe currently registered. Today that's just one:
-
-- `abstract` — creates a task with `vextype` forced to `abstract`, i.e. a parent/grouping task. Defined in `src/core/taskdefinitions.lua`.
+With no name, `vex recipe` lists the recipes available. vex ships `abstract`, which creates a task of type `abstract`: a parent that groups other tasks.
 
 ## Using a recipe
 
 ```txt
-vex recipe abstract Ship the v0.2 release --status todo
+vex recipe abstract Ship the v0.2 release
 ```
 
-Just like `add`, everything up to the first `--flag` becomes the task's `description`; any `--field value` pairs after that are set the same way they would be with `add`. The recipe creates the task, resolves it, prints its `vexid`, and sets your focus to it — so you can immediately follow up with `vex add Write release notes --vextype atom` to capture the next piece of work. 
+As with `add`, every word up to the first `--flag` is the description, and flags set fields. vex creates, resolves and writes every task the recipe adds, prints their vexids, and focuses on them.
+
+## Writing your own
+
+A recipe is a Lua file in `.vex/recipes`. This one creates a release with three linked stages:
+
+```lua
+recipe:recipe 'release' {
+    add = function(task, taskproperties)
+        local name = taskproperties.description
+        local stages = {}
+        for _, stage in ipairs({'Spike', 'Build', 'Test'}) do
+            table.insert(stages, task:add({description = stage .. ' ' .. name, vextype = 'atom'}))
+        end
+        local release = task:add({description = name, vextype = 'abstract', children = stages})
+        return {release, unpack(stages)}
+    end
+}
+```
+
+```txt
+vex recipe release the payments API
+```
+
+See [[04 Configuring recipes]] for the details.
 
 ## Next steps
 
-- [[03 Vexations (task types)]] for what `abstract` (and its siblings `decision`, `exploration`, `atom`) are each for.
-- [[01 CLI reference]] for the full `recipe` verb signature.
+- [[03 Task types (and vexations)]] for what `abstract`, `decision`, `exploration` and `atom` are for.
+- [[01 CLI reference]] for the `recipe` command.
