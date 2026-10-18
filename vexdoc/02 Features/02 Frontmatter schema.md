@@ -9,7 +9,7 @@ Every task is validated against the schema of its `vextype` and of each type tha
 | `vextype` | text | The task type. Defaults to `task` and must be a registered type. |
 | `status` | state | `todo`, then `doing`, then `done`. vex rejects any other move. Defaults to `todo`. |
 | `created` | datetime | Set when the task is added. |
-| `modified` | datetime | Set when the task is added, and updated whenever vex changes it. |
+| `modified` | datetime | Updated whenever vex touches the task: on add, set and every resolve, a reindex included. |
 | `vexbody` | text | Optional. The markdown body below the frontmatter. |
 | `due` | datetime | Optional. `YYYY-MM-DD HH:MM:SS`; a `T` may replace the space. |
 | `cost`, `benefit` | number | Optional. |

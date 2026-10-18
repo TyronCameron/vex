@@ -57,18 +57,6 @@ describe("vex storage (e2e, subprocess)", function()
     assert.truthy(vex(dir, "get", vexid, "--cost"):find("9", 1, true))
   end)
 
-  it("keeps each task's modified time when reindexing, and bumps it on set", function()
-    local vexid = vex(dir, "add", "Modified", "long", "ago")
-    local path = dir .. "/" .. vexid .. ".md"
-    helper.write_file(path, helper.read_file(path):gsub('\nmodified: "[^"]*"\n', '\nmodified: "2026-01-01 00:00:00"\n'))
-    local indexed = tostring(os.time({year = 2026, month = 1, day = 1, hour = 0, isdst = false}))
-    vex(dir, "resolve", "all")
-    vex(dir, "focus", "all", "--select", "modified")
-    assert.truthy(vex(dir, "view", "csv"):find(indexed, 1, true))
-    vex(dir, "set", vexid, "--cost", "1")
-    assert.is_nil(vex(dir, "view", "csv"):find(indexed, 1, true))
-  end)
-
   it("rebuilds a deleted index from the task files", function()
     linked_project()
     os.execute("rm -f " .. helper.shell_escape(dir) .. "/.vex/vexdex/*")

@@ -224,7 +224,6 @@ function TaskManager:remove(vexid)
                     linker[field] = func.ifilter(value, function(link) return link ~= vexid end)
                 end
             end
-            linker.modified = os.time()
             self.tasks[linker.vexid] = linker
             self:resolve(linker.vexid)
             self:write(linker.vexid)
