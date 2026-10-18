@@ -13,8 +13,4 @@ Need to create milestones:
 - V0.1.0 working and stable and usable on other projects
 - v1.0.0 working and stable and feature-stable (unlikely to change)
 
-These make good abstracts. 
-
-Furthermore, because a parent is defined through children, can have multiple parents ??? Maybe worth making milestones tags instead of abstracts? 
-
-
+These make good abstracts.
