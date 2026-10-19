@@ -9,7 +9,8 @@ children:
   - "[[ensure-decisions-work-fully-1]]"
   - "[[ensure-atoms-work-fully-1]]"
   - "[[ensure-vexations-abstract-1]]"
+  - "[[move-vexations-task-types-1]]"
 created: "2026-10-19 07:28:23"
-modified: "2026-10-19 07:31:49"
+modified: "2026-10-19 09:22:07"
 status: todo
 ---

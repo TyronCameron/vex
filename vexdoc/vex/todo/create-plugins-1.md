@@ -1,12 +1,11 @@
 ---
 vexid: create-plugins-1
-vextype: task
+vextype: abstract
 description: Create plugins
 children: 
-  - implement-vexations-plugin-1
-  - create-inline-plugin-1
-  - complete-vexations-plugin-1
+  - "[[create-inline-plugin-1]]"
+  - "[[complete-vexations-plugin-1]]"
 created: "2026-10-19 07:55:47"
-modified: "2026-10-19 07:59:40"
+modified: "2026-10-19 09:22:06"
 status: todo
 ---
