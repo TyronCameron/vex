@@ -1,0 +1,44 @@
+name: Docs site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Build vexdoc with Hugo and push to gh-pages
+    runs-on: ubuntu-latest
+    env:
+      HUGO_VERSION: 0.152.2
+      OBSIDIAN_EXPORT_VERSION: 25.3.0
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Hugo and obsidian-export
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -sSL "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.tar.gz" \
+            | tar -xz -C "$HOME/.local/bin" hugo
+          curl -sSL "https://github.com/zoni/obsidian-export/releases/download/v${OBSIDIAN_EXPORT_VERSION}/obsidian-export-x86_64-unknown-linux-gnu.tar.xz" \
+            | tar -xJ --strip-components=1 -C "$HOME/.local/bin" obsidian-export-x86_64-unknown-linux-gnu/obsidian-export
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Build site
+        run: site/build.sh
+
+      - name: Push to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: site/public
+          force_orphan: true
