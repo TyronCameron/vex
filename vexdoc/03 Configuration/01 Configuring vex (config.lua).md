@@ -6,7 +6,8 @@ return {
     default = {
         tasktype = 'task'
     },
-    taskowners = {}
+    taskowners = {},
+    loglimit = 1000
 }
 ```
 
@@ -18,6 +19,7 @@ return {
 | `taskowners` | The names `owner` may take. With no task owners, tasks can't have an owner. |
 | `default.tasktype` | The `vextype` of a task added without one. |
 | `paths.groupby` | Nests task files in folders by their fields (see below). |
+| `loglimit` | How many lines the verb and event logs in `.vex/vexdex` keep (see [[Events and hooks]]). Defaults to 1000. |
 
 For example, to keep tasks in a `todo` folder and assign them to two people:
 

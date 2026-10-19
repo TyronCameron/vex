@@ -37,6 +37,18 @@ describe("vex user-facing errors (e2e, subprocess)", function()
     fails(dir, "Cannot interpret `tomorrow blorp`", "focus", "all", "--interpret", "--between", "due:tomorrow blorp:")
   end)
 
+  it("stops a command whose event hook fails, naming the hook", function()
+    local vexid = vex(dir, "add", "Unowned", "task")
+    local path = dir .. "/" .. vexid .. ".md"
+    local before = helper.read_file(path)
+    helper.write_file(dir .. "/.vex/events/owners.lua", [[
+      event:register('pre-verb-set', 'needs-owner', function() error('every task needs an owner', 0) end)
+    ]])
+    local stderr = fails(dir, "Event hook 'needs-owner' failed on 'pre-verb-set': every task needs an owner", "set", vexid, "--cost", "3")
+    assert.is_not_nil(stderr:find("hook in .vex/events", 1, true))
+    assert.are.equal(before, helper.read_file(path))
+  end)
+
   it("rejects any verb outside a project", function()
     local outside = helper.make_tmp_dir()
     fails(outside, "Not in a vex directory", "show", "all")

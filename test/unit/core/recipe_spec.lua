@@ -1,3 +1,4 @@
+local event = require 'lib.event'
 local cli = require 'lib.cli'
 local recipe = require 'core.recipe'
 local task = require 'core.task'
@@ -54,6 +55,21 @@ describe("Recipe", function()
     it("rejects an unknown recipe", function()
         assert.has_error(function() recipe:add('__nosuchrecipe', {description = "anything at all"}) end)
         assert.stub(cli.throw).was.called_with(cli, 'unknown-recipe', '__nosuchrecipe')
+    end)
+
+    it("fires pre- and post-recipe-add with the recipe and properties, then the focus made", function()
+        recipe:recipe '__specevented' {
+            add = function(taskmanager, properties) return {taskmanager:add(properties)} end
+        }
+        local fired = {}
+        for _, name in ipairs {'pre-recipe-add', 'post-recipe-add'} do
+            event:register(name, 'spec', function(...) fired[name] = {...} end)
+        end
+        local properties = {description = "evented recipe task"}
+        local f = recipe:add('__specevented', properties)
+        for _, name in ipairs {'pre-recipe-add', 'post-recipe-add'} do event:remove(name, 'spec') end
+        assert.same({'__specevented', properties}, fired['pre-recipe-add'])
+        assert.same({'__specevented', f}, fired['post-recipe-add'])
     end)
 
 end)

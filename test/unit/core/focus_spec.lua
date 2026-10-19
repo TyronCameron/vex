@@ -1,3 +1,4 @@
+local event = require 'lib.event'
 local Focus = require 'core.focus'
 local func = require 'lib.func'
 local cli = require 'lib.cli'
@@ -418,6 +419,18 @@ describe("Focus", function()
             assert.same({"other"}, result)
         end)
 
+    end)
+
+    it("fires pre- and post-focus-write with the focus being saved", function()
+        local fired = {}
+        for _, name in ipairs {'pre-focus-write', 'post-focus-write'} do
+            event:register(name, 'spec', function(...) fired[name] = {...} end)
+        end
+        local f = Focus.focus('all')
+        f:write()
+        for _, name in ipairs {'pre-focus-write', 'post-focus-write'} do event:remove(name, 'spec') end
+        assert.same({f}, fired['pre-focus-write'])
+        assert.same({f}, fired['post-focus-write'])
     end)
 
 end)

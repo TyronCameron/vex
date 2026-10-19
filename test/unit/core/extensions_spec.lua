@@ -36,6 +36,14 @@ describe("extensions", function()
         assert.equal('shown', view:display('__specview', nil, {}))
     end)
 
+    it("runs every file in .vex/events with event in scope", function()
+        extension("events/specevent.lua", "event:on '__specevent' (function(t) t.heard = true end)")
+        reload()
+        local heard = {}
+        require('lib.event'):trigger('__specevent', heard)
+        assert.is_true(heard.heard)
+    end)
+
     it("runs task types before the recipes that use them", function()
         extension("tasks/ordered.lua", "task:task '__ordered':extends 'task' { schema = schema.atleast {} }")
         extension("recipes/ordered.lua", "assert(task.tasktypes.__ordered)")

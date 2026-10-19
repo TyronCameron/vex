@@ -5,6 +5,7 @@ local pretty = require 'lib.pretty'
 local binser = require 'lib.binser'
 local lfsext = require 'lib.lfsext'
 local func = require 'lib.func'
+local event = require 'lib.event'
 
 local VexDex = {}
 VexDex.__index = VexDex
@@ -162,6 +163,27 @@ function VexDex:writefocus()
     return self 
 end
 
+function VexDex:log(file, line)
+    local f = assert(io.open(self:vexpath("vexdex/" .. file), "a"))
+    f:write(line, "\n")
+    f:close()
+    return self
+end
+
+function VexDex:trimlog(file, limit)
+    local path = self:vexpath("vexdex/" .. file)
+    if lfs.attributes(path, "mode") ~= "file" then return self end
+    local lines = {}
+    for line in io.lines(path) do table.insert(lines, line) end
+    if #lines <= limit then return self end
+    self:atomic(path, function(tmp)
+        local f = assert(io.open(tmp, "w"))
+        f:write(table.concat(func.last(lines, limit), "\n"), "\n")
+        f:close()
+    end)
+    return self
+end
+
 function VexDex:atomic(path, func)
     local id = tostring(os.time()) .. tostring(math.random(1000))
     local vexpath = self:vexpath("tmp/" .. id .. '.txt')
@@ -179,4 +201,17 @@ function VexDex:atomic(path, func)
 end
 
 -- only need one
-return VexDex.new()
+local vexdex = VexDex.new()
+
+event:register('*', 'vexdex', function(name, ...)
+    local limit = require('core.config').loglimit or 1000
+    local time = os.date("%Y-%m-%d %H:%M:%S")
+    vexdex:log("event-log.txt", time .. "\t" .. name .. "\t" .. pretty.table({...}):gsub("\n%s*", " "))
+    local args = ...
+    if name:match("^pre%-verb%-") and args.raw then
+        vexdex:log("verb-log.txt", time .. "\t" .. args.raw)
+        vexdex:trimlog("verb-log.txt", limit):trimlog("event-log.txt", limit)
+    end
+end)
+
+return vexdex

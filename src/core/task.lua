@@ -14,6 +14,7 @@ local pretty = require 'lib.pretty'
 local vexdex = require 'core.vexdex'
 local focus = require 'core.focus'
 local config = require 'core.config'
+local event = require 'lib.event'
 
 local taskmanager
 
@@ -200,6 +201,7 @@ end
 -- creates new task
 function TaskManager:add(task)
     assert(task and type(task) == "table", "add() requires a table of task properties")
+    event:trigger('pre-task-add', task)
     if not (type(task.description) == "string") then cli:throw("task-creation-failed", "task must have a description to be added") end
     if not (#task.description > 3) then cli:throw("task-creation-failed", "Need more than 3 characters to create a task") end
     
@@ -209,12 +211,14 @@ function TaskManager:add(task)
     task.vextype = task.vextype or (config.default and config.default.tasktype) or 'task'
 
     self.tasks[task.vexid] = Task.new(task)
+    event:trigger('post-task-add', task.vexid, self.tasks[task.vexid])
     return task.vexid
 end
 
 -- removes task by id or focus
 function TaskManager:remove(vexid)
     assert(vexid, "remove() requires an id or focus")
+    event:trigger('pre-task-remove', vexid)
     if vexdex:get(vexid) then
         focus.focus(vexid):backlinks():each_task(function(linker)
             for field, value in pairs(linker) do
@@ -230,12 +234,16 @@ function TaskManager:remove(vexid)
         end)
     end
     self.tasks[vexid] = nil
+    event:trigger('post-task-remove', vexid)
     return vexid
 end
 
 -- gets data from a task and returns it as a string for the command line
 function TaskManager:get(vexid, fields)
-    return self:format(vexid):tostring(fields)
+    event:trigger('pre-task-get', vexid, fields)
+    local result = self:format(vexid):tostring(fields)
+    event:trigger('post-task-get', vexid, fields, result)
+    return result
 end
 
 local function aslist(value)
@@ -261,6 +269,7 @@ local listmodifiers = {
 -- sets task properties for a given focus; modifiers[field] = 'insert' or 'remove' edits a list by value instead
 function TaskManager:set(vexid, tab, modifiers)
     assert(tab and type(tab) == "table", "set() requires a table")
+    event:trigger('pre-task-set', vexid, tab, modifiers)
     local task = {}
     for k, v in pairs(self:getsingle(vexid)) do task[k] = v end
     for k,v in pairs(tab) do 
@@ -275,13 +284,17 @@ function TaskManager:set(vexid, tab, modifiers)
     end
     task.modified = os.time()
     self.tasks[vexid] = Task.new(task)
+    event:trigger('post-task-set', vexid, self.tasks[vexid])
     return self.tasks[vexid] 
 end
 
 -- shows task, basically cat 'filename'
 function TaskManager:show(vexid)
     assert(vexid, "show() requires an vexid")
-    return self:format(vexid):show(self:getcurrentpath(vexid))
+    event:trigger('pre-task-show', vexid)
+    local result = self:format(vexid):show(self:getcurrentpath(vexid))
+    event:trigger('post-task-show', vexid, result)
+    return result
 end
 
 ---------------------------------------------------
@@ -299,6 +312,7 @@ end
 
 -- rebuild the entire vexdex by iterating through the filesystem
 function TaskManager:reindexall()
+    event:trigger('pre-task-reindexall')
     for key in pairs(vexdex.index) do
         vexdex:unsafe_remove(key)
     end
@@ -314,6 +328,7 @@ function TaskManager:reindexall()
         vexdex:unsafe_add(vexid, self.tasks[vexid])
     end
     vexdex:writeindex()
+    event:trigger('post-task-reindexall')
     return self 
 end
 
@@ -342,6 +357,7 @@ end
 -- resolve
 function TaskManager:resolve(vexid)
     if not vexid then cli:throw('missing-required-field', vexid, 'vexid') end 
+    event:trigger('pre-task-resolve', vexid)
 
     local task = self:getsingle(vexid) or {}
     if not task.vextype then cli:throw('missing-required-field', task.vexid, 'vextype') end 
@@ -380,6 +396,7 @@ function TaskManager:resolve(vexid)
         self:arrange(linked.vexid, arranged)
     end
     vexdex:writeindex()
+    event:trigger('post-task-resolve', vexid, task)
 end
 
 ---------------------------------------------------
@@ -470,20 +487,24 @@ end
 
 -- reads a file from disk and adds it to memory by path
 function TaskManager:readfrompath(path)
+    event:trigger('pre-task-read', path)
     local ok, task = pcall(taskformat.read, path)
     if ok and task then 
         task = self:unformat(task)
         self.tasks[task.vexid] = Task.new(task)
         if relative(path) then vexdex:unsafe_locate(task.vexid, relative(path)) end
         self:index(task.vexid)
+        event:trigger('post-task-read', path, self.tasks[task.vexid])
         return task
     else 
+        event:trigger('post-task-read', path, nil)
         return nil 
     end
 end
 
 -- writes a file from disk
 function TaskManager:write(vexid)
+    event:trigger('pre-task-write', vexid)
     local task = self:format(vexid)
     local path = self:getcurrentpath(vexid)
     lfs.mkdir(dirname(path))
@@ -492,11 +513,13 @@ function TaskManager:write(vexid)
     end)
     vexdex:unsafe_locate(vexid, relative(path))
     self:index(vexid)
+    event:trigger('post-task-write', vexid, path)
     return vexid
 end
 
 -- moves a task's file to the path it should live at
 function TaskManager:move(vexid)
+    event:trigger('pre-task-move', vexid)
     local relpath = self:getrelpath(vexid)
     local from, to = self:getcurrentpath(vexid), taskroot() .. '/' .. relpath
     if from ~= to and lfs.attributes(from, "mode") ~= "file" then from = self:find(vexid) end
@@ -507,6 +530,7 @@ function TaskManager:move(vexid)
         tidy(from)
     end
     vexdex:unsafe_locate(vexid, relpath)
+    event:trigger('post-task-move', vexid, from, to)
     return vexid
 end
 
@@ -522,6 +546,7 @@ end
 
 -- deletes a file from disk
 function TaskManager:delete(vexid)
+    event:trigger('pre-task-delete', vexid)
     local linked = focus.focus(vexid):forwardlinks():get()
     local path = self:getcurrentpath(vexid)
     os.remove(path)
@@ -532,6 +557,7 @@ function TaskManager:delete(vexid)
         self:arrange(task.vexid, arranged)
     end
     vexdex:writeindex()
+    event:trigger('post-task-delete', vexid, path)
     return vexid
 end
 

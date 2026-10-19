@@ -110,4 +110,39 @@ describe("vex storage (e2e, subprocess)", function()
     assert.truthy(out:find(kept, 1, true))
     assert.is_nil(out:find(started, 1, true))
   end)
+
+  it("rebuilds the same tasks elsewhere by replaying the verb log", function()
+    vex(dir, "add", "Plan", "a", "trip", "--vextype", "abstract")
+    vex(dir, "add", "Book", "flights", "--cost", "5", "--vexbody", "Window seat, please")
+    vex(dir, "set", "plan-trip-1", "--insert", "--children", "book-flights-1")
+    vex(dir, "recipe", "abstract", "Pack", "bags")
+    vex(dir, "focus", "book-flights-1")
+    vex(dir, "set", "--status", "doing")
+    vex(dir, "add", "Throw", "this", "away")
+    vex(dir, "remove", "throw-away-1")
+
+    local replay = helper.project()
+    for line in io.lines(dir .. "/.vex/vexdex/verb-log.txt") do
+      local raw = line:match("^[^\t]*\t(.*)$")
+      local status = os.execute("cd " .. helper.shell_escape(replay) .. " && " .. helper.shell_escape(helper.VEX_BIN) .. " " .. raw .. " >/dev/null 2>&1")
+      assert.is_true(status == 0 or status == true, "replaying `" .. raw .. "` failed")
+    end
+
+    local function tasks(project)
+      local result = {}
+      for _, vexid in ipairs({"plan-trip-1", "book-flights-1", "pack-bags-1"}) do
+        local path = helper.task_file(project, vexid)
+        local fields = helper.frontmatter(path)
+        fields.created, fields.modified = nil, nil
+        result[vexid] = {fields, helper.read_file(path):match("\n%-%-%-\n(.*)$")}
+      end
+      result.removed = helper.task_file(project, "throw-away-1")
+      return result
+    end
+    local original, replayed = tasks(dir), tasks(replay)
+    helper.rm_tmp_dir(replay)
+    assert.same(original, replayed)
+    assert.are.equal("doing", replayed["book-flights-1"][1].status)
+  end)
+
 end)

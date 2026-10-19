@@ -84,4 +84,53 @@ describe("vexdex", function()
         end
     end)
 
+    describe("logs", function()
+
+        local config = require 'core.config'
+        local event = require 'lib.event'
+
+        local function lines(file)
+            local result = {}
+            local path = vexdex:vexpath("vexdex/" .. file)
+            if lfs.attributes(path, "mode") ~= "file" then return result end
+            for line in io.lines(path) do table.insert(result, line) end
+            return result
+        end
+
+        before_each(function()
+            os.remove(vexdex:vexpath("vexdex/verb-log.txt"))
+            os.remove(vexdex:vexpath("vexdex/event-log.txt"))
+        end)
+
+        after_each(function()
+            config.properties.loglimit = nil
+        end)
+
+        it("logs every event, with its args, to event-log.txt", function()
+            event:trigger('__spec-event', '__spec-arg')
+            local logged = lines("event-log.txt")
+            assert.equal(1, #logged)
+            assert.truthy(logged[1]:match("^%d%d%d%d%-%d%d%-%d%d %d%d:%d%d:%d%d\t__spec%-event\t.*__spec%-arg"))
+        end)
+
+        it("logs the command line of every verb to verb-log.txt before it runs", function()
+            event:trigger('pre-verb-add', {raw = 'add Make coffee --due tomorrow'})
+            event:trigger('post-verb-add', {raw = 'add Make coffee --due tomorrow'})
+            local logged = lines("verb-log.txt")
+            assert.equal(1, #logged)
+            assert.truthy(logged[1]:match("^%d%d%d%d%-%d%d%-%d%d %d%d:%d%d:%d%d\tadd Make coffee %-%-due tomorrow$"))
+        end)
+
+        it("keeps only the last loglimit lines of each log", function()
+            config.properties.loglimit = 3
+            for i = 1, 5 do event:trigger('pre-verb-spec', {raw = 'spec ' .. i}) end
+            local logged = lines("verb-log.txt")
+            assert.equal(3, #logged)
+            assert.truthy(logged[1]:find("spec 3", 1, true))
+            assert.truthy(logged[3]:find("spec 5", 1, true))
+            assert.equal(3, #lines("event-log.txt"))
+        end)
+
+    end)
+
 end)

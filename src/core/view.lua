@@ -7,6 +7,7 @@ local sortdata = plugin:get 'sortdata'
 local format = require 'lib.format'
 local Focus = require 'core.focus'
 local task = require 'core.task'
+local event = require 'lib.event'
 
 local View = {}
 View.__index = View
@@ -26,7 +27,10 @@ end
 -- actually print stuff to screen
 function View:display(viewname, focus, flags)
     if not self.views[viewname] then cli:throw('unknown-view', viewname) end 
-    return self.views[viewname].display(focus, flags)
+    event:trigger('pre-view-display', viewname, focus, flags)
+    local result = self.views[viewname].display(focus, flags)
+    event:trigger('post-view-display', viewname, focus, flags, result)
+    return result
 end
 
 -- only need one
