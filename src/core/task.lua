@@ -273,7 +273,7 @@ function TaskManager:set(vexid, tab, modifiers)
     local task = {}
     for k, v in pairs(self:getsingle(vexid)) do task[k] = v end
     for k,v in pairs(tab) do 
-        assert(k ~= "vexid", "Cannot change the vexid with set")
+        if k == "vexid" then cli:throw('immutable-vexid', vexid) end
         local modifier = modifiers and modifiers[k]
         if modifier then
             if not listmodifiers[modifier] then cli:throw('unknown-modifier', modifier) end

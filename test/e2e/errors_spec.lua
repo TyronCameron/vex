@@ -98,6 +98,16 @@ describe("vex user-facing errors (e2e, subprocess)", function()
     fails(dir, "field = vextype", "resolve", "all")
   end)
 
+  it("rejects an abstract listing itself as a child", function()
+    local parent = vex(dir, "add", "Self", "parent", "--vextype", "abstract")
+    fails(dir, "cannot be a child of itself", "set", parent, "--children", parent)
+  end)
+
+  it("rejects changing a vexid", function()
+    local vexid = vex(dir, "add", "Fixed", "name", "task")
+    fails(dir, "cannot be changed", "set", vexid, "--vexid", "renamed-1")
+  end)
+
   it("rejects a dependency cycle", function()
     local first = vex(dir, "add", "Cycle", "first", "task")
     local second = vex(dir, "add", "Cycle", "second", "task")

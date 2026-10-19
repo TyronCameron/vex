@@ -118,4 +118,27 @@ describe("pretty", function()
         assert.truthy(result:find("30"))
     end)
 
+    it("`pretty.tabular` has a column for a field only later rows hold, blank where a row lacks it", function()
+        local data = {{name = "alice"}, {name = "bob", age = "30"}}
+        local result = pretty.tabular(data, pairs)
+        assert.truthy(result:find("age"))
+        assert.truthy(result:find("30"))
+        assert.is_nil(result:find("nil"))
+    end)
+
+    it("`pretty.tabular` writes a list as its comma-separated values", function()
+        local result = pretty.tabular({{children = {"first-1", "second-1"}}}, pairs)
+        assert.truthy(result:find("first-1, second-1", 1, true))
+        assert.is_nil(result:find("table:", 1, true))
+    end)
+
+    it("`pretty.tabular` cuts a long list short with ...", function()
+        local long = {}
+        for i = 1, 20 do table.insert(long, "child-task-" .. i) end
+        local result = pretty.tabular({{children = long}}, pairs)
+        assert.truthy(result:find("child-task-1, ", 1, true))
+        assert.truthy(result:find(", ...", 1, true))
+        assert.is_nil(result:find("child-task-20", 1, true))
+    end)
+
 end)

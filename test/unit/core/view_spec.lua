@@ -51,6 +51,19 @@ describe("view", function()
         assert.truthy(err:find('usage', 1, true))
     end)
 
+    it("shows only the selected fields in the tabular view", function()
+        local result = view:display('tabular', focus.focus('all'):select('status'), {})
+        assert.truthy(result:find("status", 1, true))
+        assert.is_nil(result:find("description", 1, true))
+        assert.is_nil(result:find("created", 1, true))
+    end)
+
+    it("shows a field the first task lacks in the tabular view", function()
+        local result = view:display('tabular', focus.focus(child, parent), {})
+        assert.truthy(result:find("children", 1, true))
+        assert.truthy(result:find(child, 1, true))
+    end)
+
     it("renders the singular view for each linked task", function()
         for _, vexid in ipairs({child, parent, dependent}) do
             local result = view:display('singular', focus.focus(vexid), {})

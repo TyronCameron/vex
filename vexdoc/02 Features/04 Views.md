@@ -8,7 +8,7 @@ With no arguments, `vex view` lists the views. With one argument, it is the view
 
 ## `tabular`
 
-A table of every field except the body, formatted for reading.
+A table of every field except the body, formatted for reading. A list shows as its comma-separated values, cut short with `...` when it is long, and a field a task doesn't have is left blank.
 
 ```txt
 vexid                 vextype   status

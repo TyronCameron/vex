@@ -160,6 +160,20 @@ cli:error 'multiple-parents' {
     hint = "A task may appear in at most one abstract's `children`. Remove it from one of them."
 }
 
+cli:error 'self-child' {
+    function(vexid)
+        return 'Task `' .. tostring(vexid) .. '` cannot be a child of itself.'
+    end,
+    hint = "Remove the task from its own `children`."
+}
+
+cli:error 'immutable-vexid' {
+    function(vexid)
+        return 'The vexid of `' .. tostring(vexid) .. '` cannot be changed.'
+    end,
+    hint = "A vexid is a task's identity and filename. Add a new task instead, then remove this one."
+}
+
 cli:error 'dependency-cycle' {
     function(vexid, dependency)
         return 'Task `' .. tostring(vexid) .. '` cannot depend on `' .. tostring(dependency) .. '`, which already depends on it directly or indirectly.'

@@ -71,6 +71,11 @@ local function singleparent(child, context)
     return true
 end
 
+local function notself(child, context)
+    if child == context.vexid then cli:throw('self-child', child) end
+    return true
+end
+
 local function acyclic(dependency, context)
     for _, reachable in ipairs(focus.focus(dependency):tree('dependencies'):get()) do
         if reachable.vexid == context.vexid then cli:throw('dependency-cycle', context.vexid, dependency) end
@@ -132,6 +137,7 @@ task:task 'abstract':extends 'task' {
             schema.vec {
                 schema.all {
                     schema.formatted {schema.vexlink},
+                    schema.constraint {notself},
                     schema.constraint {singleparent}
                 }
             },
