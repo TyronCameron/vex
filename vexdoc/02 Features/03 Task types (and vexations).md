@@ -15,9 +15,9 @@ Use an exploration when you don't yet know what needs to happen. The task marks 
 
 An abstract groups other tasks through its `children` and holds nothing else. Capture the shape of the work first and fill it in later:
 
-```txt
-vex add Ship the beta --vextype abstract
-vex set ship-beta-1 --insert --children write-release-notes-1
+```console
+$ vex add Ship the beta --vextype abstract
+$ vex set ship-beta-1 --insert --children write-release-notes-1
 ```
 
 Parents are always found through `children`. `--reversetree children` walks up from a task, and the `lineage` transient lists its abstracts.
@@ -26,9 +26,9 @@ Parents are always found through `children`. `--reversetree children` walks up f
 
 Use a decision when the path forward branches. `options` lists the candidate tasks, often atoms, and `decision` records the choice:
 
-```txt
-vex add Choose a database --vextype decision --options use-postgres-1,use-sqlite-1
-vex set choose-database-1 --decision use-sqlite-1
+```console
+$ vex add Choose a database --vextype decision --options use-postgres-1,use-sqlite-1
+$ vex set choose-database-1 --decision use-sqlite-1
 ```
 
 ### Atom

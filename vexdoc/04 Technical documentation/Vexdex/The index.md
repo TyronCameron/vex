@@ -23,8 +23,8 @@ When a command starts, vex loads the index from `.vex/vexdex`. If the folder or 
 
 `add`, `set`, `remove` and `resolve` update the index for the tasks they touch. To pick up changes made outside vex, such as files edited, added or deleted by hand, a script or an AI agent, run:
 
-```txt
-vex resolve all
+```console
+$ vex resolve all
 ```
 
 This clears the index, reads and resolves every task file under `taskfolder`, and writes the index again.

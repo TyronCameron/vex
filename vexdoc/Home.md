@@ -30,25 +30,34 @@ Because a task is a text file, anything that reads and writes text can work with
 
 Capture work at whatever level of detail you have:
 
-```txt
-vex add Ship the billing rewrite --vextype abstract
-vex add Migrate existing invoices
-vex add Fix the flaky webhook retry
+```console
+$ vex add Ship the billing rewrite --vextype abstract
+ship-billing-rewrite-1
+$ vex add Migrate existing invoices
+migrate-existing-invoices-1
+$ vex add Fix the flaky webhook retry
+fix-flaky-webhook-retry-1
 ```
 
 Link the pieces together and move work along:
 
-```txt
-vex set ship-billing-rewrite-1 --children migrate-existing-invoices-1,fix-flaky-webhook-retry-1
-vex set fix-flaky-webhook-retry-1 --status doing
+```console
+$ vex set ship-billing-rewrite-1 --children migrate-existing-invoices-1,fix-flaky-webhook-retry-1
+$ vex set fix-flaky-webhook-retry-1 --status doing
 ```
 
 Then review it without opening a file:
 
-```txt
-vex view all kanban
-vex view ship-billing-rewrite-1 singular
-vex view all overview
+```console
+$ vex view all kanban
+┌───────────────────────────┬─────────────────────────────┐
+│ doing                     │ todo                        │
+├───────────────────────────┼─────────────────────────────┤
+│ fix-flaky-webhook-retry-1 │ migrate-existing-invoices-1 │
+│                           │ ship-billing-rewrite-1      │
+└───────────────────────────┴─────────────────────────────┘
+$ vex view ship-billing-rewrite-1 singular
+$ vex view all overview
 ```
 
 ### A team assigning work through git
@@ -61,18 +70,18 @@ taskowners = {'alice', 'bob'}
 
 `owner` must then be one of those names. Assigning work is a commit:
 
-```txt
-vex add Write the migration script --owner bob
-git commit -am "Assign the migration script to bob" && git push
+```console
+$ vex add Write the migration script --owner bob
+$ git commit -am "Assign the migration script to bob" && git push
 ```
 
 And picking it up is a pull:
 
-```txt
-git pull
-vex resolve all
-vex focus all --filter owner:bob
-vex view tabular
+```console
+$ git pull
+$ vex resolve all
+$ vex focus all --filter owner:bob
+$ vex view tabular
 ```
 
 Git does the syncing and the history; vex keeps the data structured and diffable.
@@ -95,8 +104,12 @@ recipe:recipe 'release' {
 }
 ```
 
-```txt
-vex recipe release the payments API
+```console
+$ vex recipe release the payments API
+payments-api-1
+spike-payments-api-1
+build-payments-api-1
+test-payments-api-1
 ```
 
 This creates and links all four tasks, and focuses on them. See [[04 Configuring recipes]].

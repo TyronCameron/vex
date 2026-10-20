@@ -43,8 +43,8 @@ vex uses the nearest `.vex` in the current folder or above it. For a personal ta
 
 ## Adding tasks
 
-```txt
-vex add Make coffee for wife --cost 5
+```console
+$ vex add Make coffee for wife --cost 5
 ```
 
 The task file goes in `taskfolder`. Its vexid comes from the description's first sentence. vex lowercases it, drops filler words and `-ly` adverbs, and keeps the main clause ahead of any prepositional phrase, within 32 characters and 6 words. Then it hyphenates the words and appends a counter:
@@ -56,15 +56,15 @@ The task file goes in `taskfolder`. Its vexid comes from the description's first
 
 ## Editing tasks
 
-```txt
-vex set make-coffee-wife-1 --status doing --owner alice
+```console
+$ vex set make-coffee-wife-1 --status doing --owner alice
 ```
 
 `set` overwrites each field you give it, then resolves the task. To edit a list field by value, put `--insert` or `--remove` before it:
 
-```txt
-vex set plan-trip-1 --insert --children book-flights-1,book-hotel-1
-vex set plan-trip-1 --remove --children book-flights-1
+```console
+$ vex set plan-trip-1 --insert --children book-flights-1,book-hotel-1
+$ vex set plan-trip-1 --remove --children book-flights-1
 ```
 
 `--insert` skips values already in the list.
@@ -73,16 +73,16 @@ vex set plan-trip-1 --remove --children book-flights-1
 
 A focus is a lazy, saved query over your tasks. `vex focus` builds one and saves it, and other commands read it back when you don't give them a focus:
 
-```txt
-vex focus all --filter status:done
-vex get --vexid --description
+```console
+$ vex focus all --filter status:done
+$ vex get --vexid --description
 ```
 
 Flags run in order, each one working on the result of the one before. The two commands below build the same focus as `vex focus all --filter status:done --select status,description`:
 
-```txt
-vex focus all --filter status:done
-vex focus --select status,description
+```console
+$ vex focus all --filter status:done
+$ vex focus --select status,description
 ```
 
 ### Starting points
@@ -129,9 +129,9 @@ Values are separated by `:`.
 
 `--groupby` splits a focus into groups. Every later flag then works within each group, so `--orderby` sorts each group and `--rn` numbers each group from 1. This is like SQL's `ROW_NUMBER() OVER (PARTITION BY ... ORDER BY ...)`:
 
-```txt
-vex focus all --groupby owner --orderby due --rn --select owner,due,rn
-vex view tabular
+```console
+$ vex focus all --groupby owner --orderby due --rn --select owner,due,rn
+$ vex view tabular
 ```
 
 Commands and views list the groups one after another. A set operation (`--union`, `--intersect`, `--xor`, `--notin`, `--onlyin`, `--complement`) gathers the groups back into one.
@@ -140,10 +140,10 @@ Commands and views list the groups one after another. A set operation (`--union`
 
 Dates and times can be written as phrases, read relative to now: in `add` and `set` (`--due "friday arvo"`), in a hand-edited task file, and in focus values. `--interpret` before `--filter` or `--between` reads that flag's values through each field's interpret iso:
 
-```txt
-vex focus all --interpret --between due:now:"next tuesday"
-vex focus all --interpret --between due::yesterday
-vex focus all --interpret --filter due:tomorrow
+```console
+$ vex focus all --interpret --between due:now:"next tuesday"
+$ vex focus all --interpret --between due::yesterday
+$ vex focus all --interpret --filter due:tomorrow
 ```
 
 A saved focus is read again each time it is used, so "next tuesday" always means the coming Tuesday. Phrases combine a day, a time of day and an offset, in any order:
@@ -182,8 +182,8 @@ Resolution keeps every task valid. `add`, `set`, `remove` and `recipe` resolve t
 
 ## Recipes
 
-```txt
-vex recipe abstract Ship v0.2
+```console
+$ vex recipe abstract Ship v0.2
 ```
 
 A recipe creates one or more tasks with fields already filled in. vex ships `abstract`; add your own in `.vex/recipes` ([[04 Configuring recipes]]).

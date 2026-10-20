@@ -1,0 +1,132 @@
+/* Template Name: LotusLabs Docs
+   Author: Colin Wilson
+   E-mail: colin.wilson@proton.me
+   Created: October 2022
+   Version: 1.0.0
+   File Description: Main CSS file of the Landing Page template
+*/
+
+//Custom Font Variables
+$font-family-secondary:  {{ .Site.Params.secondary_font | default "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Ubuntu'" }};
+$font-family-sans-serif: {{ .Site.Params.sans_serif_font | default "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Ubuntu'" }};
+$font-family-monospace:  {{ .Site.Params.mono_font | default "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace" }};
+
+//Fonts
+// @import "custom/fonts/fonts";
+
+//Core files
+@import "bootstrap/functions";
+@import "bootstrap/variables";
+@import "variables";
+@import "bootstrap/mixins";
+@import "bootstrap/bootstrap";
+
+// Plugins
+@import "custom/plugins/icons/google-material";
+
+// Structure
+@import "custom/structure/general";
+@import "custom/structure/topbar";
+// @import "custom/structure/content";
+// @import "custom/structure/sidebar-layouts";
+// @import "custom/structure/doc-nav";
+// @import "custom/structure/toc-layouts";
+@import "custom/structure/footer";
+
+// // Components
+@import "custom/components/buttons";
+@import "custom/components/badge";
+@import "custom/components/backgrounds";
+// @import "custom/components/alerts";
+// @import "custom/components/card";
+
+// // Pages
+// @import "custom/pages/blog";
+
+@import "custom/pages/features";
+@import "custom/pages/helper";
+@import "custom/pages/hero";
+{{ if ($.Scratch.Get "image_compare_enabled") }}@import "custom/pages/image-compare-viewer";{{ end }}
+
+// @import "custom/pages/simplebar";
+
+body {
+    color: #dee2e6;
+    background-color: #181921;
+}
+
+#topnav,
+#topnav.nav-sticky {
+    background-color: transparent;
+}
+
+#topnav .navigation-menu > li > a,
+#topnav .social-link a {
+    color: #dee2e6 !important;
+}
+
+.hero {
+    padding-bottom: 80px;
+    background:
+        radial-gradient(ellipse at 15% 0%, rgba(34, 211, 238, 0.22), transparent 55%),
+        radial-gradient(ellipse at 90% 20%, rgba(240, 171, 252, 0.12), transparent 50%),
+        #181921;
+}
+
+.heading,
+.title,
+h1, h2, h3, h4, h5, h6 {
+    color: #f8f9fa !important;
+}
+
+.text-muted,
+.para-desc {
+    color: #b6b9be !important;
+}
+
+.features .icon {
+    color: #22d3ee !important;
+    background-color: rgba(34, 211, 238, 0.12) !important;
+}
+
+.features .content p,
+.features p {
+    color: #b6b9be !important;
+}
+
+code {
+    color: #f0abfc;
+}
+
+footer,
+.footer {
+    color: #b6b9be;
+    background-color: #12131a !important;
+}
+
+.btn-primary {
+    color: #0b1220 !important;
+    background-color: #22d3ee !important;
+    border-color: #22d3ee !important;
+
+    &:hover {
+        background-color: #67e8f9 !important;
+        border-color: #67e8f9 !important;
+    }
+}
+
+.btn-outline-primary,
+.btn-soft-primary {
+    color: #22d3ee !important;
+    border-color: rgba(34, 211, 238, 0.5) !important;
+
+    &:hover {
+        color: #0b1220 !important;
+        background-color: #22d3ee !important;
+    }
+}
+
+.badge.bg-soft-primary {
+    color: #22d3ee !important;
+    background-color: rgba(34, 211, 238, 0.12) !important;
+}
