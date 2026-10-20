@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Features on vex</title><link>https://tyroncameron.github.io/vex/docs/02-features/</link><description>Recent content in Features on vex</description><generator>Hugo</generator><language>en-GB</language><atom:link href="https://tyroncameron.github.io/vex/docs/02-features/index.xml" rel="self" type="application/rss+xml"/><item><title>CLI reference</title><link>https://tyroncameron.github.io/vex/docs/02-features/01-cli-reference/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://tyroncameron.github.io/vex/docs/02-features/01-cli-reference/</guid><description>&lt;h2 id="conventions"&gt;Conventions &lt;a href="#conventions" class="anchor" aria-hidden="true"&gt;&lt;i class="material-icons align-middle"&gt;link&lt;/i&gt;&lt;/a&gt;&lt;/h2&gt;&lt;p&gt;&lt;code&gt;vex &amp;lt;command&amp;gt; [arguments] [--flags]&lt;/code&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Every word up to the first &lt;code&gt;--flag&lt;/code&gt; is positional. &lt;code&gt;add&lt;/code&gt; and &lt;code&gt;recipe&lt;/code&gt; join them into the description.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;[focus]&lt;/code&gt; is optional everywhere. Without it, a command uses your saved focus (&lt;code&gt;prev&lt;/code&gt;). See &lt;a data-bs-delay="{&amp;#34;hide&amp;#34;:300,&amp;#34;show&amp;#34;:550}" data-bs-html="true" data-bs-title="&lt;a href='https://tyroncameron.github.io/vex/docs/02-features/01-cli-reference/'&gt;&lt;p&gt;FEATURES&lt;/p&gt;&lt;strong&gt;CLI reference&lt;/strong&gt;&lt;br&gt;`vex &lt;command&gt; [arguments] [--flags]`&lt;/a&gt;" data-bs-toggle="tooltip" href="https://tyroncameron.github.io/vex/docs/02-features/01-cli-reference/#focuses"&gt;Focuses&lt;/a&gt;.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;--field value&lt;/code&gt; sets a field; a &lt;code&gt;--field&lt;/code&gt; without a value names one.&lt;/li&gt;
+&lt;li&gt;Quoting works as in a shell: &lt;code&gt;--vexbody &amp;quot;two words&amp;quot;&lt;/code&gt; is one value, and &lt;code&gt;--filter status:&amp;quot;not done&amp;quot;&lt;/code&gt; matches &lt;code&gt;not done&lt;/code&gt;.&lt;/li&gt;
+&lt;li&gt;A comma outside quotes makes a list: &lt;code&gt;--children a,b&lt;/code&gt; sets two children, and &lt;code&gt;vex focus a,b&lt;/code&gt; focuses on both tasks. A value containing spaces keeps its commas, and &lt;code&gt;\,&lt;/code&gt; writes a literal comma.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="commands"&gt;Commands &lt;a href="#commands" class="anchor" aria-hidden="true"&gt;&lt;i class="material-icons align-middle"&gt;link&lt;/i&gt;&lt;/a&gt;&lt;/h2&gt;
+
+
+
+
+
+
+&lt;table class="table table-hover"&gt;
+ &lt;thead&gt;
+ &lt;tr&gt;
+ &lt;th&gt;Command&lt;/th&gt;
+ &lt;th&gt;Description&lt;/th&gt;
+ &lt;/tr&gt;
+ &lt;/thead&gt;
+ &lt;tbody&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;vex help [command]&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;Lists every command, or describes one.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;vex init&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;Creates a &lt;code&gt;.vex&lt;/code&gt; folder in the current folder.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;vex add Description [--fields...]&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;Creates and resolves a task, prints its vexid and focuses on it.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;vex show [focus]&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;Prints each task&amp;rsquo;s frontmatter and body.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;vex get [focus] [--fields...]&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;Prints one tab-separated line per task. &lt;code&gt;--select a,b&lt;/code&gt; names the fields as a list. Defaults to &lt;code&gt;vexid&lt;/code&gt;.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;vex set [focus] [--fields...]&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;Sets fields on every task in the focus, then resolves them.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;vex remove [focus]&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;Deletes every task in the focus, removes links to them from other tasks, and clears the focus.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;vex focus [focus] [--flags...]&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;Builds and saves a focus. With no arguments, prints the saved focus.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;vex view [focus] [view] [--flags...]&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;Renders the focus with a view. With no arguments, lists the views. See &lt;a data-bs-delay="{&amp;#34;hide&amp;#34;:300,&amp;#34;show&amp;#34;:550}" data-bs-html="true" data-bs-title="&lt;a href='https://tyroncameron.github.io/vex/docs/02-features/04-views/'&gt;&lt;p&gt;FEATURES&lt;/p&gt;</description></item><item><title>Frontmatter schema</title><link>https://tyroncameron.github.io/vex/docs/02-features/02-frontmatter-schema/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://tyroncameron.github.io/vex/docs/02-features/02-frontmatter-schema/</guid><description>&lt;p&gt;Every task is validated against the schema of its &lt;code&gt;vextype&lt;/code&gt; and of each type that type extends (see &lt;a data-bs-delay="{&amp;#34;hide&amp;#34;:300,&amp;#34;show&amp;#34;:550}" data-bs-html="true" data-bs-title="&lt;a href='https://tyroncameron.github.io/vex/docs/02-features/03-task-types-and-vexations/'&gt;&lt;p&gt;FEATURES&lt;/p&gt;&lt;strong&gt;Task types (and vexations)&lt;/strong&gt;&lt;br&gt;Every task has a `vextype`.&lt;/a&gt;" data-bs-toggle="tooltip" href="https://tyroncameron.github.io/vex/docs/02-features/03-task-types-and-vexations/"&gt;Task types (and vexations)&lt;/a&gt;). This page lists the fields vex defines. Any other field you set is stored as given.&lt;/p&gt;
+&lt;h2 id="fields-on-every-task"&gt;Fields on every task &lt;a href="#fields-on-every-task" class="anchor" aria-hidden="true"&gt;&lt;i class="material-icons align-middle"&gt;link&lt;/i&gt;&lt;/a&gt;&lt;/h2&gt;
+
+
+
+
+
+
+&lt;table class="table table-hover"&gt;
+ &lt;thead&gt;
+ &lt;tr&gt;
+ &lt;th&gt;Field&lt;/th&gt;
+ &lt;th&gt;Type&lt;/th&gt;
+ &lt;th&gt;Description&lt;/th&gt;
+ &lt;/tr&gt;
+ &lt;/thead&gt;
+ &lt;tbody&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;vexid&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;text&lt;/td&gt;
+ &lt;td&gt;Unique id and filename, generated from the description when the task is added. It can&amp;rsquo;t be changed.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;description&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;text&lt;/td&gt;
+ &lt;td&gt;Required. At least 2 words and more than 3 characters.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;vextype&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;text&lt;/td&gt;
+ &lt;td&gt;The task type. Defaults to &lt;code&gt;task&lt;/code&gt; and must be a registered type.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;status&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;state&lt;/td&gt;
+ &lt;td&gt;&lt;code&gt;todo&lt;/code&gt;, then &lt;code&gt;doing&lt;/code&gt;, then &lt;code&gt;done&lt;/code&gt;. vex rejects any other move. Defaults to &lt;code&gt;todo&lt;/code&gt;.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;created&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;datetime&lt;/td&gt;
+ &lt;td&gt;Set when the task is added.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;modified&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;datetime&lt;/td&gt;
+ &lt;td&gt;Updated whenever vex touches the task: on add, set and every resolve, a reindex included.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;vexbody&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;text&lt;/td&gt;
+ &lt;td&gt;Optional. The markdown body below the frontmatter.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;due&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;datetime&lt;/td&gt;
+ &lt;td&gt;Optional.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;cost&lt;/code&gt;, &lt;code&gt;benefit&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;number&lt;/td&gt;
+ &lt;td&gt;Optional.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;owner&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;text&lt;/td&gt;
+ &lt;td&gt;Optional. Must be one of the &lt;code&gt;taskowners&lt;/code&gt; in &lt;code&gt;.vex/config.lua&lt;/code&gt;.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;dependencies&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;list of links&lt;/td&gt;
+ &lt;td&gt;Optional. Each entry must be an existing task, and dependencies can&amp;rsquo;t form a cycle.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;Datetimes are stored as timestamps and written as &lt;code&gt;YYYY-MM-DD HH:MM:SS&lt;/code&gt;. vex reads &lt;code&gt;YYYY-MM-DD HH:MM:SS&lt;/code&gt; (a &lt;code&gt;T&lt;/code&gt; may replace the space), &lt;code&gt;YYYY-MM-DD&lt;/code&gt;, or a phrase such as &lt;code&gt;tomorrow 8am&lt;/code&gt;, relative to the moment the task is resolved (&lt;a data-bs-delay="{&amp;#34;hide&amp;#34;:300,&amp;#34;show&amp;#34;:550}" data-bs-html="true" data-bs-title="&lt;a href='https://tyroncameron.github.io/vex/docs/02-features/01-cli-reference/'&gt;&lt;p&gt;FEATURES&lt;/p&gt;</description></item><item><title>Task types (and vexations)</title><link>https://tyroncameron.github.io/vex/docs/02-features/03-task-types-and-vexations/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://tyroncameron.github.io/vex/docs/02-features/03-task-types-and-vexations/</guid><description>&lt;p&gt;Every task has a &lt;code&gt;vextype&lt;/code&gt;. The base type is &lt;code&gt;task&lt;/code&gt;. The vexations plugin adds four types on top of it, each answering a different question about the work. Every type keeps all of &lt;code&gt;task&lt;/code&gt;&amp;rsquo;s fields (see &lt;a data-bs-delay="{&amp;#34;hide&amp;#34;:300,&amp;#34;show&amp;#34;:550}" data-bs-html="true" data-bs-title="&lt;a href='https://tyroncameron.github.io/vex/docs/02-features/02-frontmatter-schema/'&gt;&lt;p&gt;FEATURES&lt;/p&gt;&lt;strong&gt;Frontmatter schema&lt;/strong&gt;&lt;br&gt;Every task is validated against the schema of its `vextype` and of each type that type extends (see Task types (and vexations)).&lt;/a&gt;" data-bs-toggle="tooltip" href="https://tyroncameron.github.io/vex/docs/02-features/02-frontmatter-schema/"&gt;Frontmatter schema&lt;/a&gt;).&lt;/p&gt;
+
+
+
+
+
+
+
+&lt;table class="table table-hover"&gt;
+ &lt;thead&gt;
+ &lt;tr&gt;
+ &lt;th&gt;&lt;code&gt;vextype&lt;/code&gt;&lt;/th&gt;
+ &lt;th&gt;Answers&lt;/th&gt;
+ &lt;th&gt;Body&lt;/th&gt;
+ &lt;th&gt;Structure&lt;/th&gt;
+ &lt;/tr&gt;
+ &lt;/thead&gt;
+ &lt;tbody&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;exploration&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;What do I need to know?&lt;/td&gt;
+ &lt;td&gt;Empty&lt;/td&gt;
+ &lt;td&gt;No &lt;code&gt;children&lt;/code&gt;&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;abstract&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;What needs to happen?&lt;/td&gt;
+ &lt;td&gt;Empty&lt;/td&gt;
+ &lt;td&gt;&lt;code&gt;children&lt;/code&gt;: the tasks it groups&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;decision&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;Which path do we take?&lt;/td&gt;
+ &lt;td&gt;Free&lt;/td&gt;
+ &lt;td&gt;&lt;code&gt;options&lt;/code&gt;, and a &lt;code&gt;decision&lt;/code&gt; from among them&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;atom&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;What do I actually do?&lt;/td&gt;
+ &lt;td&gt;Free&lt;/td&gt;
+ &lt;td&gt;No &lt;code&gt;children&lt;/code&gt;&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;h3 id="exploration"&gt;Exploration &lt;a href="#exploration" class="anchor" aria-hidden="true"&gt;&lt;i class="material-icons align-middle"&gt;link&lt;/i&gt;&lt;/a&gt;&lt;/h3&gt;&lt;p&gt;Use an exploration when you don&amp;rsquo;t yet know what needs to happen. The task marks an open question. The exploring itself happens in your notes or an outliner, so the body stays empty.&lt;/p&gt;</description></item><item><title>Views</title><link>https://tyroncameron.github.io/vex/docs/02-features/04-views/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://tyroncameron.github.io/vex/docs/02-features/04-views/</guid><description>&lt;p&gt;A view renders the tasks in a focus:&lt;/p&gt;
+
+
+
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+
+ 
+
+ &lt;div class="prism-codeblock "&gt;
+ &lt;pre id="9487ca5" class="language-txt "&gt;
+ &lt;code&gt;vex view [focus] [view]&lt;/code&gt;
+ &lt;/pre&gt;
+ &lt;/div&gt;
+&lt;p&gt;With no arguments, &lt;code&gt;vex view&lt;/code&gt; lists the views. With one argument, it is the view, rendering the saved focus. Views show the fields each task stores. A focus built with &lt;code&gt;--select&lt;/code&gt; shows only the selected fields, transients included.&lt;/p&gt;
+&lt;h2 id="tabular"&gt;&lt;code&gt;tabular&lt;/code&gt; &lt;a href="#tabular" class="anchor" aria-hidden="true"&gt;&lt;i class="material-icons align-middle"&gt;link&lt;/i&gt;&lt;/a&gt;&lt;/h2&gt;&lt;p&gt;A table of every field except the body, formatted for reading. A list shows as its comma-separated values, cut short with &lt;code&gt;...&lt;/code&gt; when it is long, and a field a task doesn&amp;rsquo;t have is left blank.&lt;/p&gt;</description></item></channel></rss>

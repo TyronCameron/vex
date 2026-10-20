@@ -1,0 +1,502 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>vex</title><link>https://tyroncameron.github.io/vex/</link><description>Recent content on vex</description><generator>Hugo</generator><language>en-GB</language><atom:link href="https://tyroncameron.github.io/vex/index.xml" rel="self" type="application/rss+xml"/><item><title>Introduction</title><link>https://tyroncameron.github.io/vex/docs/introduction/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://tyroncameron.github.io/vex/docs/introduction/</guid><description>&lt;div class="alert alert-info d-flex" role="alert"&gt;
+ &lt;div class="flex-shrink-1 alert-icon"&gt;
+ &lt;span class="material-icons size-20 me-2"&gt;
+ info
+ &lt;/span&gt;&lt;/div&gt;
+ &lt;div class="w-100"&gt;
+&lt;p&gt;&lt;strong&gt;Status&lt;/strong&gt; vex v0.0.0, in development.&lt;/p&gt;
+ &lt;/div&gt;
+ &lt;/div&gt;
+&lt;p&gt;vex is the embeddable, local-first, markdown-based task system. Every task is a plain-text markdown file with YAML frontmatter, and every project keeps its own &lt;code&gt;.vex&lt;/code&gt; folder, much like a &lt;code&gt;.git&lt;/code&gt; folder. There is no server, no daemon and no account.&lt;/p&gt;
+&lt;p&gt;Because a task is a text file, anything that reads and writes text can work with it: your editor, a shell script, or an AI coding agent.&lt;/p&gt;</description></item><item><title>CLI reference</title><link>https://tyroncameron.github.io/vex/docs/02-features/01-cli-reference/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://tyroncameron.github.io/vex/docs/02-features/01-cli-reference/</guid><description>&lt;h2 id="conventions"&gt;Conventions &lt;a href="#conventions" class="anchor" aria-hidden="true"&gt;&lt;i class="material-icons align-middle"&gt;link&lt;/i&gt;&lt;/a&gt;&lt;/h2&gt;&lt;p&gt;&lt;code&gt;vex &amp;lt;command&amp;gt; [arguments] [--flags]&lt;/code&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Every word up to the first &lt;code&gt;--flag&lt;/code&gt; is positional. &lt;code&gt;add&lt;/code&gt; and &lt;code&gt;recipe&lt;/code&gt; join them into the description.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;[focus]&lt;/code&gt; is optional everywhere. Without it, a command uses your saved focus (&lt;code&gt;prev&lt;/code&gt;). See &lt;a data-bs-delay="{&amp;#34;hide&amp;#34;:300,&amp;#34;show&amp;#34;:550}" data-bs-html="true" data-bs-title="&lt;a href='https://tyroncameron.github.io/vex/docs/02-features/01-cli-reference/'&gt;&lt;p&gt;FEATURES&lt;/p&gt;&lt;strong&gt;CLI reference&lt;/strong&gt;&lt;br&gt;`vex &lt;command&gt; [arguments] [--flags]`&lt;/a&gt;" data-bs-toggle="tooltip" href="https://tyroncameron.github.io/vex/docs/02-features/01-cli-reference/#focuses"&gt;Focuses&lt;/a&gt;.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;--field value&lt;/code&gt; sets a field; a &lt;code&gt;--field&lt;/code&gt; without a value names one.&lt;/li&gt;
+&lt;li&gt;Quoting works as in a shell: &lt;code&gt;--vexbody &amp;quot;two words&amp;quot;&lt;/code&gt; is one value, and &lt;code&gt;--filter status:&amp;quot;not done&amp;quot;&lt;/code&gt; matches &lt;code&gt;not done&lt;/code&gt;.&lt;/li&gt;
+&lt;li&gt;A comma outside quotes makes a list: &lt;code&gt;--children a,b&lt;/code&gt; sets two children, and &lt;code&gt;vex focus a,b&lt;/code&gt; focuses on both tasks. A value containing spaces keeps its commas, and &lt;code&gt;\,&lt;/code&gt; writes a literal comma.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="commands"&gt;Commands &lt;a href="#commands" class="anchor" aria-hidden="true"&gt;&lt;i class="material-icons align-middle"&gt;link&lt;/i&gt;&lt;/a&gt;&lt;/h2&gt;
+
+
+
+
+
+
+&lt;table class="table table-hover"&gt;
+ &lt;thead&gt;
+ &lt;tr&gt;
+ &lt;th&gt;Command&lt;/th&gt;
+ &lt;th&gt;Description&lt;/th&gt;
+ &lt;/tr&gt;
+ &lt;/thead&gt;
+ &lt;tbody&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;vex help [command]&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;Lists every command, or describes one.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;vex init&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;Creates a &lt;code&gt;.vex&lt;/code&gt; folder in the current folder.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;vex add Description [--fields...]&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;Creates and resolves a task, prints its vexid and focuses on it.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;vex show [focus]&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;Prints each task&amp;rsquo;s frontmatter and body.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;vex get [focus] [--fields...]&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;Prints one tab-separated line per task. &lt;code&gt;--select a,b&lt;/code&gt; names the fields as a list. Defaults to &lt;code&gt;vexid&lt;/code&gt;.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;vex set [focus] [--fields...]&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;Sets fields on every task in the focus, then resolves them.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;vex remove [focus]&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;Deletes every task in the focus, removes links to them from other tasks, and clears the focus.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;vex focus [focus] [--flags...]&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;Builds and saves a focus. With no arguments, prints the saved focus.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;vex view [focus] [view] [--flags...]&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;Renders the focus with a view. With no arguments, lists the views. See &lt;a data-bs-delay="{&amp;#34;hide&amp;#34;:300,&amp;#34;show&amp;#34;:550}" data-bs-html="true" data-bs-title="&lt;a href='https://tyroncameron.github.io/vex/docs/02-features/04-views/'&gt;&lt;p&gt;FEATURES&lt;/p&gt;</description></item><item><title>Configuring vex (config.lua)</title><link>https://tyroncameron.github.io/vex/docs/03-configuration/01-configuring-vex-config.lua/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://tyroncameron.github.io/vex/docs/03-configuration/01-configuring-vex-config.lua/</guid><description>&lt;p&gt;&lt;code&gt;.vex/config.lua&lt;/code&gt; returns a Lua table and is read on every command. &lt;code&gt;vex init&lt;/code&gt; writes this one:&lt;/p&gt;
+
+
+
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+
+ 
+
+ &lt;div class="prism-codeblock "&gt;
+ &lt;pre id="7d84e6f" class="language-lua "&gt;
+ &lt;code&gt;return {
+ taskfolder = &amp;#39;.&amp;#39;,
+ default = {
+ tasktype = &amp;#39;task&amp;#39;
+ },
+ taskowners = {},
+ loglimit = 1000
+}&lt;/code&gt;
+ &lt;/pre&gt;
+ &lt;/div&gt;
+&lt;h2 id="settings"&gt;Settings &lt;a href="#settings" class="anchor" aria-hidden="true"&gt;&lt;i class="material-icons align-middle"&gt;link&lt;/i&gt;&lt;/a&gt;&lt;/h2&gt;
+
+
+
+
+
+
+&lt;table class="table table-hover"&gt;
+ &lt;thead&gt;
+ &lt;tr&gt;
+ &lt;th&gt;Setting&lt;/th&gt;
+ &lt;th&gt;Effect&lt;/th&gt;
+ &lt;/tr&gt;
+ &lt;/thead&gt;
+ &lt;tbody&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;taskfolder&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;The folder, relative to the project root, that holds the task files.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;taskowners&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;The names &lt;code&gt;owner&lt;/code&gt; may take. With no task owners, tasks can&amp;rsquo;t have an owner.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;default.tasktype&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;The &lt;code&gt;vextype&lt;/code&gt; of a task added without one.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;paths.groupby&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;Nests task files in folders by their fields (see below).&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;loglimit&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;How many lines the verb and event logs in &lt;code&gt;.vex/vexdex&lt;/code&gt; keep (see &lt;a data-bs-delay="{&amp;#34;hide&amp;#34;:300,&amp;#34;show&amp;#34;:550}" data-bs-html="true" data-bs-title="&lt;a href='https://tyroncameron.github.io/vex/docs/04-technical-documentation/vexdex/events-and-hooks/'&gt;&lt;p&gt;VEXDEX&lt;/p&gt;</description></item><item><title>Installing vex</title><link>https://tyroncameron.github.io/vex/docs/01-getting-started/01-installing-vex/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://tyroncameron.github.io/vex/docs/01-getting-started/01-installing-vex/</guid><description>&lt;p&gt;vex is a single LuaJIT program with no services to run. Installing it means putting the &lt;code&gt;vex&lt;/code&gt; command on your path and, optionally, enabling shell completion.&lt;/p&gt;
+&lt;h2 id="requirements"&gt;Requirements &lt;a href="#requirements" class="anchor" aria-hidden="true"&gt;&lt;i class="material-icons align-middle"&gt;link&lt;/i&gt;&lt;/a&gt;&lt;/h2&gt;&lt;ul&gt;
+&lt;li&gt;LuaJIT.&lt;/li&gt;
+&lt;li&gt;A clone of the vex repository.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="running-vex"&gt;Running vex &lt;a href="#running-vex" class="anchor" aria-hidden="true"&gt;&lt;i class="material-icons align-middle"&gt;link&lt;/i&gt;&lt;/a&gt;&lt;/h2&gt;&lt;p&gt;&lt;code&gt;src/vex&lt;/code&gt; is the entry point (&lt;code&gt;src/vex.bat&lt;/code&gt; on Windows). It finds its own directory, sets up Lua&amp;rsquo;s module paths and runs &lt;code&gt;src/vex.lua&lt;/code&gt;.&lt;/p&gt;
+&lt;div class="prism-codeblock vex-console"&gt;
+&lt;button type="button" class="vex-console-copy" title="Copy commands" aria-label="Copy commands" onclick="navigator.clipboard.writeText(Array.from(this.parentElement.querySelectorAll('.vex-command'), e =&gt; e.textContent).join('\n')); this.firstElementChild.textContent = 'check'; setTimeout(() =&gt; this.firstElementChild.textContent = 'content_copy', 1500)"&gt;&lt;span class="material-icons"&gt;content_copy&lt;/span&gt;&lt;/button&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span class="vex-command"&gt;&lt;span class="vex-program"&gt;git&lt;/span&gt; clone https://github.com/TyronCameron/vex.git&lt;/span&gt;
+&lt;span class="vex-command"&gt;&lt;span class="vex-program"&gt;cd&lt;/span&gt; vex&lt;/span&gt;
+&lt;span class="vex-command"&gt;&lt;span class="vex-program"&gt;./src/vex&lt;/span&gt; help&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;To run &lt;code&gt;vex&lt;/code&gt; from anywhere, link the wrapper onto your path:&lt;/p&gt;</description></item><item><title>Configuring views</title><link>https://tyroncameron.github.io/vex/docs/03-configuration/02-configuring-views/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://tyroncameron.github.io/vex/docs/03-configuration/02-configuring-views/</guid><description>&lt;p&gt;Each &lt;code&gt;.lua&lt;/code&gt; file in &lt;code&gt;.vex/views&lt;/code&gt; can register views. A view is a &lt;code&gt;display&lt;/code&gt; function that takes the focus and the command&amp;rsquo;s flags and returns the text to print:&lt;/p&gt;
+
+
+
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+
+ 
+
+ &lt;div class="prism-codeblock "&gt;
+ &lt;pre id="7c3d4aa" class="language-lua "&gt;
+ &lt;code&gt;view:view &amp;#39;count&amp;#39; {
+ display = function(focus, flags)
+ return #focus:get() .. &amp;#39; tasks&amp;#39;
+ end
+}&lt;/code&gt;
+ &lt;/pre&gt;
+ &lt;/div&gt;
+&lt;div class="prism-codeblock vex-console"&gt;
+&lt;button type="button" class="vex-console-copy" title="Copy commands" aria-label="Copy commands" onclick="navigator.clipboard.writeText(Array.from(this.parentElement.querySelectorAll('.vex-command'), e =&gt; e.textContent).join('\n')); this.firstElementChild.textContent = 'check'; setTimeout(() =&gt; this.firstElementChild.textContent = 'content_copy', 1500)"&gt;&lt;span class="material-icons"&gt;content_copy&lt;/span&gt;&lt;/button&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span class="vex-command"&gt;&lt;span class="vex-program"&gt;vex&lt;/span&gt; view all count&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;&lt;code&gt;focus:get()&lt;/code&gt; returns the focus&amp;rsquo;s tasks. Read any field from them, transients included. Flags arrive as a table: &lt;code&gt;vex view all count --field status&lt;/code&gt; gives &lt;code&gt;flags.field == 'status'&lt;/code&gt;.&lt;/p&gt;</description></item><item><title>Creating your first task using vex</title><link>https://tyroncameron.github.io/vex/docs/01-getting-started/02-creating-your-first-task-using-vex/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://tyroncameron.github.io/vex/docs/01-getting-started/02-creating-your-first-task-using-vex/</guid><description>&lt;p&gt;This page walks through the core loop: &lt;code&gt;init&lt;/code&gt;, &lt;code&gt;add&lt;/code&gt;, &lt;code&gt;show&lt;/code&gt;, &lt;code&gt;set&lt;/code&gt;, &lt;code&gt;get&lt;/code&gt;, &lt;code&gt;focus&lt;/code&gt;, &lt;code&gt;resolve&lt;/code&gt; and &lt;code&gt;remove&lt;/code&gt;.&lt;/p&gt;
+&lt;h2 id="1-initialise-a-project"&gt;1. Initialise a project &lt;a href="#1-initialise-a-project" class="anchor" aria-hidden="true"&gt;&lt;i class="material-icons align-middle"&gt;link&lt;/i&gt;&lt;/a&gt;&lt;/h2&gt;&lt;div class="prism-codeblock vex-console"&gt;
+&lt;button type="button" class="vex-console-copy" title="Copy commands" aria-label="Copy commands" onclick="navigator.clipboard.writeText(Array.from(this.parentElement.querySelectorAll('.vex-command'), e =&gt; e.textContent).join('\n')); this.firstElementChild.textContent = 'check'; setTimeout(() =&gt; this.firstElementChild.textContent = 'content_copy', 1500)"&gt;&lt;span class="material-icons"&gt;content_copy&lt;/span&gt;&lt;/button&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span class="vex-command"&gt;&lt;span class="vex-program"&gt;cd&lt;/span&gt; my-project&lt;/span&gt;
+&lt;span class="vex-command"&gt;&lt;span class="vex-program"&gt;vex&lt;/span&gt; init&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;Task files go in the folder named by &lt;code&gt;taskfolder&lt;/code&gt; in &lt;code&gt;.vex/config.lua&lt;/code&gt;. By default that&amp;rsquo;s the project root (see &lt;a data-bs-delay="{&amp;#34;hide&amp;#34;:300,&amp;#34;show&amp;#34;:550}" data-bs-html="true" data-bs-title="&lt;a href='https://tyroncameron.github.io/vex/docs/03-configuration/01-configuring-vex-config.lua/'&gt;&lt;p&gt;CONFIGURATION&lt;/p&gt;&lt;strong&gt;Configuring vex (config.lua)&lt;/strong&gt;&lt;br&gt;`.vex/config.lua` returns a Lua table and is read on every command. `vex init` writes this one:&lt;/a&gt;" data-bs-toggle="tooltip" href="https://tyroncameron.github.io/vex/docs/03-configuration/01-configuring-vex-config.lua/"&gt;Configuring vex (config.lua)&lt;/a&gt;).&lt;/p&gt;</description></item><item><title>Frontmatter schema</title><link>https://tyroncameron.github.io/vex/docs/02-features/02-frontmatter-schema/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://tyroncameron.github.io/vex/docs/02-features/02-frontmatter-schema/</guid><description>&lt;p&gt;Every task is validated against the schema of its &lt;code&gt;vextype&lt;/code&gt; and of each type that type extends (see &lt;a data-bs-delay="{&amp;#34;hide&amp;#34;:300,&amp;#34;show&amp;#34;:550}" data-bs-html="true" data-bs-title="&lt;a href='https://tyroncameron.github.io/vex/docs/02-features/03-task-types-and-vexations/'&gt;&lt;p&gt;FEATURES&lt;/p&gt;&lt;strong&gt;Task types (and vexations)&lt;/strong&gt;&lt;br&gt;Every task has a `vextype`.&lt;/a&gt;" data-bs-toggle="tooltip" href="https://tyroncameron.github.io/vex/docs/02-features/03-task-types-and-vexations/"&gt;Task types (and vexations)&lt;/a&gt;). This page lists the fields vex defines. Any other field you set is stored as given.&lt;/p&gt;
+&lt;h2 id="fields-on-every-task"&gt;Fields on every task &lt;a href="#fields-on-every-task" class="anchor" aria-hidden="true"&gt;&lt;i class="material-icons align-middle"&gt;link&lt;/i&gt;&lt;/a&gt;&lt;/h2&gt;
+
+
+
+
+
+
+&lt;table class="table table-hover"&gt;
+ &lt;thead&gt;
+ &lt;tr&gt;
+ &lt;th&gt;Field&lt;/th&gt;
+ &lt;th&gt;Type&lt;/th&gt;
+ &lt;th&gt;Description&lt;/th&gt;
+ &lt;/tr&gt;
+ &lt;/thead&gt;
+ &lt;tbody&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;vexid&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;text&lt;/td&gt;
+ &lt;td&gt;Unique id and filename, generated from the description when the task is added. It can&amp;rsquo;t be changed.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;description&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;text&lt;/td&gt;
+ &lt;td&gt;Required. At least 2 words and more than 3 characters.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;vextype&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;text&lt;/td&gt;
+ &lt;td&gt;The task type. Defaults to &lt;code&gt;task&lt;/code&gt; and must be a registered type.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;status&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;state&lt;/td&gt;
+ &lt;td&gt;&lt;code&gt;todo&lt;/code&gt;, then &lt;code&gt;doing&lt;/code&gt;, then &lt;code&gt;done&lt;/code&gt;. vex rejects any other move. Defaults to &lt;code&gt;todo&lt;/code&gt;.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;created&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;datetime&lt;/td&gt;
+ &lt;td&gt;Set when the task is added.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;modified&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;datetime&lt;/td&gt;
+ &lt;td&gt;Updated whenever vex touches the task: on add, set and every resolve, a reindex included.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;vexbody&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;text&lt;/td&gt;
+ &lt;td&gt;Optional. The markdown body below the frontmatter.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;due&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;datetime&lt;/td&gt;
+ &lt;td&gt;Optional.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;cost&lt;/code&gt;, &lt;code&gt;benefit&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;number&lt;/td&gt;
+ &lt;td&gt;Optional.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;owner&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;text&lt;/td&gt;
+ &lt;td&gt;Optional. Must be one of the &lt;code&gt;taskowners&lt;/code&gt; in &lt;code&gt;.vex/config.lua&lt;/code&gt;.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;dependencies&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;list of links&lt;/td&gt;
+ &lt;td&gt;Optional. Each entry must be an existing task, and dependencies can&amp;rsquo;t form a cycle.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;Datetimes are stored as timestamps and written as &lt;code&gt;YYYY-MM-DD HH:MM:SS&lt;/code&gt;. vex reads &lt;code&gt;YYYY-MM-DD HH:MM:SS&lt;/code&gt; (a &lt;code&gt;T&lt;/code&gt; may replace the space), &lt;code&gt;YYYY-MM-DD&lt;/code&gt;, or a phrase such as &lt;code&gt;tomorrow 8am&lt;/code&gt;, relative to the moment the task is resolved (&lt;a data-bs-delay="{&amp;#34;hide&amp;#34;:300,&amp;#34;show&amp;#34;:550}" data-bs-html="true" data-bs-title="&lt;a href='https://tyroncameron.github.io/vex/docs/02-features/01-cli-reference/'&gt;&lt;p&gt;FEATURES&lt;/p&gt;</description></item><item><title>Configuring task types</title><link>https://tyroncameron.github.io/vex/docs/03-configuration/03-configuring-task-types/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://tyroncameron.github.io/vex/docs/03-configuration/03-configuring-task-types/</guid><description>&lt;p&gt;Each &lt;code&gt;.lua&lt;/code&gt; file in &lt;code&gt;.vex/tasks&lt;/code&gt; can register task types and transients.&lt;/p&gt;
+&lt;h2 id="task-types"&gt;Task types &lt;a href="#task-types" class="anchor" aria-hidden="true"&gt;&lt;i class="material-icons align-middle"&gt;link&lt;/i&gt;&lt;/a&gt;&lt;/h2&gt;&lt;p&gt;A type extends an existing one and adds a schema. Its tasks must pass its own schema and every ancestor&amp;rsquo;s:&lt;/p&gt;
+
+
+
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+
+ 
+
+ &lt;div class="prism-codeblock "&gt;
+ &lt;pre id="a4e46fb" class="language-lua "&gt;
+ &lt;code&gt;task:task &amp;#39;bug&amp;#39;:extends &amp;#39;atom&amp;#39; {
+ schema = schema.atleast {
+ severity = schema.any {&amp;#39;low&amp;#39;, &amp;#39;high&amp;#39;},
+ reported = schema.maybe {schema.formatted {schema.datetime}},
+ }
+}&lt;/code&gt;
+ &lt;/pre&gt;
+ &lt;/div&gt;
+&lt;div class="prism-codeblock vex-console"&gt;
+&lt;button type="button" class="vex-console-copy" title="Copy commands" aria-label="Copy commands" onclick="navigator.clipboard.writeText(Array.from(this.parentElement.querySelectorAll('.vex-command'), e =&gt; e.textContent).join('\n')); this.firstElementChild.textContent = 'check'; setTimeout(() =&gt; this.firstElementChild.textContent = 'content_copy', 1500)"&gt;&lt;span class="material-icons"&gt;content_copy&lt;/span&gt;&lt;/button&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span class="vex-command"&gt;&lt;span class="vex-program"&gt;vex&lt;/span&gt; add Crash on start &lt;span class="vex-flag"&gt;--vextype&lt;/span&gt; bug &lt;span class="vex-flag"&gt;--severity&lt;/span&gt; high&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;A &lt;code&gt;schema&lt;/code&gt; is a composable mechanism for nested data validation, normalisation, derivation, and conversion. Any time a task is resolved, it is checked (normalised, validated, derived, and/or converted) against the schema. You can make up your own schemas from the following building blocks, amongst others:&lt;/p&gt;</description></item><item><title>Task types (and vexations)</title><link>https://tyroncameron.github.io/vex/docs/02-features/03-task-types-and-vexations/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://tyroncameron.github.io/vex/docs/02-features/03-task-types-and-vexations/</guid><description>&lt;p&gt;Every task has a &lt;code&gt;vextype&lt;/code&gt;. The base type is &lt;code&gt;task&lt;/code&gt;. The vexations plugin adds four types on top of it, each answering a different question about the work. Every type keeps all of &lt;code&gt;task&lt;/code&gt;&amp;rsquo;s fields (see &lt;a data-bs-delay="{&amp;#34;hide&amp;#34;:300,&amp;#34;show&amp;#34;:550}" data-bs-html="true" data-bs-title="&lt;a href='https://tyroncameron.github.io/vex/docs/02-features/02-frontmatter-schema/'&gt;&lt;p&gt;FEATURES&lt;/p&gt;&lt;strong&gt;Frontmatter schema&lt;/strong&gt;&lt;br&gt;Every task is validated against the schema of its `vextype` and of each type that type extends (see Task types (and vexations)).&lt;/a&gt;" data-bs-toggle="tooltip" href="https://tyroncameron.github.io/vex/docs/02-features/02-frontmatter-schema/"&gt;Frontmatter schema&lt;/a&gt;).&lt;/p&gt;
+
+
+
+
+
+
+
+&lt;table class="table table-hover"&gt;
+ &lt;thead&gt;
+ &lt;tr&gt;
+ &lt;th&gt;&lt;code&gt;vextype&lt;/code&gt;&lt;/th&gt;
+ &lt;th&gt;Answers&lt;/th&gt;
+ &lt;th&gt;Body&lt;/th&gt;
+ &lt;th&gt;Structure&lt;/th&gt;
+ &lt;/tr&gt;
+ &lt;/thead&gt;
+ &lt;tbody&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;exploration&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;What do I need to know?&lt;/td&gt;
+ &lt;td&gt;Empty&lt;/td&gt;
+ &lt;td&gt;No &lt;code&gt;children&lt;/code&gt;&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;abstract&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;What needs to happen?&lt;/td&gt;
+ &lt;td&gt;Empty&lt;/td&gt;
+ &lt;td&gt;&lt;code&gt;children&lt;/code&gt;: the tasks it groups&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;decision&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;Which path do we take?&lt;/td&gt;
+ &lt;td&gt;Free&lt;/td&gt;
+ &lt;td&gt;&lt;code&gt;options&lt;/code&gt;, and a &lt;code&gt;decision&lt;/code&gt; from among them&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;atom&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;What do I actually do?&lt;/td&gt;
+ &lt;td&gt;Free&lt;/td&gt;
+ &lt;td&gt;No &lt;code&gt;children&lt;/code&gt;&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;h3 id="exploration"&gt;Exploration &lt;a href="#exploration" class="anchor" aria-hidden="true"&gt;&lt;i class="material-icons align-middle"&gt;link&lt;/i&gt;&lt;/a&gt;&lt;/h3&gt;&lt;p&gt;Use an exploration when you don&amp;rsquo;t yet know what needs to happen. The task marks an open question. The exploring itself happens in your notes or an outliner, so the body stays empty.&lt;/p&gt;</description></item><item><title>Using a recipe to create a sequence of tasks</title><link>https://tyroncameron.github.io/vex/docs/01-getting-started/03-using-a-recipe-to-create-a-sequence-of-tasks/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://tyroncameron.github.io/vex/docs/01-getting-started/03-using-a-recipe-to-create-a-sequence-of-tasks/</guid><description>&lt;p&gt;A recipe is a named shortcut that creates one or more tasks with fields already filled in. Use one whenever you set up the same kind of work repeatedly.&lt;/p&gt;
+&lt;h2 id="listing-recipes"&gt;Listing recipes &lt;a href="#listing-recipes" class="anchor" aria-hidden="true"&gt;&lt;i class="material-icons align-middle"&gt;link&lt;/i&gt;&lt;/a&gt;&lt;/h2&gt;&lt;div class="prism-codeblock vex-console"&gt;
+&lt;button type="button" class="vex-console-copy" title="Copy commands" aria-label="Copy commands" onclick="navigator.clipboard.writeText(Array.from(this.parentElement.querySelectorAll('.vex-command'), e =&gt; e.textContent).join('\n')); this.firstElementChild.textContent = 'check'; setTimeout(() =&gt; this.firstElementChild.textContent = 'content_copy', 1500)"&gt;&lt;span class="material-icons"&gt;content_copy&lt;/span&gt;&lt;/button&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span class="vex-command"&gt;&lt;span class="vex-program"&gt;vex&lt;/span&gt; recipe&lt;/span&gt;
+&lt;span class="vex-output"&gt;Available recipes:&lt;/span&gt;
+&lt;span class="vex-output"&gt; abstract&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;With no name, &lt;code&gt;vex recipe&lt;/code&gt; lists the recipes available. vex ships &lt;code&gt;abstract&lt;/code&gt;, which creates a task of type &lt;code&gt;abstract&lt;/code&gt;: a parent that groups other tasks.&lt;/p&gt;</description></item><item><title>Configuring recipes</title><link>https://tyroncameron.github.io/vex/docs/03-configuration/04-configuring-recipes/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://tyroncameron.github.io/vex/docs/03-configuration/04-configuring-recipes/</guid><description>&lt;p&gt;Each &lt;code&gt;.lua&lt;/code&gt; file in &lt;code&gt;.vex/recipes&lt;/code&gt; can register recipes. A recipe is an &lt;code&gt;add&lt;/code&gt; function that receives the task manager and the properties from the command line, and adds tasks:&lt;/p&gt;
+
+
+
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+
+ 
+
+ &lt;div class="prism-codeblock "&gt;
+ &lt;pre id="b294d08" class="language-lua "&gt;
+ &lt;code&gt;recipe:recipe &amp;#39;chore&amp;#39; {
+ add = function(task, taskproperties)
+ taskproperties.vextype = &amp;#39;atom&amp;#39;
+ return {task:add(taskproperties)}
+ end
+}&lt;/code&gt;
+ &lt;/pre&gt;
+ &lt;/div&gt;
+&lt;div class="prism-codeblock vex-console"&gt;
+&lt;button type="button" class="vex-console-copy" title="Copy commands" aria-label="Copy commands" onclick="navigator.clipboard.writeText(Array.from(this.parentElement.querySelectorAll('.vex-command'), e =&gt; e.textContent).join('\n')); this.firstElementChild.textContent = 'check'; setTimeout(() =&gt; this.firstElementChild.textContent = 'content_copy', 1500)"&gt;&lt;span class="material-icons"&gt;content_copy&lt;/span&gt;&lt;/button&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span class="vex-command"&gt;&lt;span class="vex-program"&gt;vex&lt;/span&gt; recipe chore Take out the bins&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;&lt;code&gt;taskproperties&lt;/code&gt; holds the description and every flag. &lt;code&gt;add&lt;/code&gt; returns the list of vexids it added. A recipe can add as many tasks as it likes and link them through their fields; vex resolves and writes each returned task in the order of the list, then focuses on all of them:&lt;/p&gt;</description></item><item><title>Views</title><link>https://tyroncameron.github.io/vex/docs/02-features/04-views/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://tyroncameron.github.io/vex/docs/02-features/04-views/</guid><description>&lt;p&gt;A view renders the tasks in a focus:&lt;/p&gt;
+
+
+
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+
+ 
+
+ &lt;div class="prism-codeblock "&gt;
+ &lt;pre id="9487ca5" class="language-txt "&gt;
+ &lt;code&gt;vex view [focus] [view]&lt;/code&gt;
+ &lt;/pre&gt;
+ &lt;/div&gt;
+&lt;p&gt;With no arguments, &lt;code&gt;vex view&lt;/code&gt; lists the views. With one argument, it is the view, rendering the saved focus. Views show the fields each task stores. A focus built with &lt;code&gt;--select&lt;/code&gt; shows only the selected fields, transients included.&lt;/p&gt;
+&lt;h2 id="tabular"&gt;&lt;code&gt;tabular&lt;/code&gt; &lt;a href="#tabular" class="anchor" aria-hidden="true"&gt;&lt;i class="material-icons align-middle"&gt;link&lt;/i&gt;&lt;/a&gt;&lt;/h2&gt;&lt;p&gt;A table of every field except the body, formatted for reading. A list shows as its comma-separated values, cut short with &lt;code&gt;...&lt;/code&gt; when it is long, and a field a task doesn&amp;rsquo;t have is left blank.&lt;/p&gt;</description></item><item><title>Configuring focuses</title><link>https://tyroncameron.github.io/vex/docs/03-configuration/05-configuring-focuses/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://tyroncameron.github.io/vex/docs/03-configuration/05-configuring-focuses/</guid><description>&lt;p&gt;Each &lt;code&gt;.lua&lt;/code&gt; file in &lt;code&gt;.vex/focuses&lt;/code&gt; can register named focuses. A named focus is a function that returns a list of tasks, usually built from other focuses:&lt;/p&gt;
+
+
+
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+
+ 
+
+ &lt;div class="prism-codeblock "&gt;
+ &lt;pre id="ee8a188" class="language-lua "&gt;
+ &lt;code&gt;focus.register_focus(&amp;#39;mine&amp;#39;, function()
+ return focus.focus(&amp;#39;all&amp;#39;):filter(&amp;#39;owner&amp;#39;, &amp;#39;alice&amp;#39;):filter(&amp;#39;status&amp;#39;, &amp;#39;doing&amp;#39;):get()
+end)&lt;/code&gt;
+ &lt;/pre&gt;
+ &lt;/div&gt;
+&lt;div class="prism-codeblock vex-console"&gt;
+&lt;button type="button" class="vex-console-copy" title="Copy commands" aria-label="Copy commands" onclick="navigator.clipboard.writeText(Array.from(this.parentElement.querySelectorAll('.vex-command'), e =&gt; e.textContent).join('\n')); this.firstElementChild.textContent = 'check'; setTimeout(() =&gt; this.firstElementChild.textContent = 'content_copy', 1500)"&gt;&lt;span class="material-icons"&gt;content_copy&lt;/span&gt;&lt;/button&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span class="vex-command"&gt;&lt;span class="vex-program"&gt;vex&lt;/span&gt; focus mine &lt;span class="vex-flag"&gt;--select&lt;/span&gt; due&lt;/span&gt;
+&lt;span class="vex-command"&gt;&lt;span class="vex-program"&gt;vex&lt;/span&gt; view mine kanban&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;A named focus works wherever a focus does: as a starting point, in a list (&lt;code&gt;mine,all&lt;/code&gt;), and as the value of &lt;code&gt;--union&lt;/code&gt; and the other set operations. It is evaluated each time it&amp;rsquo;s used, so it always reflects the current tasks.&lt;/p&gt;</description></item><item><title>Configuring event hooks</title><link>https://tyroncameron.github.io/vex/docs/03-configuration/06-configuring-event-hooks/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://tyroncameron.github.io/vex/docs/03-configuration/06-configuring-event-hooks/</guid><description>&lt;p&gt;Each &lt;code&gt;.lua&lt;/code&gt; file in &lt;code&gt;.vex/events&lt;/code&gt; can register hooks. Every event comes in a pair: &lt;code&gt;pre-&amp;lt;event&amp;gt;&lt;/code&gt; fires before the action and &lt;code&gt;post-&amp;lt;event&amp;gt;&lt;/code&gt; after it. For example, &lt;code&gt;pre-verb-set&lt;/code&gt; fires before the &lt;code&gt;vex set&lt;/code&gt; command runs, and &lt;code&gt;post-task-resolve&lt;/code&gt; fires after a task resolves. A hook receives the event&amp;rsquo;s args (see the table below):&lt;/p&gt;
+
+
+
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+
+ 
+
+ &lt;div class="prism-codeblock "&gt;
+ &lt;pre id="c5db8f4" class="language-lua "&gt;
+ &lt;code&gt;event:on &amp;#39;post-task-resolve&amp;#39; (function(vexid, t)
+ if t.due and t.due &amp;lt; os.time() and t.phase ~= &amp;#39;final&amp;#39; then
+ print(vexid .. &amp;#39; is overdue&amp;#39;)
+ end
+end)&lt;/code&gt;
+ &lt;/pre&gt;
+ &lt;/div&gt;
+&lt;p&gt;A hook that raises an error stops the command. vex prints which hook failed, on which event, and why, for example &lt;code&gt;Event hook 'needs-owner' failed on 'pre-verb-set': ...&lt;/code&gt;. A &lt;code&gt;pre-&lt;/code&gt; hook can therefore enforce project rules before anything changes, for example requiring every task to have an &lt;code&gt;owner&lt;/code&gt;:&lt;/p&gt;</description></item><item><title>Design journal</title><link>https://tyroncameron.github.io/vex/docs/vex/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://tyroncameron.github.io/vex/docs/vex/</guid><description>&lt;h2 id="philosophy"&gt;Philosophy &lt;a href="#philosophy" class="anchor" aria-hidden="true"&gt;&lt;i class="material-icons align-middle"&gt;link&lt;/i&gt;&lt;/a&gt;&lt;/h2&gt;&lt;p&gt;Simple way to create and manage tasks, embeddable in any project, and local first.&lt;/p&gt;
+&lt;p&gt;Tasks are just folders and markdown files.&lt;/p&gt;
+&lt;p&gt;Focus on using the task management system to reduce uncertainty, make decisions, and create maximum efficiency sets of actionable items.&lt;/p&gt;
+&lt;p&gt;Philosophy is to be minimalist, creating first a CLI tool which could be expanded into other tools.&lt;/p&gt;
+&lt;p&gt;All written in luajit so it runs on a potato.&lt;/p&gt;</description></item><item><title>Events and hooks</title><link>https://tyroncameron.github.io/vex/docs/04-technical-documentation/vexdex/events-and-hooks/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://tyroncameron.github.io/vex/docs/04-technical-documentation/vexdex/events-and-hooks/</guid><description>&lt;p&gt;Events go through one event manager, &lt;code&gt;src/lib/event.lua&lt;/code&gt;. They fire at two levels:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Verbs.&lt;/strong&gt; &lt;code&gt;lib.cli&lt;/code&gt; fires &lt;code&gt;pre-verb-&amp;lt;verb&amp;gt;&lt;/code&gt; before every command runs and &lt;code&gt;post-verb-&amp;lt;verb&amp;gt;&lt;/code&gt; after it finishes.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Actions.&lt;/strong&gt; The task, focus, view and recipe managers fire &lt;code&gt;pre-&lt;/code&gt; and &lt;code&gt;post-&lt;/code&gt; events around each public action, such as &lt;code&gt;pre-task-resolve&lt;/code&gt; or &lt;code&gt;post-focus-write&lt;/code&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;At the end of loading, vex runs every &lt;code&gt;.lua&lt;/code&gt; file in &lt;code&gt;.vex/events&lt;/code&gt;, sorted by path, and each file registers its handlers. Handlers run in the order they were registered. A handler that raises an error stops the command with a &lt;code&gt;hook-failed&lt;/code&gt; error naming the hook and the event. See &lt;a data-bs-delay="{&amp;#34;hide&amp;#34;:300,&amp;#34;show&amp;#34;:550}" data-bs-html="true" data-bs-title="&lt;a href='https://tyroncameron.github.io/vex/docs/03-configuration/06-configuring-event-hooks/'&gt;&lt;p&gt;CONFIGURATION&lt;/p&gt;</description></item><item><title>Plugin architecture</title><link>https://tyroncameron.github.io/vex/docs/04-technical-documentation/plugin-architecture/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://tyroncameron.github.io/vex/docs/04-technical-documentation/plugin-architecture/</guid><description>&lt;p&gt;Every swappable part of vex, including id generation, file layout, the task file format and sort order, goes through one mechanism: &lt;code&gt;src/lib/plugin.lua&lt;/code&gt;.&lt;/p&gt;
+&lt;h2 id="enums-named-slots-with-one-active-member"&gt;Enums: named slots with one active member &lt;a href="#enums-named-slots-with-one-active-member" class="anchor" aria-hidden="true"&gt;&lt;i class="material-icons align-middle"&gt;link&lt;/i&gt;&lt;/a&gt;&lt;/h2&gt;&lt;p&gt;&lt;code&gt;Plugin:addenum(name, members, active)&lt;/code&gt; registers a slot: a name, the implementations that can fill it, and the one that is active. &lt;code&gt;src/vex.lua&lt;/code&gt; registers six:&lt;/p&gt;
+
+
+
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+
+ 
+
+ &lt;div class="prism-codeblock "&gt;
+ &lt;pre id="85d8a01" class="language-lua "&gt;
+ &lt;code&gt;plugin:addenum(&amp;#34;tagger&amp;#34;, {&amp;#34;canonicalvexid&amp;#34;})
+plugin:addenum(&amp;#34;taskpath&amp;#34;, {&amp;#34;grouppath&amp;#34;})
+plugin:addenum(&amp;#34;taskformat&amp;#34;, {&amp;#34;obsidian&amp;#34;})
+plugin:addenum(&amp;#34;sortdata&amp;#34;, {&amp;#34;canonicalsort&amp;#34;})
+plugin:addenum(&amp;#34;frontmatter&amp;#34;, {&amp;#34;canonicalfrontmatter&amp;#34;})
+plugin:addenum(&amp;#34;body&amp;#34;, {&amp;#34;canonicalbody&amp;#34;})&lt;/code&gt;
+ &lt;/pre&gt;
+ &lt;/div&gt;
+&lt;p&gt;&lt;code&gt;Plugin:select(name, member)&lt;/code&gt; switches the active member. The rest of vex depends only on the slot. Markdown with YAML frontmatter is simply what the &lt;code&gt;obsidian&lt;/code&gt; member of &lt;code&gt;taskformat&lt;/code&gt; writes; another member could store the same fields as JSON or database rows, and schemas, focuses and views would work unchanged.&lt;/p&gt;</description></item><item><title>The index</title><link>https://tyroncameron.github.io/vex/docs/04-technical-documentation/vexdex/the-index/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://tyroncameron.github.io/vex/docs/04-technical-documentation/vexdex/the-index/</guid><description>&lt;p&gt;The vexdex (&lt;code&gt;src/core/vexdex.lua&lt;/code&gt;) is vex&amp;rsquo;s index: a map from each vexid to its task data, kept in &lt;code&gt;.vex/vexdex&lt;/code&gt; so that commands don&amp;rsquo;t read every task file on every run. It is derived entirely from the task files, so keep it out of git and rebuild it with &lt;code&gt;vex resolve all&lt;/code&gt;.&lt;/p&gt;
+&lt;h2 id="on-disk"&gt;On disk &lt;a href="#on-disk" class="anchor" aria-hidden="true"&gt;&lt;i class="material-icons align-middle"&gt;link&lt;/i&gt;&lt;/a&gt;&lt;/h2&gt;
+
+
+
+
+
+
+&lt;table class="table table-hover"&gt;
+ &lt;thead&gt;
+ &lt;tr&gt;
+ &lt;th&gt;File&lt;/th&gt;
+ &lt;th&gt;Holds&lt;/th&gt;
+ &lt;/tr&gt;
+ &lt;/thead&gt;
+ &lt;tbody&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;index.bin&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;Every task&amp;rsquo;s fields, unformatted: timestamps as numbers, links as bare vexids.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;backlinks.bin&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;For every task, the tasks that link to it.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;paths.bin&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;Where each task file is, relative to &lt;code&gt;taskfolder&lt;/code&gt;.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;focus.bin&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;The saved focus, as the list of operations that rebuild it.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;Each &lt;code&gt;.bin&lt;/code&gt; file is written with &lt;code&gt;binser&lt;/code&gt; and is what vex reads. Next to it, a &lt;code&gt;.lua&lt;/code&gt; file holds the same data in readable form. vex never reads the &lt;code&gt;.lua&lt;/code&gt; files; they exist so you can inspect the index.&lt;/p&gt;</description></item></channel></rss>
