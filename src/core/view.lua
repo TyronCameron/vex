@@ -49,10 +49,10 @@ v:view 'tabular' {
             local formatted = task:format(t.vexid)
             local result = {}
             for k, v in pairs(t) do
-                if k ~= 'vexbody' then result[k] = v end
-            end
-            for k, v in pairs(formatted) do
-                if k ~= 'vexbody' then result[k] = v end
+                if k ~= 'vexbody' then
+                    result[k] = formatted[k]
+                    if result[k] == nil then result[k] = v end
+                end
             end
             return result
         end)

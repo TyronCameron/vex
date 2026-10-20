@@ -285,12 +285,29 @@ local function pad(s, w)
     return s .. string.rep(' ', w - #strip_ansi(s))
 end
 
+local maxlistwidth = 40
+
+local function cell(value)
+    if type(value) ~= 'table' then return value == nil and '' or tostring(value) end
+    local shown = ''
+    for i, element in ipairs(value) do
+        local joined = i == 1 and tostring(element) or shown .. ', ' .. tostring(element)
+        if i > 1 and #joined > maxlistwidth then return shown .. ', ...' end
+        shown = joined
+    end
+    return shown
+end
+
 function pretty.tabular(data, sortfunc)
     if #data == 0 then return '' end
     sortfunc = sortfunc or pairs
 
+    local allfields = {}
+    for _, row in ipairs(data) do
+        for key in pairs(row) do allfields[key] = true end
+    end
     local fields = {}
-    for key in sortfunc(data[1]) do
+    for key in sortfunc(allfields) do
         table.insert(fields, key)
     end 
 
@@ -299,7 +316,7 @@ function pretty.tabular(data, sortfunc)
     for _, f in ipairs(fields) do widths[f] = #f end
     for _, task in ipairs(data) do
         for _, f in ipairs(fields) do
-            widths[f] = math.max(widths[f], #strip_ansi(tostring(task[f])))
+            widths[f] = math.max(widths[f], #strip_ansi(cell(task[f])))
         end
     end
 
@@ -333,7 +350,7 @@ function pretty.tabular(data, sortfunc)
     for _, task in ipairs(data) do
         local row = box.left
         for _, f in ipairs(fields) do
-            row = row .. ' ' .. pad(task[f], widths[f]) .. ' ' .. box.right
+            row = row .. ' ' .. pad(cell(task[f]), widths[f]) .. ' ' .. box.right
         end
         table.insert(lines, row)
     end

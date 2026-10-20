@@ -1,9 +1,9 @@
 ---
 vexid: when-printing-validation-errors-1
-vextype: task
+vextype: atom
 description: "When printing validation errors, pretty print them"
 created: "2026-07-10 22:12:48"
-modified: "2026-07-10 22:12:48"
+modified: "2026-10-19 09:22:06"
 status: todo
 ---
 

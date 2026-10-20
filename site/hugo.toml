@@ -1,0 +1,37 @@
+baseURL = "https://tyroncameron.github.io/vex/"
+languageCode = "en"
+title = "vex"
+theme = "dark-theme-editor"
+enableGitInfo = false
+
+[markup.goldmark.renderHooks.link]
+    useEmbedded = "fallback"
+
+[params.header]
+    title = "vex"
+    subtitle = "The embeddable, local-first, markdown-based task system"
+
+[params.footer]
+    copyrightStr = ""
+    gitHash = false
+
+[params.footer.socialLink]
+    github = "https://github.com/TyronCameron/vex"
+
+[params.globalFrontmatter]
+    author = "Tyron Cameron"
+    description = "The embeddable, local-first, markdown-based task system"
+    keywords = "vex,tasks,markdown,cli,luajit"
+
+[params.homePage]
+    siteLongDescriptionTitle = "Start"
+    siteLongDescription = "vex keeps every task as a plain-text markdown file with YAML frontmatter, and every project keeps its own .vex folder, much like a .git folder. There is no server, no daemon and no account. Open Home in the sidebar to find your way around."
+    showRecentPostsBlock = false
+
+[params.page]
+    showAuthor = false
+    showDate = false
+
+[params.preference]
+    sortBy = "weight"
+    sortInAsc = true

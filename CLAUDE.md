@@ -16,7 +16,10 @@ just test                        # unit + e2e + lint; reports every failing suit
 just test-unit [spec...]         # unit tests (all, or the given spec files)
 just test-e2e [spec...]          # e2e tests (all, or the given spec files)
 just lint                        # luacheck (globals, undefined names, broken loops) + mirror check
+just docs [hugo flags]           # build the docs site from vexdoc/ into site/public (needs hugo and obsidian-export)
 ```
+
+`.github/workflows/pages.yml` runs `site/build.sh` on every push to `main` and pushes `site/public` to the `gh-pages` branch, which GitHub Pages serves. The script exports `vexdoc/` with `obsidian-export` (turning `[[wikilinks]]` into markdown links; `vexdoc/.export-ignore` leaves the `vex/` backlog out), gives each page a `title` and `weight` from its numbered filename, and builds it with Hugo and the `dark-theme-editor` theme (`site/hugo.toml`).
 
 There is no build step: LuaJIT runs the `.lua` sources directly, through the `src/vex` shell wrapper (`src/vex.bat` on Windows). `.busted` runs every test under `luajit`, the runtime vex ships with, and `test/unit/load.lua` refuses to run anywhere else.
 
@@ -42,14 +45,14 @@ Rules:
 
 ### Entry point and plugin bootstrap (`src/vex.lua`)
 
-Registers seven plugin **enums** (named slots with exactly one active implementation), loads every file under `src/plugin/`, then hands off to `lib.cli`. Loading `core.vexdex` throws `not-vexed` when no `.vex` exists above the cwd, so `src/vex.lua` only requires `core.verbs` (and with it the vexdex and every plugin) when the verb isn't `init`.
+Registers six plugin **enums** (named slots with exactly one active implementation), loads every file under `src/plugin/`, then hands off to `lib.cli`. Loading `core.vexdex` throws `not-vexed` when no `.vex` exists above the cwd, so `src/vex.lua` only requires `core.verbs` (and with it the vexdex and every plugin) when the verb isn't `init`.
 
 ### The plugin system (`src/lib/plugin.lua`)
 
 Everything swappable in vex — id generation, file path layout, serialization format, sort order — goes through one mechanism:
 - `plugin:add(name)` / `plugin:addall(dir)` — register standalone plugins (e.g. `src/plugin/vexcomplete.lua`, the only real one today).
 - `plugin:addenum(name, members)` — register a named set with one active member.
-- `plugin:get(name)` — resolve to a module, `pcall`-requiring `plugin.<name>` first and falling back to `default.<name>` if that plugin isn't overridden. This is why `src/default/*.lua` holds the actual reference implementations for every slot (`tagger`, `taskpath`, `taskformat`, `dataformat`, `sortdata`, `frontmatter`, `body`) without a project needing to override anything.
+- `plugin:get(name)` — resolve to a module, `pcall`-requiring `plugin.<name>` first and falling back to `default.<name>` if that plugin isn't overridden. This is why `src/default/*.lua` holds the actual reference implementations for every slot (`tagger`, `taskpath`, `taskformat`, `sortdata`, `frontmatter`, `body`) without a project needing to override anything.
 
 ### Data flow: add → resolve → write
 
@@ -140,6 +143,7 @@ If a new concept appears and it isn't clear which of these it belongs to, stop a
 
 - **Rebuild the index after a checkout.** `.vex/vexdex/` is git-ignored, so run `./src/vex resolve all` after cloning, pulling or switching branches.
 - **Track work with vex.** This repo's backlog is vex tasks in `vexdoc/vex/`. When new work or a new bug comes up, raise it with `./src/vex add <description>`, then give the task a body that fully describes it.
+- **Organise tasks as a tree of abstracts over atoms.** Every task you create or edit sits under an `abstract` (`--vextype abstract`) that names a category of work in a few words ("Make vex configurable from config", "Fix bugs"); abstracts nest to refine categories downwards, hold only `children`, and have no body. The leaves are `atom`s (`--vextype atom`): one concrete change small enough to finish in a single session, with a body that says what is wrong or missing, where in the code, which doc promises it (link pages as `[[Page name]]` and tasks as `[[vexid]]`), and how to verify it. If an atom needs breaking down, it should have been an abstract: add one and move the pieces under it. Put a new task under the closest existing abstract with `vex set <parent> --insert --children <vexid>` (remove it from its old parent first, since a task has one parent), add a new abstract only for a new category, and link ordering between atoms with `--dependencies`. `paths.groupby` files each task under its status and lineage, so the folders in `vexdoc/vex/` mirror this tree.
 - **Close out vex tasks** that a change addresses: move the status through `doing` to `done` with `./src/vex set <vexid> --status ...`. Append to a task's body rather than overwriting it, and only when there is something worth adding: a `done` status already says the task was fixed.
 - **Fix docs directly.** When documentation (e.g. this file) is stale or wrong, fix it in place instead of raising a vex task for it.
 - **Design before writing code.** Work out which module each piece belongs to (see "Where code goes"), then write the code.

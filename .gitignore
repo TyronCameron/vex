@@ -46,3 +46,9 @@ luac.out
 .trash/
 # vex index, rebuilt with `vex resolve all`
 .vex/vexdex/
+# docs site, built by site/build.sh
+site/content/
+site/public/
+site/themes/
+site/resources/
+site/.hugo_build.lock

@@ -2,13 +2,12 @@ Every swappable part of vex, including id generation, file layout, the task file
 
 ## Enums: named slots with one active member
 
-`Plugin:addenum(name, members, active)` registers a slot: a name, the implementations that can fill it, and the one that is active. `src/vex.lua` registers seven:
+`Plugin:addenum(name, members, active)` registers a slot: a name, the implementations that can fill it, and the one that is active. `src/vex.lua` registers six:
 
 ```lua
 plugin:addenum("tagger", {"canonicalvexid"})
 plugin:addenum("taskpath", {"grouppath"})
 plugin:addenum("taskformat", {"obsidian"})
-plugin:addenum("dataformat", {"csvdata"})
 plugin:addenum("sortdata", {"canonicalsort"})
 plugin:addenum("frontmatter", {"canonicalfrontmatter"})
 plugin:addenum("body", {"canonicalbody"})
@@ -21,7 +20,6 @@ plugin:addenum("body", {"canonicalbody"})
 | `tagger` | `default.canonicalvexid` | How a description becomes a vexid ([[01 CLI reference#Adding tasks]]). |
 | `taskpath` | `default.grouppath` | Where a task file lives under `taskfolder`: flat, or nested by `paths.groupby` ([[01 Configuring vex (config.lua)]]). |
 | `taskformat` | `default.obsidian` | How a task is written to and read from a file. |
-| `dataformat` | `default.csvdata` | The format the `csv` view writes. |
 | `sortdata` | `default.canonicalsort` | The order of fields in the frontmatter. |
 | `frontmatter` | `default.canonicalfrontmatter` | Which fields go in the frontmatter. |
 | `body` | `default.canonicalbody` | Which field becomes the body. |
