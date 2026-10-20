@@ -49,6 +49,5 @@ luac.out
 # docs site, built by site/build.sh
 site/content/
 site/public/
-site/themes/
 site/resources/
 site/.hugo_build.lock

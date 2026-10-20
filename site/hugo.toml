@@ -1,37 +1,73 @@
 baseURL = "https://tyroncameron.github.io/vex/"
-languageCode = "en"
+languageCode = "en-GB"
 title = "vex"
-theme = "dark-theme-editor"
 enableGitInfo = false
 
-[markup.goldmark.renderHooks.link]
-    useEmbedded = "fallback"
+[module]
+    [module.hugoVersion]
+        extended = true
+        min = "0.140.0"
+    [[module.imports]]
+        path = "github.com/colinwilson/lotusdocs"
+    [[module.imports]]
+        path = "github.com/gohugoio/hugo-mod-bootstrap-scss/v5"
 
-[params.header]
-    title = "vex"
-    subtitle = "The embeddable, local-first, markdown-based task system"
+[markup]
+    [markup.tableOfContents]
+        startLevel = 2
+        endLevel = 3
+    [markup.goldmark.renderer]
+        unsafe = true
+    [markup.goldmark.renderHooks.link]
+        useEmbedded = "fallback"
 
-[params.footer]
-    copyrightStr = ""
-    gitHash = false
+[params]
+    google_fonts = [
+        ["Inter", "300, 400, 600, 700"],
+        ["Fira Code", "500, 700"]
+    ]
+    sans_serif_font = "Inter"
+    secondary_font = "Inter"
+    mono_font = "Fira Code"
 
-[params.footer.socialLink]
-    github = "https://github.com/TyronCameron/vex"
+    [params.footer]
+        copyright = "© :YEAR: Tyron Cameron. vex is open source under the [MIT licence](https://github.com/TyronCameron/vex/blob/main/LICENSE)."
 
-[params.globalFrontmatter]
-    author = "Tyron Cameron"
-    description = "The embeddable, local-first, markdown-based task system"
-    keywords = "vex,tasks,markdown,cli,luajit"
+    [params.social]
+        github = "TyronCameron/vex"
 
-[params.homePage]
-    siteLongDescriptionTitle = "Start"
-    siteLongDescription = "vex keeps every task as a plain-text markdown file with YAML frontmatter, and every project keeps its own .vex folder, much like a .git folder. There is no server, no daemon and no account. Open Home in the sidebar to find your way around."
-    showRecentPostsBlock = false
+    [params.docs]
+        title = "vex"
+        themeColor = "cyan"
+        darkMode = true
+        prism = true
+        prismTheme = "vex"
+        repoURL = "https://github.com/TyronCameron/vex"
+        repoBranch = "main"
+        sidebarIcons = true
+        breadcrumbs = true
+        backToTop = true
+        toc = true
+        tocMobile = true
+        scrollSpy = true
+        descriptions = false
+        titleIcon = true
+        navDesc = true
+        navDescTrunc = 60
+        listDescTrunc = 140
+        intLinkTooltip = true
 
-[params.page]
-    showAuthor = false
-    showDate = false
+    [params.flexsearch]
+        enabled = true
 
-[params.preference]
-    sortBy = "weight"
-    sortInAsc = true
+[menu]
+    [[menu.primary]]
+        name = "Docs"
+        url = "docs/"
+        identifier = "docs"
+        weight = 10
+    [[menu.primary]]
+        name = "GitHub"
+        url = "https://github.com/TyronCameron/vex"
+        identifier = "github"
+        weight = 20

@@ -2,16 +2,19 @@ A recipe is a named shortcut that creates one or more tasks with fields already 
 
 ## Listing recipes
 
-```txt
-vex recipe
+```console
+$ vex recipe
+Available recipes:
+  abstract
 ```
 
 With no name, `vex recipe` lists the recipes available. vex ships `abstract`, which creates a task of type `abstract`: a parent that groups other tasks.
 
 ## Using a recipe
 
-```txt
-vex recipe abstract Ship the v0.2 release
+```console
+$ vex recipe abstract Ship the v0.2 release
+ship-v0-2-release-1
 ```
 
 As with `add`, every word up to the first `--flag` is the description, and flags set fields. vex creates, resolves and writes every task the recipe adds, prints their vexids, and focuses on them.
@@ -34,8 +37,12 @@ recipe:recipe 'release' {
 }
 ```
 
-```txt
-vex recipe release the payments API
+```console
+$ vex recipe release the payments API
+payments-api-1
+spike-payments-api-1
+build-payments-api-1
+test-payments-api-1
 ```
 
 See [[04 Configuring recipes]] for the details.

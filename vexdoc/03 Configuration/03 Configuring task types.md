@@ -13,8 +13,8 @@ task:task 'bug':extends 'atom' {
 }
 ```
 
-```txt
-vex add Crash on start --vextype bug --severity high
+```console
+$ vex add Crash on start --vextype bug --severity high
 ```
 
 A `schema` is a composable mechanism for nested data validation, normalisation, derivation, and conversion. Any time a task is resolved, it is checked (normalised, validated, derived, and/or converted) against the schema. You can make up your own schemas from the following building blocks, amongst others:
@@ -43,8 +43,8 @@ task:transient 'shouting' {
 }
 ```
 
-```txt
-vex focus all --select shouting
+```console
+$ vex focus all --select shouting
 ```
 
 A definition can read other fields and transients, and query other tasks through `focus`.

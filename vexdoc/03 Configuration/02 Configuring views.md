@@ -8,8 +8,8 @@ view:view 'count' {
 }
 ```
 
-```txt
-vex view all count
+```console
+$ vex view all count
 ```
 
 `focus:get()` returns the focus's tasks. Read any field from them, transients included. Flags arrive as a table: `vex view all count --field status` gives `flags.field == 'status'`.

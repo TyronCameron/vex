@@ -6,9 +6,9 @@ focus.register_focus('mine', function()
 end)
 ```
 
-```txt
-vex focus mine --select due
-vex view mine kanban
+```console
+$ vex focus mine --select due
+$ vex view mine kanban
 ```
 
 A named focus works wherever a focus does: as a starting point, in a list (`mine,all`), and as the value of `--union` and the other set operations. It is evaluated each time it's used, so it always reflects the current tasks.

@@ -16,10 +16,10 @@ just test                        # unit + e2e + lint; reports every failing suit
 just test-unit [spec...]         # unit tests (all, or the given spec files)
 just test-e2e [spec...]          # e2e tests (all, or the given spec files)
 just lint                        # luacheck (globals, undefined names, broken loops) + mirror check
-just docs [hugo flags]           # build the docs site from vexdoc/ into site/public (needs hugo and obsidian-export)
+just docs [hugo flags]           # build the docs site from vexdoc/ into site/public (needs hugo extended, go and obsidian-export)
 ```
 
-`.github/workflows/pages.yml` runs `site/build.sh` on every push to `main` and pushes `site/public` to the `gh-pages` branch, which GitHub Pages serves. The script exports `vexdoc/` with `obsidian-export` (turning `[[wikilinks]]` into markdown links; `vexdoc/.export-ignore` leaves the `vex/` backlog out), gives each page a `title` and `weight` from its numbered filename, and builds it with Hugo and the `dark-theme-editor` theme (`site/hugo.toml`).
+`.github/workflows/pages.yml` runs `site/build.sh` on every push to `main` and pushes `site/public` to the `gh-pages` branch, which GitHub Pages serves. The script exports `vexdoc/` with `obsidian-export` (turning `[[wikilinks]]` into markdown links; `vexdoc/.export-ignore` leaves the `vex/` backlog out), gives each page a `title`, `weight`, `description` and sidebar `icon`, turns Obsidian callouts into alerts and wraps every table in Lotus Docs' `table-hover` shortcode, then builds it with Hugo and the Lotus Docs theme, pulled in as Hugo modules pinned in `site/go.mod` (`site/hugo.toml`, landing page in `site/data/landing.yaml`). In `vexdoc/`, write shell examples as `console` code blocks: `$ ` starts a command, any other line is its output. `site/layouts/docs/_markup/render-codeblock-console.html` shows the prompt and the output without letting either be selected or copied.
 
 There is no build step: LuaJIT runs the `.lua` sources directly, through the `src/vex` shell wrapper (`src/vex.bat` on Windows). `.busted` runs every test under `luajit`, the runtime vex ships with, and `test/unit/load.lua` refuses to run anywhere else.
 

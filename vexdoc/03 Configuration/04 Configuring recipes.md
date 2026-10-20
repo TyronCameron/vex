@@ -9,8 +9,8 @@ recipe:recipe 'chore' {
 }
 ```
 
-```txt
-vex recipe chore Take out the bins
+```console
+$ vex recipe chore Take out the bins
 ```
 
 `taskproperties` holds the description and every flag. `add` returns the list of vexids it added. A recipe can add as many tasks as it likes and link them through their fields; vex resolves and writes each returned task in the order of the list, then focuses on all of them:

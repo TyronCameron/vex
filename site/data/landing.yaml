@@ -1,0 +1,46 @@
+hero:
+  enable: true
+  weight: 10
+  template: hero
+  badge:
+    text: v0.0.0 · in development
+    color: primary
+    pill: true
+    soft: true
+  title: vex
+  subtitle: The **embeddable**, **local-first**, **markdown-based** task system. Every task is a plain-text file, every project keeps its own `.vex` folder, and there is no server, no daemon and no account.
+  ctaButton:
+    icon: rocket_launch
+    btnText: Get started
+    url: "docs/01-getting-started/01-installing-vex/"
+  cta2Button:
+    icon: code
+    btnText: View on GitHub
+    url: "https://github.com/TyronCameron/vex"
+  info: "**Open source**, MIT licensed. Runs on LuaJIT, so it runs on a potato."
+
+featureGrid:
+  enable: true
+  weight: 20
+  template: feature grid
+  title: Tasks as plain text
+  subtitle: vex keeps your tasks next to your code, in files that any editor, script, git hook or AI agent can read and write.
+  items:
+    - title: Markdown files
+      icon: description
+      description: Every task is a markdown file with YAML frontmatter. Open it in your editor, link it in Obsidian, diff it in git.
+    - title: Lives in your project
+      icon: folder_open
+      description: Each project keeps its own `.vex` folder, like `.git`. Commit the tasks, ignore the index, and git does the syncing.
+    - title: Focuses
+      icon: filter_alt
+      description: Saved, composable queries. Filter, fuzzy-match, walk trees and dependencies, group, order and number, then act on the result.
+    - title: Views
+      icon: dashboard
+      description: Tables, CSV, JSON, kanban boards, project statistics and a dependency view for any single task.
+    - title: Opinionated task types
+      icon: account_tree
+      description: Abstracts group work, explorations mark open questions, decisions pick a path and atoms get done.
+    - title: Extensible
+      icon: extension
+      description: Add task types, transients, recipes, focuses, views and event hooks with a Lua file in `.vex`, no build step required.

@@ -1,0 +1,19 @@
+<div class="prism-codeblock vex-console">
+<button type="button" class="vex-console-copy" title="Copy commands" aria-label="Copy commands" onclick="navigator.clipboard.writeText(Array.from(this.parentElement.querySelectorAll('.vex-command'), e => e.textContent).join('\n')); this.firstElementChild.textContent = 'check'; setTimeout(() => this.firstElementChild.textContent = 'content_copy', 1500)"><span class="material-icons">content_copy</span></button>
+<pre><code>
+{{- range $i, $line := split (strings.TrimSuffix "\n" .Inner) "\n" -}}
+{{- if $i }}{{ "\n" }}{{ end -}}
+{{- if hasPrefix $line "$ " -}}
+<span class="vex-command">
+{{- substr $line 2 | htmlEscape
+    | replaceRE `(\s#.*)$` `<span class="vex-comment">$1</span>`
+    | replaceRE `^(\S+)` `<span class="vex-program">$1</span>`
+    | replaceRE `(^|\s)(--[\w-]+)` `$1<span class="vex-flag">$2</span>`
+    | safeHTML -}}
+</span>
+{{- else -}}
+<span class="vex-output">{{ $line }}</span>
+{{- end -}}
+{{- end -}}
+</code></pre>
+</div>
