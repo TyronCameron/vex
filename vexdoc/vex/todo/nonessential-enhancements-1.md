@@ -8,12 +8,10 @@ children:
   - "[[polish-shell-completion-1]]"
   - "[[remove-implement-empty-lib-stubs-1]]"
   - "[[export-tasks-other-tools-1]]"
-  - "[[track-time-schedules-1]]"
-  - "[[span-several-projects-1]]"
-  - "[[design-vexql-query-language-1]]"
-  - "[[add-llm-pushback-mode-critiques-1]]"
   - "[[support-recurring-tasks-1]]"
+  - "[[add-transient-date-task-file-1]]"
+  - "[[allow-several-task-folders-one-1]]"
 created: "2026-10-19 07:37:37"
-modified: "2026-10-19 21:29:43"
+modified: "2026-10-20 09:47:59"
 status: todo
 ---

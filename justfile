@@ -19,5 +19,5 @@ lint:
 	luacheck src test
 	test/unit/mirror.sh
 
-site *args:
+docs *args:
 	site/build.sh {{args}}

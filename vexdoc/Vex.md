@@ -203,10 +203,8 @@ Config.lua allows for:
 - setting root folder where the tasks themselves are actually stored 
 - folder structure types (choosing paths)
 - task name structure (default = tag)
-- allow hooks: true/false
 - file format
 - warnings on/off 
-- default views 
 
 
 ## Plugins 
@@ -228,15 +226,11 @@ File format
 - obsidian.md
 Query 
 - vexQL
-Query format
-- CSV 
-- JSON 
 Views 
 - tabular 
 - kanban 
 Export to .ics
 Tag creation (i.e. how to create naming from a description)
-Pushback mode from LLM
 
 ## Schedules 
 

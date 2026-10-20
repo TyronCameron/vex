@@ -7,6 +7,9 @@ modified: "2026-10-19 21:29:42"
 status: todo
 ---
 
+**Unconfirmed: this needs further thinking.** The design below is one possibility, not a decision.
+
+
 Event hooks ([[06 Configuring event hooks]]) are global. A `.vex/events` file registers on an event name, gets bare args such as `(vexid, task)`, and has to filter by type itself. Recurrence, and other per-type behaviour, needs hooks that belong to a task type. Let a type declare hooks next to its schema, inherited down the type chain like schemas and transients (`TaskManager:schemaof`, `transientof`):
 
 ```lua

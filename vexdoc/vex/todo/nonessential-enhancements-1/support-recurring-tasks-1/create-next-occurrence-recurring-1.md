@@ -5,17 +5,14 @@ description: Create the next occurrence when a recurring task is done
 created: "2026-10-19 21:29:42"
 dependencies: 
   - "[[let-task-types-register-hooks-1]]"
-  - "[[fire-event-task-status-changes-1]]"
-  - "[[add-recur-field-reads-phrases-1]]"
-modified: "2026-10-19 21:29:43"
+modified: "2026-10-20 09:47:51"
 status: todo
 ---
 
-When a task with `recur` reaches its `final` phase, create its next occurrence. Use the status-change event ([[fire-event-task-status-changes-1]]) and a type-level hook ([[let-task-types-register-hooks-1]]) on the base `task` type, so it works for every type:
+We want recurring tasks. What is known so far:
 
-- The new task copies the description, type, owner, cost, benefit, body, `recur` and parent (it is inserted into the same abstract's `children`). It gets a fresh vexid from the tagger's counter, status `todo`, and `due` advanced with `naturaltime.next(recur, previous due or completion time)`.
-- The finished task stays as a record. Optionally, link the two (`previous: [[vexid]]`) so a series can be followed with `--tree previous`.
-- `vex add`/`set` print the new vexid, and the focus moves to it.
-- Edge cases to settle and test: completing a task late (skip missed occurrences or not), removing `recur` to end a series, and `vex resolve all` never creating duplicates.
+- The next occurrence is kicked off when the previous task reaches its recurrence point, e.g. when it is completed.
+- Recurrences are recipes, not a field on a task ([[04 Configuring recipes]]).
+- It should be implemented through hooks ([[06 Configuring event hooks]]), possibly type-level ones ([[let-task-types-register-hooks-1]]).
 
-Document recurring tasks in [[01 CLI reference]] and [[02 Creating your first task using vex]], and add an e2e test that completes a weekly task and finds the next one due a week later.
+Everything else is undecided: design it, and bring the design up for discussion before building.
