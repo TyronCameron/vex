@@ -44,3 +44,6 @@ featureGrid:
     - title: Extensible
       icon: extension
       description: Add task types, transients, recipes, focuses, views and event hooks with a Lua file in `.vex`, no build step required.
+
+imageCompare:
+  enable: false
