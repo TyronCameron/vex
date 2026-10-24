@@ -7,3 +7,5 @@ modified: "2026-10-19 09:22:06"
 status: todo
 ---
 `Config:loadall` (`src/lib/config.lua`) supports several paths, later ones overriding earlier ones, but `src/core/config.lua` only registers `.vex/config.lua`. The design goal is an inheritance chain (e.g. user-level config, then each `.vex` from the outermost to the innermost), none of which is wired up.
+
+The user-level step is done ([[load-config-extensions-plugins-1]]); the outermost-to-innermost chain of `.vex` folders is not.

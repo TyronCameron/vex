@@ -48,10 +48,11 @@ Each of those tasks is now a markdown file you can open, edit, link in Obsidian 
 You need [LuaJIT](https://luajit.org/).
 
 ```console
-$ git clone https://github.com/TyronCameron/vex.git
-$ ln -s "$(pwd)/vex/src/vex" /usr/local/bin/vex
-$ vex help
+$ curl -fsSL https://raw.githubusercontent.com/TyronCameron/vex/main/install.sh | sh
+$ vex version
 ```
+
+That installs the latest [release](https://github.com/TyronCameron/vex/releases) under `~/.local`. Releases also hold a `.zip` with `install.ps1` for Windows. See [Installing vex](https://tyroncameron.github.io/vex/docs/01-getting-started/01-installing-vex/) for options.
 
 Then follow [Creating your first task](https://tyroncameron.github.io/vex/docs/01-getting-started/02-creating-your-first-task-using-vex/).
 
@@ -70,7 +71,7 @@ The docs are written in [`vexdoc/`](vexdoc), an Obsidian vault that also holds t
 $ just test
 ```
 
-runs the unit tests, end-to-end tests and lint, and needs `luajit`, `busted`, `luacheck` and `just`. See [CLAUDE.md](CLAUDE.md) for how the code is organised.
+runs the unit tests, end-to-end tests and lint, and needs `luajit`, `busted`, `luacheck`, `just` and `zip`. Pushing a `v*` tag runs the release workflow. See [CLAUDE.md](CLAUDE.md) for how the code is organised.
 
 ## License
 

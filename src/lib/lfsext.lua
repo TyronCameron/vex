@@ -17,6 +17,24 @@ function lfsext.rootdir(path)
     return nil
 end
 
+function lfsext.globaldir(getenv)
+    getenv = getenv or os.getenv
+    local function under(variable, suffix)
+        local base = getenv(variable)
+        return base and base .. suffix
+    end
+    local candidates = {
+        getenv('VEX_HOME') or false,
+        under('APPDATA', '\\vex') or false,
+        under('XDG_CONFIG_HOME', '/vex') or false,
+        under('HOME', '/.config/vex') or false,
+    }
+    for _, path in ipairs(candidates) do
+        if path and lfs.attributes(path, 'mode') == 'directory' then return path end
+    end
+    return nil
+end
+
 function lfsext.walk(path, files)
     files = files or {}
     for file in lfs.dir(path) do

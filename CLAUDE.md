@@ -16,10 +16,14 @@ just test                        # unit + e2e + lint; reports every failing suit
 just test-unit [spec...]         # unit tests (all, or the given spec files)
 just test-e2e [spec...]          # e2e tests (all, or the given spec files)
 just lint                        # luacheck (globals, undefined names, broken loops) + mirror check
+just install [--uninstall]       # install this clone the way a release installs (PREFIX, default ~/.local)
+just package <version> [outdir]  # build vex-<version>.tar.gz/.zip + SHA256SUMS into dist/
 just docs [hugo flags]           # build the docs site from vexdoc/ into site/public (needs hugo extended, go and obsidian-export)
 ```
 
 `.github/workflows/pages.yml` runs `site/build.sh` on every push to `main` and pushes `site/public` to the `gh-pages` branch, which GitHub Pages serves. The script exports `vexdoc/` with `obsidian-export` (turning `[[wikilinks]]` into markdown links; `vexdoc/.export-ignore` leaves the `vex/` backlog out), gives each page a `title`, `weight`, `description` and sidebar `icon`, turns Obsidian callouts into alerts and wraps every table in Lotus Docs' `table-hover` shortcode, then builds it with Hugo and the Lotus Docs theme, pulled in as Hugo modules pinned in `site/go.mod` (`site/hugo.toml`, landing page in `site/data/landing.yaml`). In `vexdoc/`, write shell examples as `console` code blocks: `$ ` starts a command, any other line is its output. `site/layouts/docs/_markup/render-codeblock-console.html` shows the prompt and the output without letting either be selected or copied.
+
+`.github/workflows/release.yml` runs `just test`, `scripts/package.sh` and `gh release create` when a `v*` tag is pushed. A release is the platform-neutral `src/` plus `install.sh` / `install.ps1`, which copy it to `$PREFIX/lib/vex` (`%LOCALAPPDATA%\vex` on Windows) and link `bin/vex`; `package.sh` stamps `src/version.lua`, which `vex version` prints. `lux.toml` makes the same sources a LuaRocks/lux package.
 
 There is no build step: LuaJIT runs the `.lua` sources directly, through the `src/vex` shell wrapper (`src/vex.bat` on Windows). `.busted` runs every test under `luajit`, the runtime vex ships with, and `test/unit/load.lua` refuses to run anywhere else.
 
@@ -45,7 +49,7 @@ Rules:
 
 ### Entry point and plugin bootstrap (`src/vex.lua`)
 
-Registers six plugin **enums** (named slots with exactly one active implementation), loads every file under `src/plugin/`, then hands off to `lib.cli`. Loading `core.vexdex` throws `not-vexed` when no `.vex` exists above the cwd, so `src/vex.lua` only requires `core.verbs` (and with it the vexdex and every plugin) when the verb isn't `init`.
+Finds its own install root by searching `package.path` for `lib/plugin.lua`, so it runs the same from a clone, an install or a rock. It puts the global folder (below) on `package.path` and registers its `plugin/` after `src/plugin`. Registers six plugin **enums** (named slots with exactly one active implementation), loads every file under `src/plugin/`, then hands off to `lib.cli`. Loading `core.vexdex` throws `not-vexed` when no `.vex` exists above the cwd, so `src/vex.lua` only requires `core.verbs` (and with it the vexdex and every plugin) when the verb isn't `init`.
 
 ### The plugin system (`src/lib/plugin.lua`)
 
@@ -99,13 +103,15 @@ A from-scratch verb/error registry, not a wrapper around an existing arg-parsing
 
 ### Config (`src/core/config.lua` / `src/lib/config.lua`)
 
-`Config:loadall()` `dofile`s each registered path (currently just `.vex/config.lua`) and merges the returned tables, later paths overwriting earlier ones. Read values as fields: `config.taskfolder`, `config.taskowners`, `config.default.tasktype` (the `vextype` `TaskManager:add` gives a task without one), `config.paths`.
+`Config:loadall()` `dofile`s each registered path (the global folder's `config.lua` if it exists, then `.vex/config.lua`) and merges the returned tables, later paths overwriting earlier ones. Read values as fields: `config.taskfolder`, `config.taskowners`, `config.default.tasktype` (the `vextype` `TaskManager:add` gives a task without one), `config.paths`.
 
 `paths.groupby` (read by `src/default/grouppath.lua`, the only `taskpath` member) is a list of field names, transients included, that nests task files in folders, e.g. `paths = { groupby = {'lineage', 'status'} }` puts a task at `<root>/<parent>/<status>/<vexid>.md`. A list value nests one folder per element; unset values and empty lists are skipped; each value is kept to a single folder name (`/`, `\`, `:` and the like become `-`). Without `paths.groupby`, files sit flat at `<vexid>.md`. Anything but a list of strings throws `bad-groupby`.
 
+The **global folder** is `lfsext.globaldir()`: `$VEX_HOME`, else `%APPDATA%\vex`, `$XDG_CONFIG_HOME/vex` or `~/.config/vex`, whichever exists first (nil if none). It is the user's own layer under every project, surviving upgrades of the install: `config.lua`, the extension folders below and `plugin/`. Tests point `VEX_HOME` at a missing folder (`test/e2e/helper.lua`, `test/unit/run.sh`) so a developer's real one never leaks in.
+
 ### Extensions (`src/core/extensions.lua`)
 
-Required at the end of `core.verbs`, once every manager exists. It runs each `.lua` file in the project's `.vex/tasks/`, `.vex/recipes/`, `.vex/focuses/`, `.vex/views/` then `.vex/events/` (each sorted by path) through `loadfile` + `setfenv`, in an environment that exposes `task`, `recipe`, `focus` (the `Focus` class: `focus.register_focus(name, get)`), `view`, `schema` and `event` on top of `_G`, so a file registers things directly (`task:task 'bug':extends 'task' { ... }`) without any `require`. A file that fails to load throws `bad-extension`.
+Required at the end of `core.verbs`, once every manager exists. For each of `tasks`, `recipes`, `focuses`, `views` then `events`, it runs the `.lua` files of the global folder's copy and then the project's `.vex/<folder>` (each sorted by path) through `loadfile` + `setfenv`, in an environment that exposes `task`, `recipe`, `focus` (the `Focus` class: `focus.register_focus(name, get)`), `view`, `schema` and `event` on top of `_G`, so a file registers things directly (`task:task 'bug':extends 'task' { ... }`) without any `require`. A file that fails to load throws `bad-extension`.
 
 ### Events (`src/lib/event.lua`)
 

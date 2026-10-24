@@ -21,3 +21,9 @@ lint:
 
 docs *args:
 	site/build.sh {{args}}
+
+install *args:
+	sh install.sh {{args}}
+
+package version *outdir:
+	scripts/package.sh {{version}} {{outdir}}
