@@ -141,4 +141,50 @@ describe("pretty", function()
         assert.is_nil(result:find("child-task-20", 1, true))
     end)
 
+    local function visiblewidth(line)
+        return select(2, line:gsub("\27%[[0-9;]*m", ""):gsub("[^\128-\191]", ""))
+    end
+
+    it("`pretty.tabular` keeps a long list within 40 characters", function()
+        local long = {}
+        for i = 1, 20 do table.insert(long, "child-task-" .. i) end
+        local result = pretty.tabular({{children = long}}, pairs)
+        local row = result:match("\n│ (child%-task[^\n]-) │")
+        assert.truthy(visiblewidth(row:gsub("%s+$", "")) <= 40)
+    end)
+
+    it("`pretty.tabular` cuts a long value to 40 characters with ...", function()
+        local result = pretty.tabular({{description = string.rep("a", 100)}}, pairs)
+        assert.truthy(result:find(string.rep("a", 37) .. "...", 1, true))
+        assert.is_nil(result:find(string.rep("a", 38), 1, true))
+    end)
+
+    it("`pretty.tabular` cuts values to the given maximum width", function()
+        local result = pretty.tabular({{description = "abcdefghijklmnop"}}, pairs, 10)
+        assert.truthy(result:find("abcdefg...", 1, true))
+        assert.is_nil(result:find("abcdefgh", 1, true))
+    end)
+
+    it("`pretty.tabular` cuts a long field name in the header", function()
+        local result = pretty.tabular({{[string.rep("f", 50)] = "x"}}, pairs)
+        assert.truthy(result:find(string.rep("f", 37) .. "...", 1, true))
+        assert.is_nil(result:find(string.rep("f", 38), 1, true))
+    end)
+
+    it("`pretty.tabular` aligns every line across long, unicode, styled and multiline values", function()
+        local data = {
+            {description = string.rep("long ", 30), status = "todo"},
+            {description = "café — ok", status = "doing"},
+            {description = pretty.string("styled", "bold"), status = "done"},
+            {description = "first line\nsecond line", status = "todo"},
+        }
+        local result = pretty.tabular(data, pairs)
+        local lines = {}
+        for line in (result .. "\n"):gmatch("(.-)\n") do table.insert(lines, line) end
+        assert.equal(#data + 4, #lines)
+        for _, line in ipairs(lines) do
+            assert.equal(visiblewidth(lines[1]), visiblewidth(line))
+        end
+    end)
+
 end)

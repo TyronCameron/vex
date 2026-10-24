@@ -280,27 +280,51 @@ local function strip_ansi(s)
     return (s:gsub("\27%[[0-9;]*m", ""))
 end
 
-local function pad(s, w)
-    s = tostring(s)
-    return s .. string.rep(' ', w - #strip_ansi(s))
+local function width(s)
+    return select(2, strip_ansi(s):gsub('[^\128-\191]', ''))
 end
 
-local maxlistwidth = 40
+local function pad(s, w)
+    s = tostring(s)
+    return s .. string.rep(' ', w - width(s))
+end
 
-local function cell(value)
-    if type(value) ~= 'table' then return value == nil and '' or tostring(value) end
+local function truncate(s, w)
+    if width(s) <= w then return s end
+    local kept = {}
+    for char in strip_ansi(s):gmatch('[%z\1-\127\194-\244][\128-\191]*') do
+        if #kept == w - 3 then break end
+        table.insert(kept, char)
+    end
+    return table.concat(kept) .. '...'
+end
+
+local defaultmaxwidth = 40
+
+local function listcell(value, w)
     local shown = ''
     for i, element in ipairs(value) do
         local joined = i == 1 and tostring(element) or shown .. ', ' .. tostring(element)
-        if i > 1 and #joined > maxlistwidth then return shown .. ', ...' end
+        if i > 1 and width(joined) + #', ...' > w then return shown .. ', ...' end
         shown = joined
     end
     return shown
 end
 
-function pretty.tabular(data, sortfunc)
+local function cell(value, w)
+    local shown
+    if type(value) == 'table' then
+        shown = listcell(value, w)
+    else
+        shown = value == nil and '' or tostring(value)
+    end
+    return truncate((shown:gsub('[\r\n\t]', ' ')), w)
+end
+
+function pretty.tabular(data, sortfunc, maxwidth)
     if #data == 0 then return '' end
     sortfunc = sortfunc or pairs
+    maxwidth = maxwidth or defaultmaxwidth
 
     local allfields = {}
     for _, row in ipairs(data) do
@@ -309,14 +333,21 @@ function pretty.tabular(data, sortfunc)
     local fields = {}
     for key in sortfunc(allfields) do
         table.insert(fields, key)
-    end 
+    end
+
+    local headers, cells = {}, {}
+    for _, f in ipairs(fields) do headers[f] = cell(f, maxwidth) end
+    for i, task in ipairs(data) do
+        cells[i] = {}
+        for _, f in ipairs(fields) do cells[i][f] = cell(task[f], maxwidth) end
+    end
 
     -- compute column widths (ignoring ANSI escape sequences)
     local widths = {}
-    for _, f in ipairs(fields) do widths[f] = #f end
-    for _, task in ipairs(data) do
+    for _, f in ipairs(fields) do widths[f] = width(headers[f]) end
+    for _, row in ipairs(cells) do
         for _, f in ipairs(fields) do
-            widths[f] = math.max(widths[f], #strip_ansi(cell(task[f])))
+            widths[f] = math.max(widths[f], width(row[f]))
         end
     end
 
@@ -342,15 +373,15 @@ function pretty.tabular(data, sortfunc)
     -- header row
     local header = box.left
     for _, f in ipairs(fields) do
-        header = header .. ' ' .. pretty.string(pad(f, widths[f]), "bold") .. ' ' .. box.right
+        header = header .. ' ' .. pretty.string(pad(headers[f], widths[f]), "bold") .. ' ' .. box.right
     end
 
     -- data rows
     local lines = {top, header, sep}
-    for _, task in ipairs(data) do
+    for _, cellrow in ipairs(cells) do
         local row = box.left
         for _, f in ipairs(fields) do
-            row = row .. ' ' .. pad(cell(task[f]), widths[f]) .. ' ' .. box.right
+            row = row .. ' ' .. pad(cellrow[f], widths[f]) .. ' ' .. box.right
         end
         table.insert(lines, row)
     end
