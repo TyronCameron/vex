@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -uo pipefail
+export VEX_HOME=/nonexistent/vex-home
 repo="$(cd "$(dirname "$0")/../.." && pwd)"
 specs=("$@")
 if [ ${#specs[@]} -eq 0 ]; then

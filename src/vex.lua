@@ -1,6 +1,21 @@
-local script_dir = debug.getinfo(1, "S").source:match("^@(.+[\\/])")
-package.path = script_dir .. "?.lua;" .. script_dir .. "?/init.lua;" .. package.path
-package.cpath = script_dir .. "?.dll;"  .. script_dir .. "?.so;"       .. package.cpath
+local function source_dir()
+    for template in package.path:gmatch("[^;]+") do
+        local path = template:gsub("%?", "lib/plugin")
+        local file = io.open(path)
+        if file then
+            file:close()
+            return path:match("^(.+)[\\/]lib[\\/]plugin%.lua$")
+        end
+    end
+end
+
+local script_dir = source_dir() .. "/"
+local lfs = require 'lib.lfs'
+local lfsext = require 'lib.lfsext'
+local globaldir = lfsext.globaldir()
+if globaldir then
+    package.path = globaldir .. "/?.lua;" .. package.path
+end
 
 local plugin = require 'lib.plugin'
 plugin:addenum("tagger", {"canonicalvexid"})
@@ -9,7 +24,10 @@ plugin:addenum("taskformat", {"obsidian"})
 plugin:addenum("sortdata", {"canonicalsort"})
 plugin:addenum("frontmatter", {"canonicalfrontmatter"})
 plugin:addenum("body", {"canonicalbody"})
-plugin:addall(script_dir .. '/plugin')
+plugin:addall(script_dir .. 'plugin')
+if globaldir and lfs.attributes(globaldir .. '/plugin', 'mode') == 'directory' then
+    plugin:addall(globaldir .. '/plugin')
+end
 
 local cli = require 'lib.cli'
 
@@ -23,9 +41,16 @@ cli:verb "init" {
     example = "vex init"
 }
 
+cli:verb "version" {
+    function() print(require 'version') end,
+    doc = "Print the installed vex version",
+    args = "",
+    example = "vex version"
+}
+
 require 'core.errors'
 
-if arg[1] ~= 'init' then
+if arg[1] ~= 'init' and arg[1] ~= 'version' then
     require 'core.verbs'
     plugin:each(function(plug) end) -- automatically loads them
 end

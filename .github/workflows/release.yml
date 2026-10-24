@@ -1,0 +1,42 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to release, without the leading v (creates the tag v<version> on the selected commit)
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Test, package and publish a GitHub release
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ inputs.version || github.ref_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install LuaJIT, busted, luacheck, just and zip
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y luajit luarocks lua5.1 liblua5.1-0-dev lua-check just zip
+          sudo luarocks install busted
+
+      - name: Run tests
+        run: just test
+
+      - name: Package
+        run: scripts/package.sh "$VERSION" dist
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="v${VERSION#v}"
+          gh release create "$tag" dist/* --target "$GITHUB_SHA" --title "$tag" --generate-notes

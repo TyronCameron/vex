@@ -55,7 +55,8 @@ function Plugin:addall(plugin_dir)
         if filename ~= "." and filename ~= ".." then
             if lfs.attributes(plugin_dir .. '/' .. filename, 'mode') == 'directory'
                 or filename:find("%.lua") then
-                self:add(filename:gsub("%.lua", ""))
+                local name = filename:gsub("%.lua", "")
+                if not self.plugins[name] then self:add(name) end
             end
         end
     end

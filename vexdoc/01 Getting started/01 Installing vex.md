@@ -3,11 +3,44 @@ vex is a single LuaJIT program with no services to run. Installing it means putt
 ## Requirements
 
 - LuaJIT.
-- A clone of the vex repository.
 
-## Running vex
+## Installing a release
 
-`src/vex` is the entry point (`src/vex.bat` on Windows). It finds its own directory, sets up Lua's module paths and runs `src/vex.lua`.
+Every [release](https://github.com/TyronCameron/vex/releases) is a `.tar.gz` and a `.zip` holding the Lua sources and an installer. On Linux and macOS:
+
+```console
+$ curl -fsSL https://raw.githubusercontent.com/TyronCameron/vex/main/install.sh | sh
+$ vex version
+```
+
+That downloads the latest release and puts it under `~/.local` (`lib/vex` holds the program, `bin/vex` is the command). Set `PREFIX` to install elsewhere and `VEX_VERSION` to pick a release:
+
+```console
+$ curl -fsSL https://raw.githubusercontent.com/TyronCameron/vex/main/install.sh | PREFIX=/usr/local VEX_VERSION=0.1.0 sh
+```
+
+Or unpack a release yourself and run its installer; running it again upgrades vex:
+
+```console
+$ tar -xzf vex-0.1.0.tar.gz
+$ sh vex-0.1.0/install.sh
+$ sh vex-0.1.0/install.sh --uninstall
+```
+
+If `~/.local/bin` is not on your `PATH`, the installer says so.
+
+On Windows, unzip a release and run the installer from PowerShell. It copies vex to `%LOCALAPPDATA%\vex` and adds that folder to your user `PATH`:
+
+```console
+$ .\install.ps1
+$ .\install.ps1 -Uninstall
+```
+
+Your tasks, `.vex` folders and global folder (see [[01 Configuring vex (config.lua)#The global folder]]) are never touched by installing, upgrading or uninstalling.
+
+## Running from a clone
+
+To work on vex itself, run it from a clone. `src/vex` (`src/vex.bat` on Windows) finds its own directory, sets up Lua's module paths and runs `src/vex.lua`:
 
 ```console
 $ git clone https://github.com/TyronCameron/vex.git
@@ -15,11 +48,7 @@ $ cd vex
 $ ./src/vex help
 ```
 
-To run `vex` from anywhere, link the wrapper onto your path:
-
-```console
-$ ln -s "$(pwd)/src/vex" /usr/local/bin/vex
-```
+`just install` installs the clone the same way a release does.
 
 ## Initialising a project
 

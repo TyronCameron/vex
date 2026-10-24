@@ -29,4 +29,18 @@ describe("Plugin", function()
         assert.equal(require 'default.canonicalsort', plugins:get("canonicalsort"))
     end)
 
+    it("does not register a folder's file again when its name is already a plugin or a set member", function()
+        local dir = os.tmpname()
+        os.remove(dir)
+        os.execute("mkdir -p '" .. dir .. "' && touch '" .. dir .. "/canonicalvexid.lua' '" .. dir .. "/extra.lua'")
+        local plugins = plugin.new():addenum("tagger", {"canonicalvexid"}):addall(dir)
+        os.execute("rm -rf '" .. dir .. "'")
+        assert.same({"canonicalvexid", "extra"}, (function()
+            local names = {}
+            for name in pairs(plugins.plugins) do table.insert(names, name) end
+            table.sort(names)
+            return names
+        end)())
+    end)
+
 end)

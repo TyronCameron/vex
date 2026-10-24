@@ -17,3 +17,6 @@ args = [ "src/vex.lua" ]
 
 [build]
 type = "builtin"
+
+[build.install.bin]
+vex = "src/vex"
