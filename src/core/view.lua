@@ -43,20 +43,42 @@ v:view 'csv' {
     end
 }
 
+local function tabularrow(t)
+    local formatted = task:format(t.vexid)
+    local result = {}
+    for k, v in pairs(t) do
+        if k ~= 'vexbody' then
+            result[k] = formatted[k]
+            if result[k] == nil then result[k] = v end
+        end
+    end
+    return result
+end
+
+local function groupkey(value)
+    return type(value) == 'table' and table.concat(value, '\0') or tostring(value)
+end
+
 v:view 'tabular' {
     display = function(focus, flags)
-        local tasks = func.imap(focus:get(), function(t)
-            local formatted = task:format(t.vexid)
-            local result = {}
-            for k, v in pairs(t) do
-                if k ~= 'vexbody' then
-                    result[k] = formatted[k]
-                    if result[k] == nil then result[k] = v end
+        local fields = focus.groupfields or {}
+        local groups = focus.groupfields and focus:groups() or {focus:get()}
+        local rows, previous = {}, {}
+        for _, group in ipairs(groups) do
+            local changed = false
+            for level, field in ipairs(fields) do
+                local key = groupkey(group[1][field])
+                changed = changed or key ~= previous[level]
+                previous[level] = key
+                if changed then
+                    local value = task:format(group[1].vexid)[field]
+                    if value == nil then value = group[1][field] end
+                    table.insert(rows, pretty.subheader(field, value, level - 1))
                 end
             end
-            return result
-        end)
-        return pretty.tabular(tasks, sortdata)
+            for _, t in ipairs(group) do table.insert(rows, tabularrow(t)) end
+        end
+        return pretty.tabular(rows, sortdata)
     end
 }
 

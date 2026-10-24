@@ -321,6 +321,14 @@ local function cell(value, w)
     return truncate((shown:gsub('[\r\n\t]', ' ')), w)
 end
 
+local Subheader = {}
+
+function pretty.subheader(field, value, depth)
+    return setmetatable({field = field, value = value, depth = depth}, Subheader)
+end
+
+local guide = pretty.string('│', 'dim') .. ' '
+
 function pretty.tabular(data, sortfunc, maxwidth)
     if #data == 0 then return '' end
     sortfunc = sortfunc or pairs
@@ -328,26 +336,45 @@ function pretty.tabular(data, sortfunc, maxwidth)
 
     local allfields = {}
     for _, row in ipairs(data) do
-        for key in pairs(row) do allfields[key] = true end
+        if getmetatable(row) ~= Subheader then
+            for key in pairs(row) do allfields[key] = true end
+        end
     end
     local fields = {}
     for key in sortfunc(allfields) do
         table.insert(fields, key)
     end
 
-    local headers, cells = {}, {}
+    local headers, entries = {}, {}
     for _, f in ipairs(fields) do headers[f] = cell(f, maxwidth) end
-    for i, task in ipairs(data) do
-        cells[i] = {}
-        for _, f in ipairs(fields) do cells[i][f] = cell(task[f], maxwidth) end
+    local depth = 0
+    for _, row in ipairs(data) do
+        if getmetatable(row) == Subheader then
+            depth = row.depth + 1
+            table.insert(entries, {depth = row.depth, label = cell(row.field, maxwidth) .. ': ' .. cell(row.value, maxwidth)})
+        else
+            local cells = {}
+            for _, f in ipairs(fields) do cells[f] = cell(row[f], maxwidth) end
+            cells[fields[1]] = string.rep(guide, depth) .. cells[fields[1]]
+            table.insert(entries, {cells = cells})
+        end
     end
 
     -- compute column widths (ignoring ANSI escape sequences)
     local widths = {}
     for _, f in ipairs(fields) do widths[f] = width(headers[f]) end
-    for _, row in ipairs(cells) do
-        for _, f in ipairs(fields) do
-            widths[f] = math.max(widths[f], width(row[f]))
+    for _, entry in ipairs(entries) do
+        for _, f in ipairs(entry.cells and fields or {}) do
+            widths[f] = math.max(widths[f], width(entry.cells[f]))
+        end
+    end
+    local inner = -3
+    for _, f in ipairs(fields) do inner = inner + widths[f] + 3 end
+    for _, entry in ipairs(entries) do
+        local needed = entry.label and 2 * entry.depth + width(entry.label) or 0
+        if needed > inner then
+            widths[fields[#fields]] = widths[fields[#fields]] + needed - inner
+            inner = needed
         end
     end
 
@@ -378,10 +405,14 @@ function pretty.tabular(data, sortfunc, maxwidth)
 
     -- data rows
     local lines = {top, header, sep}
-    for _, cellrow in ipairs(cells) do
+    for _, entry in ipairs(entries) do
         local row = box.left
-        for _, f in ipairs(fields) do
-            row = row .. ' ' .. pad(cellrow[f], widths[f]) .. ' ' .. box.right
+        if entry.label then
+            row = row .. ' ' .. pad(string.rep(guide, entry.depth) .. pretty.string(entry.label, "bold"), inner) .. ' ' .. box.right
+        else
+            for _, f in ipairs(fields) do
+                row = row .. ' ' .. pad(entry.cells[f], widths[f]) .. ' ' .. box.right
+            end
         end
         table.insert(lines, row)
     end

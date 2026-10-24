@@ -8,3 +8,5 @@ status: todo
 ---
 
 When the tabular view shows abstracts and their descendants, group rows under a subheader per abstract (following `children`), instead of one flat table.
+
+`vex view tabular --groupby lineage` (from [[pass-focus-flags-views-show-1]]) now gives a subheader per ancestor line; what is left is nesting by each abstract in `children` rather than by the whole lineage.

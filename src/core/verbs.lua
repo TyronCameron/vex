@@ -75,21 +75,21 @@ cli:verb "view" {
             return join_lines(lines)
         end
 
-        local focusname
-        local viewname
-        if #positional_args > 1 then 
-            focusname = focus_pop_args(positional_args)
-            viewname = table.remove(positional_args, 1)
-        else 
-            viewname = table.remove(positional_args, 1)
-            focusname = focus_pop_args(positional_args)
+        local focusargs, viewname = {}, positional_args[#positional_args > 1 and 2 or 1]
+        if #positional_args > 1 then focusargs[1] = positional_args[1] end
+        local flags = {}
+        for _, word in ipairs(args) do
+            if cli.isflag(word) and focus.operates(word[1]) then
+                table.insert(focusargs, word)
+            elseif cli.isflag(word) and word[2] then
+                flags[word[1]] = word[2]
+            end
         end
-        local flags = args:flags()
-        return view:display(viewname, focusname, flags)
+        return view:display(viewname, focus.parse(focusargs), flags)
     end,
-    doc = "Prints a view of current tasks",
-    args = "[focus] [view]",
-    example = "vex view all tabular"
+    doc = "Prints a view of current tasks. Focus flags shape the focus for this view only, without saving it.",
+    args = "[focus] [view] [--focusflags...]",
+    example = "vex view all tabular --groupby status --orderby due"
 }
 
 cli:verb "resolve" {

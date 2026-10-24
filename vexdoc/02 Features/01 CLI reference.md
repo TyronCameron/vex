@@ -20,7 +20,7 @@
 | `vex set [focus] [--fields...]` | Sets fields on every task in the focus, then resolves them. |
 | `vex remove [focus]` | Deletes every task in the focus, removes links to them from other tasks, and clears the focus. |
 | `vex focus [focus] [--flags...]` | Builds and saves a focus. With no arguments, prints the saved focus. |
-| `vex view [focus] [view] [--flags...]` | Renders the focus with a view. With no arguments, lists the views. See [[04 Views]]. |
+| `vex view [focus] [view] [--flags...]` | Renders the focus with a view. Focus flags shape the focus for this view only, without saving it. With no arguments, lists the views. See [[04 Views]]. |
 | `vex resolve [focus]` | Validates and reindexes the tasks in the focus. `vex resolve all` rebuilds the whole index from disk. |
 | `vex recipe [recipe] Description [--fields...]` | Creates tasks from a recipe and focuses on them. With no recipe, lists the recipes. |
 | `vex autocomplete shell` | Prints a completion script for `bash`, `zsh`, `fish` or `powershell`. |
@@ -134,7 +134,7 @@ $ vex focus all --groupby owner --orderby due --rn --select owner,due,rn
 $ vex view tabular
 ```
 
-Commands and views list the groups one after another. A set operation (`--union`, `--intersect`, `--xor`, `--notin`, `--onlyin`, `--complement`) gathers the groups back into one.
+Commands and views list the groups one after another, and the `tabular` view gives each group a subheader. A view takes the same flags without saving the focus, so `vex view all tabular --groupby owner --orderby due` shows the groups in one command. A set operation (`--union`, `--intersect`, `--xor`, `--notin`, `--onlyin`, `--complement`) gathers the groups back into one.
 
 ### Interpreting times
 

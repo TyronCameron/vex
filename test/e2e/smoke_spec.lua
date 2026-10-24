@@ -35,6 +35,7 @@ local verbs = {
 local views = {
   {"view", "all", "csv"},
   {"view", "all", "tabular"},
+  {"view", "all", "tabular", "--groupby", "vextype:status", "--orderby", "vexid:desc"},
   {"view", "all", "json"},
   {"view", "all", "kanban"},
   {"view", "all", "overview"},
