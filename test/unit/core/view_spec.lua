@@ -58,6 +58,29 @@ describe("view", function()
         assert.is_nil(result:find("created", 1, true))
     end)
 
+    it("shows no subheaders for an ungrouped focus in the tabular view", function()
+        local result = view:display('tabular', focus.focus('all'), {})
+        assert.is_nil(result:find("vextype: ", 1, true))
+    end)
+
+    it("shows a subheader per group of a grouped focus in the tabular view", function()
+        local result = view:display('tabular', focus.focus('all'):groupby('vextype'):select('vextype'), {})
+        for _, vextype in ipairs({'abstract', 'atom', 'task'}) do
+            assert.truthy(result:find("vextype: " .. vextype, 1, true))
+        end
+        assert.truthy(result:find("vextype: abstract", 1, true) < result:find(parent, 1, true))
+        assert.truthy(result:find(parent, 1, true) < result:find("vextype: atom", 1, true))
+    end)
+
+    it("nests the subheaders of a focus grouped by several fields in the tabular view", function()
+        local result = view:display('tabular', focus.focus('all'):groupby('status', 'vextype'), {})
+        local plain = result:gsub("\27%[[0-9;]*m", "")
+        assert.truthy(plain:find("│ status: doing", 1, true))
+        assert.truthy(plain:find("│ │ vextype: atom", 1, true))
+        assert.truthy(plain:find("│ │ │ " .. dependent, 1, true))
+        assert.equal(1, select(2, plain:gsub("│ status: todo", "")))
+    end)
+
     it("shows a field the first task lacks in the tabular view", function()
         local result = view:display('tabular', focus.focus(child, parent), {})
         assert.truthy(result:find("children", 1, true))

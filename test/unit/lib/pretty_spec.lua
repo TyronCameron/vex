@@ -141,4 +141,111 @@ describe("pretty", function()
         assert.is_nil(result:find("child-task-20", 1, true))
     end)
 
+    local function visiblewidth(line)
+        return select(2, line:gsub("\27%[[0-9;]*m", ""):gsub("[^\128-\191]", ""))
+    end
+
+    it("`pretty.tabular` keeps a long list within 40 characters", function()
+        local long = {}
+        for i = 1, 20 do table.insert(long, "child-task-" .. i) end
+        local result = pretty.tabular({{children = long}}, pairs)
+        local row = result:match("\n│ (child%-task[^\n]-) │")
+        assert.truthy(visiblewidth(row:gsub("%s+$", "")) <= 40)
+    end)
+
+    it("`pretty.tabular` cuts a long value to 40 characters with ...", function()
+        local result = pretty.tabular({{description = string.rep("a", 100)}}, pairs)
+        assert.truthy(result:find(string.rep("a", 37) .. "...", 1, true))
+        assert.is_nil(result:find(string.rep("a", 38), 1, true))
+    end)
+
+    it("`pretty.tabular` cuts values to the given maximum width", function()
+        local result = pretty.tabular({{description = "abcdefghijklmnop"}}, pairs, 10)
+        assert.truthy(result:find("abcdefg...", 1, true))
+        assert.is_nil(result:find("abcdefgh", 1, true))
+    end)
+
+    it("`pretty.tabular` cuts a long field name in the header", function()
+        local result = pretty.tabular({{[string.rep("f", 50)] = "x"}}, pairs)
+        assert.truthy(result:find(string.rep("f", 37) .. "...", 1, true))
+        assert.is_nil(result:find(string.rep("f", 38), 1, true))
+    end)
+
+    local function plainlines(result)
+        local lines = {}
+        for line in (result:gsub("\27%[[0-9;]*m", "") .. "\n"):gmatch("(.-)\n") do table.insert(lines, line) end
+        return lines
+    end
+
+    it("`pretty.tabular` shows a subheader as its field and value, without making it a column", function()
+        local result = pretty.tabular({pretty.subheader("owner", "tyron", 0), {vexid = "fix-thing-1"}}, pairs)
+        local lines = plainlines(result)
+        assert.truthy(lines[4]:find("│ owner: tyron", 1, true))
+        assert.truthy(lines[5]:find("│ │ fix-thing-1", 1, true))
+        assert.is_nil(result:find("label", 1, true))
+    end)
+
+    it("`pretty.tabular` indents nested subheaders and their rows with a guide per level", function()
+        local data = {
+            pretty.subheader("owner", "tyron", 0),
+            pretty.subheader("status", "doing", 1),
+            {vexid = "fix-thing-1", status = "doing"},
+            pretty.subheader("owner", "sam", 0),
+            pretty.subheader("status", "todo", 1),
+            {vexid = "ship-it-1", status = "todo"},
+        }
+        local lines = plainlines(pretty.tabular(data, pairs))
+        assert.truthy(lines[4]:find("^│ owner: tyron "))
+        assert.truthy(lines[5]:find("^│ │ status: doing "))
+        assert.truthy(lines[6]:find("^│ │ │ fix%-thing%-1 "))
+        assert.truthy(lines[7]:find("^│ owner: sam "))
+        assert.truthy(lines[9]:find("^│ │ │ ship%-it%-1 "))
+    end)
+
+    it("`pretty.tabular` draws the guides dim", function()
+        local result = pretty.tabular({pretty.subheader("owner", "tyron", 0), {vexid = "x"}}, pairs)
+        assert.truthy(result:find(pretty.string("│", "dim"), 1, true))
+    end)
+
+    it("`pretty.tabular` shows a list or missing value in a subheader like a cell", function()
+        local lines = plainlines(pretty.tabular({pretty.subheader("lineage", {"top-1", "middle-1"}, 0), {vexid = "x"}, pretty.subheader("owner", nil, 0), {vexid = "y"}}, pairs))
+        assert.truthy(lines[4]:find("lineage: top-1, middle-1", 1, true))
+        assert.truthy(lines[6]:find("owner: ", 1, true))
+        assert.is_nil(lines[6]:find("nil", 1, true))
+    end)
+
+    it("`pretty.tabular` aligns every line with nested subheaders and long values", function()
+        local data = {
+            pretty.subheader("description", string.rep("long ", 30), 0),
+            pretty.subheader("status", "doing", 1),
+            {vexid = "x", description = string.rep("long ", 30)},
+            pretty.subheader("description", "short", 0),
+            pretty.subheader("status", "todo", 1),
+            {vexid = "a-much-longer-vexid-than-x-1", description = "café"},
+        }
+        local result = pretty.tabular(data, pairs)
+        local lines = {}
+        for line in (result .. "\n"):gmatch("(.-)\n") do table.insert(lines, line) end
+        assert.equal(#data + 4, #lines)
+        for _, line in ipairs(lines) do
+            assert.equal(visiblewidth(lines[1]), visiblewidth(line))
+        end
+    end)
+
+    it("`pretty.tabular` aligns every line across long, unicode, styled and multiline values", function()
+        local data = {
+            {description = string.rep("long ", 30), status = "todo"},
+            {description = "café — ok", status = "doing"},
+            {description = pretty.string("styled", "bold"), status = "done"},
+            {description = "first line\nsecond line", status = "todo"},
+        }
+        local result = pretty.tabular(data, pairs)
+        local lines = {}
+        for line in (result .. "\n"):gmatch("(.-)\n") do table.insert(lines, line) end
+        assert.equal(#data + 4, #lines)
+        for _, line in ipairs(lines) do
+            assert.equal(visiblewidth(lines[1]), visiblewidth(line))
+        end
+    end)
+
 end)

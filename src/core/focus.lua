@@ -439,7 +439,7 @@ function Focus:groupby(...)
     local orders = orderings(...)
     return FocusGroups.new('groupby', function(tasks)
         return bucket(self:get(tasks), orders)
-    end, func.imerge(self.operations, {{ operation = 'groupby', args = {...} }}))
+    end, func.imerge(self.operations, {{ operation = 'groupby', args = {...} }}), func.imap(orders, function(o) return o.field end))
 end
 
 -- rn numbers each group's tasks from 1 in the field `rn`, on copies of the tasks
@@ -570,8 +570,8 @@ end
 -----------------------------------------
 
 -- a focus split into groups, which runs every operation within each group
-function FocusGroups.new(name, groups, operations)
-    return setmetatable({name = name, _groups = groups, operations = operations}, FocusGroups)
+function FocusGroups.new(name, groups, operations, groupfields)
+    return setmetatable({name = name, _groups = groups, operations = operations, groupfields = groupfields}, FocusGroups)
 end
 
 function FocusGroups:groups(tasks)
@@ -595,7 +595,7 @@ function FocusGroups:chain(operation, focus, ...)
             if #result > 0 then table.insert(groups, result) end
         end
         return groups
-    end, func.imerge(self.operations, {{ operation = operation, args = {...} }}))
+    end, func.imerge(self.operations, {{ operation = operation, args = {...} }}), self.groupfields)
 end
 
 function FocusGroups:groupby(...)
@@ -604,7 +604,7 @@ function FocusGroups:groupby(...)
         local groups = {}
         for _, group in ipairs(self:groups(tasks)) do groups = func.imerge(groups, bucket(group, orders)) end
         return groups
-    end, func.imerge(self.operations, {{ operation = 'groupby', args = {...} }}))
+    end, func.imerge(self.operations, {{ operation = 'groupby', args = {...} }}), func.imerge(self.groupfields, func.imap(orders, function(o) return o.field end)))
 end
 
 function Focus:each_task(f, ...)
@@ -631,6 +631,16 @@ local function split(str, sep)
         table.insert(parts, part)
     end
     return unpack(parts)
+end
+
+local operations = {}
+for _, name in ipairs({'select', 'filter', 'fuzzy', 'between', 'orderby', 'groupby', 'rn', 'tree', 'reversetree',
+    'backlinks', 'forwardlinks', 'interpret', 'intersect', 'union', 'complement', 'xor', 'notin', 'onlyin'}) do
+    operations[name] = true
+end
+
+function Focus.operates(name)
+    return operations[name] == true
 end
 
 function Focus.parse(args)
