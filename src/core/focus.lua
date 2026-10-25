@@ -12,8 +12,24 @@ local Focus = {
 }
 Focus.__index = Focus
 
-local FocusGroups = setmetatable({}, {__index = Focus})
-FocusGroups.__index = FocusGroups
+local Groups = {}
+
+local function leaves(tasks, f)
+    if getmetatable(tasks) ~= Groups then return f(tasks) end
+    local groups = setmetatable({}, Groups)
+    for _, group in ipairs(tasks) do
+        local result = leaves(group.tasks, f)
+        if #result > 0 then table.insert(groups, {field = group.field, value = group.value, tasks = result}) end
+    end
+    return groups
+end
+
+local function flatten(tasks)
+    if getmetatable(tasks) ~= Groups then return tasks end
+    local tasklist = {}
+    for _, group in ipairs(tasks) do tasklist = func.imerge(tasklist, flatten(group.tasks)) end
+    return tasklist
+end
 
 function Focus.new(name, get, operations)
     return setmetatable({
@@ -59,7 +75,7 @@ local deserialize
 
 local function asfocus(focus)
     if type(focus) == "string" then return Focus.focus(focus) end
-    if getmetatable(focus) ~= Focus and getmetatable(focus) ~= FocusGroups then return deserialize(focus) end
+    if getmetatable(focus) ~= Focus then return deserialize(focus) end
     return focus
 end
 
@@ -68,7 +84,7 @@ function Focus:chain(operation, focus, ...)
         focus = Focus.new(operation, focus)
     end 
     return Focus.new('chain', function(tasks) 
-        return focus:get(self:get(tasks))
+        return leaves(self:result(tasks), function(list) return focus:result(list) end)
     end, func.imerge(self.operations or {}, {{ operation = operation, args = {...} }}))
 end
 
@@ -421,28 +437,28 @@ function Focus:orderby(...)
 end
 
 local function bucket(tasks, orders)
-    local groups, keyed = {}, {}
+    if #orders == 0 then return tasks end
+    local o = orders[1]
+    local groups, keyed = setmetatable({}, Groups), {}
     for _, task in ipairs(tasks) do
-        local key = table.concat(func.imap(orders, function(o) return tostring(sortkey(task[o.field])) end), "\0")
+        local key = tostring(sortkey(task[o.field]))
         if not keyed[key] then
-            keyed[key] = {values = {}}
-            for i, o in ipairs(orders) do keyed[key].values[i] = task[o.field] end
+            keyed[key] = {field = o.field, value = task[o.field], tasks = {}}
             table.insert(groups, keyed[key])
         end
-        table.insert(keyed[key], task)
+        table.insert(keyed[key].tasks, task)
     end
-    table.sort(groups, function(a, b) return order(a[1], b[1], orders) < 0 end)
+    table.sort(groups, function(a, b) return compare(a.value, b.value, o.descending) < 0 end)
+    for _, group in ipairs(groups) do group.tasks = bucket(group.tasks, {unpack(orders, 2)}) end
     return groups
-end
-
-local function whole()
-    return Focus.new('within', function(tasks) return tasks end)
 end
 
 -- groupby field[:asc|:desc]:field..., ordering the groups as orderby would
 function Focus:groupby(...)
-    return FocusGroups.new(self, orderings(...), whole(),
-        func.imerge(self.operations, {{ operation = 'groupby', args = {...} }}))
+    local orders = orderings(...)
+    return self:chain('groupby', function(tasks)
+        return bucket(tasks, orders)
+    end, ...)
 end
 
 -- rn numbers each group's tasks from 1 in the field `rn`, on copies of the tasks
@@ -564,43 +580,25 @@ end
 -- Universal 
 -----------------------------------------
 
-function Focus:get(tasks)
+function Focus:result(tasks)
     return self._get(tasks or Focus.getalltasks())
 end
 
------------------------------------------
--- Groups
------------------------------------------
-
--- a focus split into groups of the tasks from source sharing the fields in by, which runs within in each group
-function FocusGroups.new(source, by, within, operations)
-    return setmetatable({name = 'groupby', source = source, by = by, within = within, operations = operations}, FocusGroups)
+function Focus:get(tasks)
+    return flatten(self:result(tasks))
 end
 
-function FocusGroups:groups(tasks)
+function Focus.isgrouped(tasks)
+    return getmetatable(tasks) == Groups
+end
+
+function Focus:groups(tasks)
     local groups = {}
-    for _, group in ipairs(bucket(self.source:get(tasks), self.by)) do
-        local result = self.within:get(group)
-        result.values = group.values
-        if #result > 0 then table.insert(groups, result) end
-    end
+    leaves(self:result(tasks), function(list)
+        if #list > 0 then table.insert(groups, list) end
+        return list
+    end)
     return groups
-end
-
-function FocusGroups:get(tasks)
-    local tasklist = {}
-    for _, group in ipairs(self:groups(tasks)) do tasklist = func.imerge(tasklist, group) end
-    return tasklist
-end
-
-function FocusGroups:chain(operation, focus, ...)
-    return FocusGroups.new(self.source, self.by, self.within:chain(operation, focus, ...),
-        func.imerge(self.operations, {{ operation = operation, args = {...} }}))
-end
-
-function FocusGroups:groupby(...)
-    return FocusGroups.new(self, func.imerge(self.by, orderings(...)), whole(),
-        func.imerge(self.operations, {{ operation = 'groupby', args = {...} }}))
 end
 
 function Focus:each_task(f, ...)

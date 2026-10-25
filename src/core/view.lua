@@ -55,31 +55,28 @@ local function tabularrow(t)
     return result
 end
 
-local function groupkey(value)
-    return type(value) == 'table' and table.concat(value, '\0') or tostring(value)
+local function firsttask(tasks)
+    if Focus.isgrouped(tasks) then return firsttask(tasks[1].tasks) end
+    return tasks[1]
+end
+
+local function tabularrows(rows, tasks, depth)
+    if not Focus.isgrouped(tasks) then
+        for _, t in ipairs(tasks) do table.insert(rows, tabularrow(t)) end
+        return rows
+    end
+    for _, group in ipairs(tasks) do
+        local value = task:format(firsttask(group.tasks).vexid)[group.field]
+        if value == nil then value = group.value end
+        table.insert(rows, pretty.subheader(group.field, value, depth))
+        tabularrows(rows, group.tasks, depth + 1)
+    end
+    return rows
 end
 
 v:view 'tabular' {
     display = function(focus, flags, flagwords)
-        focus = focus:apply(flagwords)
-        local fields = func.imap(focus.by or {}, function(o) return o.field end)
-        local groups = focus.by and focus:groups() or {focus:get()}
-        local rows, previous = {}, {}
-        for _, group in ipairs(groups) do
-            local changed = false
-            for level, field in ipairs(fields) do
-                local key = groupkey(group.values[level])
-                changed = changed or key ~= previous[level]
-                previous[level] = key
-                if changed then
-                    local value = task:format(group[1].vexid)[field]
-                    if value == nil then value = group.values[level] end
-                    table.insert(rows, pretty.subheader(field, value, level - 1))
-                end
-            end
-            for _, t in ipairs(group) do table.insert(rows, tabularrow(t)) end
-        end
-        return pretty.tabular(rows, sortdata)
+        return pretty.tabular(tabularrows({}, focus:apply(flagwords):result(), 0), sortdata)
     end
 }
 

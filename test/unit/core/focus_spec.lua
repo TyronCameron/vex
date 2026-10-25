@@ -219,19 +219,27 @@ describe("Focus", function()
             assert.same({{"b", "e"}}, func.imap(f:groupby('owner'):filter('cost', 1):groups(tasks), vexids))
         end)
 
-        it("a grouped focus keeps what it groups by, one level per field, through later operations", function()
-            assert.same({{field = 'owner'}, {field = 'status', descending = true}}, f:groupby('owner'):orderby('cost'):groupby('status', 'desc').by)
-            assert.is_nil(f:orderby('cost').by)
+        it("groups by several fields as it would by each in turn", function()
+            local leaves = func.imap(f:groupby('owner'):groupby('cost'):groups(tasks), vexids)
+            assert.same(func.imap(f:groupby('owner', 'cost'):groups(tasks), vexids), leaves)
         end)
 
-        it("each group keeps the values it was grouped on, even once a later operation drops them", function()
-            local groups = f:groupby('owner', 'desc', 'cost'):select('vexid'):groups(tasks)
-            assert.same({{"bob", 3}, {"bob"}, {"alice", 1}, {[2] = 2}}, func.imap(groups, function(g) return g.values end))
+        it("runs operations after a nested groupby within the innermost groups", function()
+            local numbered = f:groupby('owner'):groupby('cost'):orderby('vexid', 'desc'):rn():get(tasks)
+            assert.same({"e", "b", "a", "d", "c"}, vexids(numbered))
+            assert.same({1, 2, 1, 1, 1}, func.imap(numbered, function(t) return t.rn end))
         end)
 
-        it("a saved grouped focus still knows what it groups by", function()
-            Focus.focus('all'):groupby('status'):orderby('vexid'):write()
-            assert.same({{field = 'status'}}, Focus.read().by)
+        it("a saved grouped focus gives the same groups", function()
+            local task = require 'core.task'
+            for _, properties in ipairs({{description = "grouped todo task"}, {description = "grouped doing task"}}) do
+                local vexid = task:add(properties)
+                task:resolve(vexid)
+                task:write(vexid)
+            end
+            local grouped = Focus.focus('all'):groupby('status'):orderby('vexid')
+            grouped:write()
+            assert.same(func.imap(grouped:groups(), vexids), func.imap(Focus.read():groups(), vexids))
         end)
 
         it("knows which flags are focus operations", function()
