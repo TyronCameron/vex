@@ -16,15 +16,15 @@ $ vex version
 That downloads the latest release and puts it under `~/.local` (`lib/vex` holds the program, `bin/vex` is the command). Set `PREFIX` to install elsewhere and `VEX_VERSION` to pick a release:
 
 ```console
-$ curl -fsSL https://raw.githubusercontent.com/TyronCameron/vex/main/install.sh | PREFIX=/usr/local VEX_VERSION=0.1.0 sh
+$ curl -fsSL https://raw.githubusercontent.com/TyronCameron/vex/main/install.sh | PREFIX=/usr/local VEX_VERSION=0.0.1 sh
 ```
 
 Or unpack a release yourself and run its installer; running it again upgrades vex:
 
 ```console
-$ tar -xzf vex-0.1.0.tar.gz
-$ sh vex-0.1.0/install.sh
-$ sh vex-0.1.0/install.sh --uninstall
+$ tar -xzf vex-0.0.1.tar.gz
+$ sh vex-0.0.1/install.sh
+$ sh vex-0.0.1/install.sh --uninstall
 ```
 
 If `~/.local/bin` is not on your `PATH`, the installer says so.

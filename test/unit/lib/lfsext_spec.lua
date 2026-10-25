@@ -63,4 +63,16 @@ describe("lfsext", function()
         end)
     end)
 
+    describe("globalpath", function()
+        it("is a path inside the global folder only when it exists", function()
+            local dir = tmpdir()
+            os.execute("mkdir -p '" .. dir .. "/tasks'")
+            local getenv = function(name) return name == "VEX_HOME" and dir or nil end
+            assert.equal(dir .. "/tasks", lfsext.globalpath("tasks", getenv))
+            assert.is_falsy(lfsext.globalpath("views", getenv))
+            assert.is_falsy(lfsext.globalpath("tasks", function() end))
+            os.execute("rm -rf '" .. dir .. "'")
+        end)
+    end)
+
 end)

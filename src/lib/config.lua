@@ -10,7 +10,7 @@ function Config.new()
 end
 
 function Config:registerpath(path)
-    table.insert(self.files, path)
+    if path then table.insert(self.files, path) end
     return self
 end
 

@@ -35,6 +35,12 @@ function lfsext.globaldir(getenv)
     return nil
 end
 
+function lfsext.globalpath(name, getenv)
+    local dir = lfsext.globaldir(getenv)
+    local path = dir and dir .. '/' .. name
+    return path and lfs.attributes(path, 'mode') and path
+end
+
 function lfsext.walk(path, files)
     files = files or {}
     for file in lfs.dir(path) do

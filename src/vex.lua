@@ -10,7 +10,6 @@ local function source_dir()
 end
 
 local script_dir = source_dir() .. "/"
-local lfs = require 'lib.lfs'
 local lfsext = require 'lib.lfsext'
 local globaldir = lfsext.globaldir()
 if globaldir then
@@ -25,9 +24,8 @@ plugin:addenum("sortdata", {"canonicalsort"})
 plugin:addenum("frontmatter", {"canonicalfrontmatter"})
 plugin:addenum("body", {"canonicalbody"})
 plugin:addall(script_dir .. 'plugin')
-if globaldir and lfs.attributes(globaldir .. '/plugin', 'mode') == 'directory' then
-    plugin:addall(globaldir .. '/plugin')
-end
+local globalplugins = lfsext.globalpath('plugin')
+if globalplugins then plugin:addall(globalplugins) end
 
 local cli = require 'lib.cli'
 
