@@ -189,10 +189,10 @@ describe("pretty", function()
         local data = {
             pretty.subheader("owner", "tyron", 0),
             pretty.subheader("status", "doing", 1),
-            {vexid = "fix-thing-1", status = "doing"},
+            {vexid = "fix-thing-1"},
             pretty.subheader("owner", "sam", 0),
             pretty.subheader("status", "todo", 1),
-            {vexid = "ship-it-1", status = "todo"},
+            {vexid = "ship-it-1"},
         }
         local lines = plainlines(pretty.tabular(data, pairs))
         assert.truthy(lines[4]:find("^│ owner: tyron "))
