@@ -1,12 +1,10 @@
 A view renders the tasks in a focus:
 
 ```txt
-vex view [focus] [view] [--focusflags...]
+vex view [focus] [view]
 ```
 
 With no arguments, `vex view` lists the views. With one argument, it is the view, rendering the saved focus. Views show the fields each task stores. A focus built with `--select` shows only the selected fields, transients included.
-
-Any focus flag (`--select`, `--filter`, `--orderby`, `--groupby` and the rest, see [[01 CLI reference]]) shapes the focus for this view only. The focus isn't saved, so `prev` stays as it was. Other flags go to the view itself, like `kanban`'s `--field`.
 
 ## `tabular`
 
@@ -24,6 +22,8 @@ $ vex view tabular
 │ migrate-existing-invoices-1 │ task     │ todo   │
 └─────────────────────────────┴──────────┴────────┘
 ```
+
+It takes any focus flags (`--select`, `--filter`, `--orderby`, `--groupby` and the rest, see [[01 CLI reference]]), applied in the order given, for this view only: the focus isn't saved, so `prev` stays as it was.
 
 A grouped focus shows each group under a subheader naming its field and value. Each nested level is indented 2 spaces, with a muted guide line down the left:
 

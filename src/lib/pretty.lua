@@ -351,7 +351,7 @@ function pretty.tabular(data, sortfunc, maxwidth)
     for _, row in ipairs(data) do
         if getmetatable(row) == Subheader then
             depth = row.depth + 1
-            table.insert(entries, {depth = row.depth, label = cell(row.field, maxwidth) .. ': ' .. cell(row.value, maxwidth)})
+            table.insert(entries, {depth = row.depth, field = cell(row.field, maxwidth) .. ': ', value = row.value})
         else
             local cells = {}
             for _, f in ipairs(fields) do cells[f] = cell(row[f], maxwidth) end
@@ -371,6 +371,8 @@ function pretty.tabular(data, sortfunc, maxwidth)
     local inner = -3
     for _, f in ipairs(fields) do inner = inner + widths[f] + 3 end
     for _, entry in ipairs(entries) do
+        local room = inner - 2 * (entry.depth or 0) - width(entry.field or '')
+        entry.label = entry.field and entry.field .. cell(entry.value, math.max(maxwidth, room))
         local needed = entry.label and 2 * entry.depth + width(entry.label) or 0
         if needed > inner then
             widths[fields[#fields]] = widths[fields[#fields]] + needed - inner

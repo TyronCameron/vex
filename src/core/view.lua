@@ -25,10 +25,10 @@ function View:view(name)
 end
 
 -- actually print stuff to screen
-function View:display(viewname, focus, flags)
+function View:display(viewname, focus, flags, flagwords)
     if not self.views[viewname] then cli:throw('unknown-view', viewname) end 
     event:trigger('pre-view-display', viewname, focus, flags)
-    local result = self.views[viewname].display(focus, flags)
+    local result = self.views[viewname].display(focus, flags, flagwords or {})
     event:trigger('post-view-display', viewname, focus, flags, result)
     return result
 end
@@ -60,19 +60,20 @@ local function groupkey(value)
 end
 
 v:view 'tabular' {
-    display = function(focus, flags)
-        local fields = focus.groupfields or {}
-        local groups = focus.groupfields and focus:groups() or {focus:get()}
+    display = function(focus, flags, flagwords)
+        focus = focus:apply(flagwords)
+        local fields = func.imap(focus.by or {}, function(o) return o.field end)
+        local groups = focus.by and focus:groups() or {focus:get()}
         local rows, previous = {}, {}
         for _, group in ipairs(groups) do
             local changed = false
             for level, field in ipairs(fields) do
-                local key = groupkey(group[1][field])
+                local key = groupkey(group.values[level])
                 changed = changed or key ~= previous[level]
                 previous[level] = key
                 if changed then
                     local value = task:format(group[1].vexid)[field]
-                    if value == nil then value = group[1][field] end
+                    if value == nil then value = group.values[level] end
                     table.insert(rows, pretty.subheader(field, value, level - 1))
                 end
             end

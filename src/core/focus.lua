@@ -425,7 +425,8 @@ local function bucket(tasks, orders)
     for _, task in ipairs(tasks) do
         local key = table.concat(func.imap(orders, function(o) return tostring(sortkey(task[o.field])) end), "\0")
         if not keyed[key] then
-            keyed[key] = {}
+            keyed[key] = {values = {}}
+            for i, o in ipairs(orders) do keyed[key].values[i] = task[o.field] end
             table.insert(groups, keyed[key])
         end
         table.insert(keyed[key], task)
@@ -434,12 +435,14 @@ local function bucket(tasks, orders)
     return groups
 end
 
+local function whole()
+    return Focus.new('within', function(tasks) return tasks end)
+end
+
 -- groupby field[:asc|:desc]:field..., ordering the groups as orderby would
 function Focus:groupby(...)
-    local orders = orderings(...)
-    return FocusGroups.new('groupby', function(tasks)
-        return bucket(self:get(tasks), orders)
-    end, func.imerge(self.operations, {{ operation = 'groupby', args = {...} }}), func.imap(orders, function(o) return o.field end))
+    return FocusGroups.new(self, orderings(...), whole(),
+        func.imerge(self.operations, {{ operation = 'groupby', args = {...} }}))
 end
 
 -- rn numbers each group's tasks from 1 in the field `rn`, on copies of the tasks
@@ -569,13 +572,19 @@ end
 -- Groups
 -----------------------------------------
 
--- a focus split into groups, which runs every operation within each group
-function FocusGroups.new(name, groups, operations, groupfields)
-    return setmetatable({name = name, _groups = groups, operations = operations, groupfields = groupfields}, FocusGroups)
+-- a focus split into groups of the tasks from source sharing the fields in by, which runs within in each group
+function FocusGroups.new(source, by, within, operations)
+    return setmetatable({name = 'groupby', source = source, by = by, within = within, operations = operations}, FocusGroups)
 end
 
 function FocusGroups:groups(tasks)
-    return self._groups(tasks or Focus.getalltasks())
+    local groups = {}
+    for _, group in ipairs(bucket(self.source:get(tasks), self.by)) do
+        local result = self.within:get(group)
+        result.values = group.values
+        if #result > 0 then table.insert(groups, result) end
+    end
+    return groups
 end
 
 function FocusGroups:get(tasks)
@@ -585,26 +594,13 @@ function FocusGroups:get(tasks)
 end
 
 function FocusGroups:chain(operation, focus, ...)
-    if type(focus) == "function" then 
-        focus = Focus.new(operation, focus)
-    end 
-    return FocusGroups.new('chain', function(tasks)
-        local groups = {}
-        for _, group in ipairs(self:groups(tasks)) do
-            local result = focus:get(group)
-            if #result > 0 then table.insert(groups, result) end
-        end
-        return groups
-    end, func.imerge(self.operations, {{ operation = operation, args = {...} }}), self.groupfields)
+    return FocusGroups.new(self.source, self.by, self.within:chain(operation, focus, ...),
+        func.imerge(self.operations, {{ operation = operation, args = {...} }}))
 end
 
 function FocusGroups:groupby(...)
-    local orders = orderings(...)
-    return FocusGroups.new('groupby', function(tasks)
-        local groups = {}
-        for _, group in ipairs(self:groups(tasks)) do groups = func.imerge(groups, bucket(group, orders)) end
-        return groups
-    end, func.imerge(self.operations, {{ operation = 'groupby', args = {...} }}), func.imerge(self.groupfields, func.imap(orders, function(o) return o.field end)))
+    return FocusGroups.new(self, func.imerge(self.by, orderings(...)), whole(),
+        func.imerge(self.operations, {{ operation = 'groupby', args = {...} }}))
 end
 
 function Focus:each_task(f, ...)
@@ -643,16 +639,11 @@ function Focus.operates(name)
     return operations[name] == true
 end
 
-function Focus.parse(args)
-    local current
-    if args[1] and not cli.isflag(args[1]) then 
-        current = Focus.focus(args[1])
-    else 
-        current = Focus.read()
-    end 
-    if not current then cli:throw('no-focus') end
+function Focus:apply(args)
+    local current = self
     for _, arg in ipairs(args) do
         if cli.isflag(arg) then 
+            if not Focus.operates(arg[1]) then cli:throw('unknown-focus-operation', arg[1]) end
             local split_args = {}
             local values = type(arg[2]) == "table" and arg[2] or {arg[2]}
             for _, value in ipairs(values) do
@@ -664,6 +655,17 @@ function Focus.parse(args)
         end 
     end
     return current
+end
+
+function Focus.parse(args)
+    local current
+    if args[1] and not cli.isflag(args[1]) then 
+        current = Focus.focus(args[1])
+    else 
+        current = Focus.read()
+    end 
+    if not current then cli:throw('no-focus') end
+    return current:apply(args)
 end
 
 -----------------------------------------

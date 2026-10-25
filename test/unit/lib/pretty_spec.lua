@@ -202,6 +202,12 @@ describe("pretty", function()
         assert.truthy(lines[9]:find("^│ │ │ ship%-it%-1 "))
     end)
 
+    it("`pretty.tabular` gives a subheader's list the table's whole width", function()
+        local lineage = {"create-plugins-1", "complete-vexations-plugin-1"}
+        local result = pretty.tabular({pretty.subheader("lineage", lineage, 0), {vexid = "x", description = string.rep("d", 60), notes = string.rep("n", 60)}}, pairs)
+        assert.truthy(result:find("lineage: create-plugins-1, complete-vexations-plugin-1", 1, true))
+    end)
+
     it("`pretty.tabular` draws the guides dim", function()
         local result = pretty.tabular({pretty.subheader("owner", "tyron", 0), {vexid = "x"}}, pairs)
         assert.truthy(result:find(pretty.string("│", "dim"), 1, true))
