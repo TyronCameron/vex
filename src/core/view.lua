@@ -25,10 +25,10 @@ function View:view(name)
 end
 
 -- actually print stuff to screen
-function View:display(viewname, focus, flags)
+function View:display(viewname, focus, flags, flagwords)
     if not self.views[viewname] then cli:throw('unknown-view', viewname) end 
     event:trigger('pre-view-display', viewname, focus, flags)
-    local result = self.views[viewname].display(focus, flags)
+    local result = self.views[viewname].display(focus, flags, flagwords or {})
     event:trigger('post-view-display', viewname, focus, flags, result)
     return result
 end
@@ -43,20 +43,40 @@ v:view 'csv' {
     end
 }
 
+local function tabularrow(t)
+    local formatted = task:format(t.vexid)
+    local result = {}
+    for k, v in pairs(t) do
+        if k ~= 'vexbody' then
+            result[k] = formatted[k]
+            if result[k] == nil then result[k] = v end
+        end
+    end
+    return result
+end
+
+local function firsttask(tasks)
+    if Focus.isgrouped(tasks) then return firsttask(tasks[1].tasks) end
+    return tasks[1]
+end
+
+local function tabularrows(rows, tasks, depth)
+    if not Focus.isgrouped(tasks) then
+        for _, t in ipairs(tasks) do table.insert(rows, tabularrow(t)) end
+        return rows
+    end
+    for _, group in ipairs(tasks) do
+        local value = task:format(firsttask(group.tasks).vexid)[group.field]
+        if value == nil then value = group.value end
+        table.insert(rows, pretty.subheader(group.field, value, depth))
+        tabularrows(rows, group.tasks, depth + 1)
+    end
+    return rows
+end
+
 v:view 'tabular' {
-    display = function(focus, flags)
-        local tasks = func.imap(focus:get(), function(t)
-            local formatted = task:format(t.vexid)
-            local result = {}
-            for k, v in pairs(t) do
-                if k ~= 'vexbody' then
-                    result[k] = formatted[k]
-                    if result[k] == nil then result[k] = v end
-                end
-            end
-            return result
-        end)
-        return pretty.tabular(tasks, sortdata)
+    display = function(focus, flags, flagwords)
+        return pretty.tabular(tabularrows({}, focus:apply(flagwords):result(), 0), sortdata)
     end
 }
 

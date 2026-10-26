@@ -219,6 +219,51 @@ describe("Focus", function()
             assert.same({{"b", "e"}}, func.imap(f:groupby('owner'):filter('cost', 1):groups(tasks), vexids))
         end)
 
+        it("groups by several fields as it would by each in turn", function()
+            local leaves = func.imap(f:groupby('owner'):groupby('cost'):groups(tasks), vexids)
+            assert.same(func.imap(f:groupby('owner', 'cost'):groups(tasks), vexids), leaves)
+        end)
+
+        it("runs operations after a nested groupby within the innermost groups", function()
+            local numbered = f:groupby('owner'):groupby('cost'):orderby('vexid', 'desc'):rn():get(tasks)
+            assert.same({"e", "b", "a", "d", "c"}, vexids(numbered))
+            assert.same({1, 2, 1, 1, 1}, func.imap(numbered, function(t) return t.rn end))
+        end)
+
+        it("a saved grouped focus gives the same groups", function()
+            local task = require 'core.task'
+            for _, properties in ipairs({{description = "grouped todo task"}, {description = "grouped doing task"}}) do
+                local vexid = task:add(properties)
+                task:resolve(vexid)
+                task:write(vexid)
+            end
+            local grouped = Focus.focus('all'):groupby('status'):orderby('vexid')
+            grouped:write()
+            assert.same(func.imap(grouped:groups(), vexids), func.imap(Focus.read():groups(), vexids))
+        end)
+
+        it("knows which flags are focus operations", function()
+            assert.is_true(Focus.operates('groupby'))
+            assert.is_true(Focus.operates('select'))
+            assert.is_false(Focus.operates('field'))
+            assert.is_false(Focus.operates('write'))
+        end)
+
+        it("applies flags to a focus in the order given", function()
+            local grouped = f:apply(require('lib.cli'):parse('--groupby owner --orderby cost:desc --rn')):get(tasks)
+            assert.same({"b", "e", "a", "d", "c"}, vexids(grouped))
+            assert.same({1, 2, 1, 2, 1}, func.imap(grouped, function(t) return t.rn end))
+        end)
+
+        it("rejects a flag that is not a focus operation", function()
+            local cli = require 'lib.cli'
+            stub(cli, 'throw', function(self, name) error(name) end)
+            local ok, err = pcall(function() f:apply(cli:parse('--write')) end)
+            cli.throw:revert()
+            assert.is_false(ok)
+            assert.truthy(err:find('unknown-focus-operation', 1, true))
+        end)
+
         it("rn numbers the tasks in each group from 1, without changing the tasks", function()
             local numbered = f:groupby('owner'):orderby('cost'):rn():get(tasks)
             assert.same({"b", "e", "a", "d", "c"}, vexids(numbered))

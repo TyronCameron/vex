@@ -280,43 +280,103 @@ local function strip_ansi(s)
     return (s:gsub("\27%[[0-9;]*m", ""))
 end
 
-local function pad(s, w)
-    s = tostring(s)
-    return s .. string.rep(' ', w - #strip_ansi(s))
+local function width(s)
+    return select(2, strip_ansi(s):gsub('[^\128-\191]', ''))
 end
 
-local maxlistwidth = 40
+local function pad(s, w)
+    s = tostring(s)
+    return s .. string.rep(' ', w - width(s))
+end
 
-local function cell(value)
-    if type(value) ~= 'table' then return value == nil and '' or tostring(value) end
+local function truncate(s, w)
+    if width(s) <= w then return s end
+    local kept = {}
+    for char in strip_ansi(s):gmatch('[%z\1-\127\194-\244][\128-\191]*') do
+        if #kept == w - 3 then break end
+        table.insert(kept, char)
+    end
+    return table.concat(kept) .. '...'
+end
+
+local defaultmaxwidth = 40
+
+local function listcell(value, w)
     local shown = ''
     for i, element in ipairs(value) do
         local joined = i == 1 and tostring(element) or shown .. ', ' .. tostring(element)
-        if i > 1 and #joined > maxlistwidth then return shown .. ', ...' end
+        if i > 1 and width(joined) + #', ...' > w then return shown .. ', ...' end
         shown = joined
     end
     return shown
 end
 
-function pretty.tabular(data, sortfunc)
+local function cell(value, w)
+    local shown
+    if type(value) == 'table' then
+        shown = listcell(value, w)
+    else
+        shown = value == nil and '' or tostring(value)
+    end
+    return truncate((shown:gsub('[\r\n\t]', ' ')), w)
+end
+
+local Subheader = {}
+
+function pretty.subheader(field, value, depth)
+    return setmetatable({field = field, value = value, depth = depth}, Subheader)
+end
+
+local guide = pretty.string('│', 'dim') .. ' '
+
+function pretty.tabular(data, sortfunc, maxwidth)
     if #data == 0 then return '' end
     sortfunc = sortfunc or pairs
+    maxwidth = maxwidth or defaultmaxwidth
 
     local allfields = {}
     for _, row in ipairs(data) do
-        for key in pairs(row) do allfields[key] = true end
+        if getmetatable(row) ~= Subheader then
+            for key in pairs(row) do allfields[key] = true end
+        end
     end
     local fields = {}
     for key in sortfunc(allfields) do
         table.insert(fields, key)
-    end 
+    end
+
+    local headers, entries = {}, {}
+    for _, f in ipairs(fields) do headers[f] = cell(f, maxwidth) end
+    local depth = 0
+    for _, row in ipairs(data) do
+        if getmetatable(row) == Subheader then
+            depth = row.depth + 1
+            table.insert(entries, {depth = row.depth, field = cell(row.field, maxwidth) .. ': ', value = row.value})
+        else
+            local cells = {}
+            for _, f in ipairs(fields) do cells[f] = cell(row[f], maxwidth) end
+            cells[fields[1]] = string.rep(guide, depth) .. cells[fields[1]]
+            table.insert(entries, {cells = cells})
+        end
+    end
 
     -- compute column widths (ignoring ANSI escape sequences)
     local widths = {}
-    for _, f in ipairs(fields) do widths[f] = #f end
-    for _, task in ipairs(data) do
-        for _, f in ipairs(fields) do
-            widths[f] = math.max(widths[f], #strip_ansi(cell(task[f])))
+    for _, f in ipairs(fields) do widths[f] = width(headers[f]) end
+    for _, entry in ipairs(entries) do
+        for _, f in ipairs(entry.cells and fields or {}) do
+            widths[f] = math.max(widths[f], width(entry.cells[f]))
+        end
+    end
+    local inner = -3
+    for _, f in ipairs(fields) do inner = inner + widths[f] + 3 end
+    for _, entry in ipairs(entries) do
+        local room = inner - 2 * (entry.depth or 0) - width(entry.field or '')
+        entry.label = entry.field and entry.field .. cell(entry.value, math.max(maxwidth, room))
+        local needed = entry.label and 2 * entry.depth + width(entry.label) or 0
+        if needed > inner then
+            widths[fields[#fields]] = widths[fields[#fields]] + needed - inner
+            inner = needed
         end
     end
 
@@ -342,15 +402,19 @@ function pretty.tabular(data, sortfunc)
     -- header row
     local header = box.left
     for _, f in ipairs(fields) do
-        header = header .. ' ' .. pretty.string(pad(f, widths[f]), "bold") .. ' ' .. box.right
+        header = header .. ' ' .. pretty.string(pad(headers[f], widths[f]), "bold") .. ' ' .. box.right
     end
 
     -- data rows
     local lines = {top, header, sep}
-    for _, task in ipairs(data) do
+    for _, entry in ipairs(entries) do
         local row = box.left
-        for _, f in ipairs(fields) do
-            row = row .. ' ' .. pad(cell(task[f]), widths[f]) .. ' ' .. box.right
+        if entry.label then
+            row = row .. ' ' .. pad(string.rep(guide, entry.depth) .. pretty.string(entry.label, "bold"), inner) .. ' ' .. box.right
+        else
+            for _, f in ipairs(fields) do
+                row = row .. ' ' .. pad(entry.cells[f], widths[f]) .. ' ' .. box.right
+            end
         end
         table.insert(lines, row)
     end

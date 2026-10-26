@@ -134,7 +134,7 @@ $ vex focus all --groupby owner --orderby due --rn --select owner,due,rn
 $ vex view tabular
 ```
 
-Commands and views list the groups one after another. A set operation (`--union`, `--intersect`, `--xor`, `--notin`, `--onlyin`, `--complement`) gathers the groups back into one.
+Commands and views list the groups one after another, and the `tabular` view gives each group a subheader. The `tabular` view takes the same flags without saving the focus, so `vex view all tabular --groupby owner --orderby due` shows the groups in one command. A set operation (`--union`, `--intersect`, `--xor`, `--notin`, `--onlyin`, `--complement`) gathers the groups back into one.
 
 ### Interpreting times
 

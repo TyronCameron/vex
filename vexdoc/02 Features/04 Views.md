@@ -8,7 +8,7 @@ With no arguments, `vex view` lists the views. With one argument, it is the view
 
 ## `tabular`
 
-A table of every field except the body, formatted for reading. A list shows as its comma-separated values, cut short with `...` when it is long, and a field a task doesn't have is left blank.
+A table of every field except the body, formatted for reading. A list shows as its comma-separated values, and a field a task doesn't have is left blank. To fit a terminal, every cell and header is cut to 40 characters, ending in `...`; a list is cut between its values.
 
 ```console
 $ vex focus all --select vextype,status
@@ -21,6 +21,26 @@ $ vex view tabular
 │ ship-billing-rewrite-1      │ abstract │ todo   │
 │ migrate-existing-invoices-1 │ task     │ todo   │
 └─────────────────────────────┴──────────┴────────┘
+```
+
+It takes any focus flags (`--select`, `--filter`, `--orderby`, `--groupby` and the rest, see [[01 CLI reference]]), applied in the order given, for this view only: the focus isn't saved, so `prev` stays as it was.
+
+A grouped focus shows each group under a subheader naming its field and value. Each nested level is indented 2 spaces, with a muted guide line down the left:
+
+```console
+$ vex view all tabular --groupby vextype:status --orderby vexid --select vextype,status
+┌─────────────────────────────────┬──────────┬────────┐
+│ vexid                           │ vextype  │ status │
+├─────────────────────────────────┼──────────┼────────┤
+│ vextype: abstract                                   │
+│ │ status: todo                                      │
+│ │ │ ship-billing-rewrite-1      │ abstract │ todo   │
+│ vextype: task                                       │
+│ │ status: doing                                     │
+│ │ │ fix-flaky-webhook-retry-1   │ task     │ doing  │
+│ │ status: todo                                      │
+│ │ │ migrate-existing-invoices-1 │ task     │ todo   │
+└─────────────────────────────────┴──────────┴────────┘
 ```
 
 ## `csv`

@@ -85,7 +85,7 @@ cli:verb "view" {
             focusname = focus_pop_args(positional_args)
         end
         local flags = args:flags()
-        return view:display(viewname, focusname, flags)
+        return view:display(viewname, focusname, flags, func.ifilter(args, cli.isflag))
     end,
     doc = "Prints a view of current tasks",
     args = "[focus] [view]",

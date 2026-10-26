@@ -91,6 +91,13 @@ cli:error "unknown-focus" {
     hint = "Use one of the standard focus names ('all', 'none', 'prev') or a valid vexid which is in the vexdex. Use vex resolve all if your vexdex is out of date."
 }
 
+cli:error "unknown-focus-operation" {
+    function(operation)
+        return 'Unknown focus operation `' .. tostring(operation) .. '`.'
+    end,
+    hint = "Use a focus flag such as `--select`, `--filter`, `--orderby` or `--groupby`. See `vex help focus`."
+}
+
 cli:error "uninterpretable" {
     function(value, field)
         return 'Cannot interpret `' .. tostring(value) .. '` as a value of `' .. tostring(field) .. '`.'
