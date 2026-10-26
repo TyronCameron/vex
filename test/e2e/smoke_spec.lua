@@ -28,6 +28,7 @@ local verbs = {
   {"add", "Smoke", "added", "task"},
   {"add", "Explore", "some", "options", "--vextype", "exploration"},
   {"remove", "smoke-added-task-1"},
+  {"version"},
   {"autocomplete", "bash"},
   {"suggest", "2", "vex", "view"},
 }

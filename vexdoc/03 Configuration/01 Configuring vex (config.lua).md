@@ -56,3 +56,23 @@ With this config, a task sits under its ancestors and then in a folder named aft
 vex reads every config on the way down to the project: your user config (`~/.vex/config.lua`), then the `config.lua` of each enclosing `.vex` folder, outermost first. Later files override earlier ones key by key. Shared settings such as `taskowners` can live in a parent folder and be refined per project.
 
 This repository's own config sets `taskfolder = "vexdoc/vex"`: its backlog is the `vex` folder of this wiki.
+
+## The global folder
+
+Besides each project's `.vex`, vex reads a global folder that belongs to you, not to a project or to the install, so it survives upgrades. It is the first of these that exists:
+
+| Where | Used when |
+| --- | --- |
+| `$VEX_HOME` | set |
+| `%APPDATA%\vex` | on Windows |
+| `$XDG_CONFIG_HOME/vex` | set |
+| `~/.config/vex` | otherwise |
+
+Nothing creates it; make it when you want it. It holds the same things as `.vex`, and a project always wins:
+
+| Path | Effect |
+| --- | --- |
+| `config.lua` | Read before the project's `config.lua`; the project's value wins for any setting both define. Useful for settings `vex init` does not write, like `paths.groupby`. |
+| `tasks/`, `recipes/`, `focuses/`, `views/`, `events/` | Loaded before the same folder in `.vex`, so project extensions can build on them (a task type cannot be defined twice). |
+| `plugin/` | Plugins registered at startup. A file named after a slot's default (`canonicalvexid.lua`, `grouppath.lua`...) replaces it for every project; see [[Plugin architecture]]. |
+

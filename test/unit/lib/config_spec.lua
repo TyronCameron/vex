@@ -55,4 +55,9 @@ describe("Config", function()
         assert.has_no.errors(function() cfg:loadall() end)
     end)
 
+    it("ignores a path that is nil", function()
+        local cfg = Config.new():registerpath(nil)
+        assert.same({}, cfg.files)
+    end)
+
 end)

@@ -24,6 +24,10 @@ end
 -- directly, so we exercise exactly what an end user invokes.
 M.VEX_BIN = this_dir() .. "../../src/vex"
 
+-- Where vex looks for global config and extensions. It points nowhere unless
+-- a spec sets it, so the developer's real ~/.config/vex never leaks into tests.
+M.vex_home = "/nonexistent/vex-home"
+
 -- Creates a fresh, empty, unique temp directory and returns its absolute path.
 function M.make_tmp_dir()
   local handle = assert(io.popen("mktemp -d 2>/dev/null"))
@@ -78,8 +82,9 @@ function M.run_vex(cwd, args)
   local exit_path   = cwd .. "/.e2e_exit"
 
   local cmd = string.format(
-    "cd %s && %s %s >%s 2>%s ; echo $? > %s",
+    "cd %s && VEX_HOME=%s %s %s >%s 2>%s ; echo $? > %s",
     M.shell_escape(cwd),
+    M.shell_escape(M.vex_home),
     M.shell_escape(M.VEX_BIN),
     table.concat(quoted, " "),
     M.shell_escape(stdout_path),
