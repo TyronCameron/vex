@@ -335,7 +335,7 @@ end
 local function normalise(vextype, task, context)
     local ok, res = pcall(vextype.schema.prevalidate, vextype.schema, task, context)
     if not ok and type(res) == "table" and res.uninterpretable then cli:throw('uninterpretable', res.uninterpretable, res.field) end
-    if not ok then cli:throw('resolution-failed-normalisation', context.vexid, context.path, tostring(res)) end 
+    if not ok then cli:throw('resolution-failed-normalisation', context.vexid, res) end 
     return res
 end 
 
@@ -345,7 +345,7 @@ end
 
 local function derive(vextype, task, context)
     local ok, res = pcall(vextype.schema.postvalidate, vextype.schema, task, context)
-    if not ok then cli:throw('resolution-failed-derivation', context.vexid, context.path, tostring(res)) end 
+    if not ok then cli:throw('resolution-failed-derivation', context.vexid, res) end 
     return res
 end 
 

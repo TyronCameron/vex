@@ -10,13 +10,12 @@ local schema = require 'lib.schema'
 
 schema.register 'words' {
     validate = function(self, instance, context)
-        if type(instance) ~= "string" then return false end 
         local count = 0
-        for _ in instance:gmatch("%S+") do
+        for _ in tostring(type(instance) == "string" and instance or ""):gmatch("%S+") do
             count = count + 1
             if count >= self.specification[1] then return true end 
         end
-        return false
+        return false, "Expected at least " .. self.specification[1] .. " words"
     end
 }
 

@@ -47,6 +47,15 @@ describe("taskdefinitions", function()
             assert.stub(cli.throw).was.called_with(cli, 'resolution-failed-validation', vexid, match._)
         end)
 
+        it("reports the failing status as a failure with its message first", function()
+            local vexid = create({description = "status failure task"})
+            task:set(vexid, {status = "done"})
+            assert.has_error(function() task:resolve(vexid) end)
+            assert.stub(cli.throw).was.called_with(cli, 'resolution-failed-validation', vexid, match.is_truthy())
+            local failure = cli.throw.calls[#cli.throw.calls].vals[4]
+            assert.truthy(tostring(failure):find("Cannot transition status from todo to done", 1, true))
+        end)
+
         it("rejects doing back to todo", function()
             local vexid = create({description = "status backward task"})
             setstatus(vexid, "doing")

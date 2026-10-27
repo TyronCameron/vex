@@ -484,4 +484,76 @@ describe("schema", function()
         assert.same({4}, schema.vec { schema.formatted { schema.__spec_double } }:postvalidate({2}))
     end)
 
+    describe("failures", function()
+        local function plain(failure)
+            return (tostring(failure):gsub("\27%[[%d;]*m", ""))
+        end
+
+        local function count(text, needle)
+            return select(2, text:gsub(needle, ""))
+        end
+
+        it("shows the error, then the failing data, then the stack with the most specific first", function()
+            local s = schema.atleast { name = schema.all { schema.str } }
+            local ok, failure = s:validate({name = 5})
+            local text = plain(failure)
+            assert.falsy(ok)
+            assert.equal("ERROR: Expected a string, got number", text:match("^[^\n]*"))
+            assert.truthy(text:find("name = 5", 1, true))
+            assert.truthy(text:find("Stack (most specific first):", 1, true))
+            assert.truthy(text:find("at name", 1, true) < text:find("at <root>", 1, true))
+        end)
+
+        it("merges the schemas on one path into a single stack line and repeats no context", function()
+            local s = schema.atleast { name = schema.all { schema.str } }
+            local text = plain(select(2, s:validate({name = 5})))
+            assert.equal(1, count(text, "at name"))
+            assert.truthy(text:find("str < all", 1, true))
+            assert.is_nil(text:find("Context:", 1, true))
+        end)
+
+        it("leaves out the stack when the failure never leaves one path", function()
+            local text = plain(select(2, schema.str:validate(5)))
+            assert.is_nil(text:find("Stack", 1, true))
+        end)
+
+        it("names the check that failed when it gives no reason", function()
+            local text = plain(select(2, schema.constraint(function() return false end):validate(1)))
+            assert.equal("ERROR: Failed `constraint` check", text:match("^[^\n]*"))
+        end)
+
+        it("lists why each alternative of an any failed", function()
+            local text = plain(select(2, schema.any { schema.str, schema.bool }:validate(5)))
+            assert.truthy(text:find("- Expected a string, got number", 1, true))
+            assert.truthy(text:find("- Expected a boolean, got number", 1, true))
+        end)
+
+        it("raises one failure with the whole stack when a prevalidate crashes", function()
+            schema.register '__spec_crash' {
+                prevalidate = function() error("boom") end,
+                validate = function() return true end
+            }
+            local s = schema.atleast { field = schema.all { schema.__spec_crash } }
+            local ok, failure = pcall(s.prevalidate, s, {field = 1})
+            local text = plain(failure)
+            assert.falsy(ok)
+            assert.truthy(text:match("^ERROR: Prevalidation step errored: [^\n]*boom"))
+            assert.equal(1, count(text, "ERROR:"))
+            assert.truthy(text:find("at field", 1, true) < text:find("at <root>", 1, true))
+        end)
+
+        it("raises one failure with the whole stack when a postvalidate crashes", function()
+            schema.register '__spec_postcrash' {
+                postvalidate = function() error("bang") end,
+                validate = function() return true end
+            }
+            local s = schema.atleast { field = schema.__spec_postcrash }
+            local ok, failure = pcall(s.postvalidate, s, {field = 1})
+            local text = plain(failure)
+            assert.falsy(ok)
+            assert.truthy(text:match("^ERROR: Postvalidation step errored: [^\n]*bang"))
+            assert.equal(1, count(text, "ERROR:"))
+        end)
+    end)
+
 end)
