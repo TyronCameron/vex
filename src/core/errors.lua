@@ -99,10 +99,9 @@ cli:error "unknown-focus-operation" {
 }
 
 cli:error "uninterpretable" {
-    function(value, field)
-        return 'Cannot interpret `' .. tostring(value) .. '` as a value of `' .. tostring(field) .. '`.'
-    end,
-    hint = "Use a phrase such as `tomorrow`, `next tuesday`, `friday arvo`, `in 3 days`, `26 July` or `2026-07-26 09:00`."
+    function(field, failure)
+        return tostring(failure) .. '\n\n' .. pretty.string('while interpreting `' .. tostring(field) .. '`', 'dim')
+    end
 }
 
 cli:error "missing-required-field" {
@@ -121,8 +120,8 @@ cli:error "unknown-vextype" {
 }
 
 local function resolutionfailure(step)
-    return function(vexid, failure)
-        local footer = pretty.string('the ' .. step .. ' step failed while resolving `' .. tostring(vexid) .. '`', 'dim')
+    return function(vexid, failure, path)
+        local footer = pretty.string('the ' .. step .. ' step failed while resolving ', 'dim') .. pretty.string('`' .. tostring(vexid) .. '`', unpack(path and {{filelink = path}} or {}))
         return failure and (tostring(failure) .. '\n\n' .. footer) or footer
     end
 end

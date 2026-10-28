@@ -72,7 +72,16 @@ describe("vex user-facing errors (e2e, subprocess)", function()
     local vexid = vex(dir, "add", "Water", "the", "plants")
     fails(dir, "ERROR: Cannot transition status from todo to done", "set", vexid, "--status", "done")
     fails(dir, "at status", "set", vexid, "--status", "done")
+    local raw = helper.run_vex(dir, {"set", vexid, "--status", "done"}).stderr
+    assert.truthy(raw:find("\27]8;;file://", 1, true))
+    assert.truthy(raw:find(vexid .. ".md\27\\", 1, true))
     assert.equal("todo", helper.frontmatter(dir .. "/" .. vexid .. ".md").status)
+  end)
+
+  it("links no file for a task that has none yet", function()
+    local stderr = helper.run_vex(dir, {"add", "Bugs", "--vextype", "abstract"}).stderr
+    assert.truthy(stderr:find("validation step failed", 1, true))
+    assert.is_nil(stderr:find("file://", 1, true))
   end)
 
   it("rejects an unknown set modifier", function()

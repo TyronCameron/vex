@@ -297,7 +297,7 @@ function naturaltime.parse(phrase, now)
         if not consumed then table.insert(unknown, tokens[i]) end
         i = i + (consumed or 1)
     end
-    if #unknown > 0 then error('Unknown time words: ' .. table.concat(unknown, ', '), 0) end
+    if #unknown > 0 then error('Cannot interpret `' .. tostring(phrase) .. '` as a time. Unknown words: ' .. table.concat(unknown, ', ') .. '. Try a phrase such as `tomorrow`, `next tuesday`, `friday arvo`, `in 3 days`, `26 July` or `2026-07-26 09:00`.', 0) end
     return settle(state)
 end
 

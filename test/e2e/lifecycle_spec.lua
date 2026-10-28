@@ -214,7 +214,9 @@ describe("vex CLI lifecycle (e2e, subprocess)", function()
 
   it("vex set rejects a time it cannot read and leaves the file as it was", function()
     local vexid = vex(dir, "add", "Water", "the", "plants", "--due", "2026-08-01")
-    helper.vex_fails(dir, "Cannot interpret `garbage words` as a value of `due`", "set", vexid, "--due", "garbage words")
+    local stderr = helper.vex_fails(dir, "ERROR: Cannot interpret `garbage words` as a time", "set", vexid, "--due", "garbage words")
+    assert.truthy(stderr:find('due = "garbage words"', 1, true))
+    assert.truthy(stderr:find("normalisation step failed", 1, true))
     assert.equal("2026-08-01 00:00:00", task(vexid).due)
   end)
 

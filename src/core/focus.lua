@@ -296,7 +296,7 @@ local function normalised(task, field, value, iso)
     if not fieldschema then return value end
     if iso then
         local ok, result = pcall(fieldschema.unapply, fieldschema, iso, value)
-        if not ok then cli:throw('uninterpretable', value, field) end
+        if not ok then cli:throw('uninterpretable', field, result) end
         value = result
     end
     local ok, result = pcall(fieldschema.prevalidate, fieldschema, value, {})

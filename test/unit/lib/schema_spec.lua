@@ -425,8 +425,10 @@ describe("schema", function()
     it("`schema.formatted` raises which value and field it could not read", function()
         local s = schema.atleast { due = schema.maybe { schema.formatted { schema.datetime } } }
         local ok, err = pcall(s.prevalidate, s, {due = "garbage words"})
+        local text = tostring(err):gsub("\27%[[%d;]*m", "")
         assert.is_false(ok)
-        assert.same({uninterpretable = "garbage words", field = "due"}, err)
+        assert.truthy(text:find("Cannot interpret `garbage words`", 1, true))
+        assert.truthy(text:find('due = "garbage words"', 1, true))
     end)
 
     it("`schema.datetime` rejects a phrase it cannot interpret", function()
@@ -493,22 +495,23 @@ describe("schema", function()
             return select(2, text:gsub(needle, ""))
         end
 
-        it("shows the error, then the failing data, then the stack with the most specific first", function()
+        it("shows the error, then the failing data, then the stack", function()
             local s = schema.atleast { name = schema.all { schema.str } }
             local ok, failure = s:validate({name = 5})
             local text = plain(failure)
             assert.falsy(ok)
             assert.equal("ERROR: Expected a string, got number", text:match("^[^\n]*"))
             assert.truthy(text:find("name = 5", 1, true))
-            assert.truthy(text:find("Stack (most specific first):", 1, true))
-            assert.truthy(text:find("at name", 1, true) < text:find("at <root>", 1, true))
+            assert.truthy(text:find("Stack:", 1, true))
+            assert.truthy(text:find("at name", 1, true) < text:find("at (root)", 1, true))
         end)
 
         it("merges the schemas on one path into a single stack line and repeats no context", function()
             local s = schema.atleast { name = schema.all { schema.str } }
             local text = plain(select(2, s:validate({name = 5})))
             assert.equal(1, count(text, "at name"))
-            assert.truthy(text:find("str < all", 1, true))
+            assert.truthy(text:find("at name%s+str"))
+            assert.is_nil(text:find("<", 1, true))
             assert.is_nil(text:find("Context:", 1, true))
         end)
 
@@ -539,7 +542,7 @@ describe("schema", function()
             assert.falsy(ok)
             assert.truthy(text:match("^ERROR: Prevalidation step errored: [^\n]*boom"))
             assert.equal(1, count(text, "ERROR:"))
-            assert.truthy(text:find("at field", 1, true) < text:find("at <root>", 1, true))
+            assert.truthy(text:find("at field", 1, true) < text:find("at (root)", 1, true))
         end)
 
         it("raises one failure with the whole stack when a postvalidate crashes", function()

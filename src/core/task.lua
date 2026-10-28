@@ -332,10 +332,14 @@ function TaskManager:reindexall()
     return self 
 end
 
+local function taskfile(context)
+    local path = context.taskmanager:getcurrentpath(context.vexid)
+    return lfs.attributes(path, 'mode') == 'file' and path or nil
+end
+
 local function normalise(vextype, task, context)
     local ok, res = pcall(vextype.schema.prevalidate, vextype.schema, task, context)
-    if not ok and type(res) == "table" and res.uninterpretable then cli:throw('uninterpretable', res.uninterpretable, res.field) end
-    if not ok then cli:throw('resolution-failed-normalisation', context.vexid, res) end 
+    if not ok then cli:throw('resolution-failed-normalisation', context.vexid, res, taskfile(context)) end 
     return res
 end 
 
@@ -345,7 +349,7 @@ end
 
 local function derive(vextype, task, context)
     local ok, res = pcall(vextype.schema.postvalidate, vextype.schema, task, context)
-    if not ok then cli:throw('resolution-failed-derivation', context.vexid, res) end 
+    if not ok then cli:throw('resolution-failed-derivation', context.vexid, res, taskfile(context)) end 
     return res
 end 
 
@@ -381,7 +385,7 @@ function TaskManager:resolve(vexid)
     for _, parent in ipairs(parents) do 
         if not normalise(parent, task, context) then cli:throw('resolution-failed-normalisation', vexid) end 
         local isvalid, err = validate(parent, task, context)
-        if not isvalid then cli:throw('resolution-failed-validation', vexid, err) end 
+        if not isvalid then cli:throw('resolution-failed-validation', vexid, err, taskfile(context)) end 
         if not derive(parent, task, context) then cli:throw('resolution-failed-derivation', vexid) end 
     end 
 

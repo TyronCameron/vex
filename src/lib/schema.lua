@@ -148,7 +148,7 @@ function Failure:push(frame)
 end
 
 local function pathname(path)
-    return #path == 0 and '<root>' or table.concat(path, '.')
+    return #path == 0 and '(root)' or table.concat(path, '.')
 end
 
 local function stack(frames)
@@ -156,10 +156,9 @@ local function stack(frames)
     for _, frame in ipairs(frames) do
         local path = pathname(frame.path)
         if not bypath[path] then
-            bypath[path] = {path = path, schemas = {}}
+            bypath[path] = {path = path, schema = frame.currentschema._name}
             table.insert(groups, bypath[path])
         end
-        table.insert(bypath[path].schemas, frame.currentschema._name)
     end
     return groups
 end
@@ -179,9 +178,9 @@ function Failure:__tostring()
         local width = 0
         for _, group in ipairs(groups) do width = math.max(width, #group.path) end
         table.insert(lines, '')
-        table.insert(lines, pretty.string('Stack (most specific first):', 'bold'))
+        table.insert(lines, pretty.string('Stack:', 'bold'))
         for _, group in ipairs(groups) do
-            table.insert(lines, '  at ' .. group.path .. string.rep(' ', width - #group.path) .. '  ' .. pretty.string(table.concat(group.schemas, ' < '), 'dim'))
+            table.insert(lines, '  at ' .. group.path .. string.rep(' ', width - #group.path) .. '  ' .. pretty.string(group.schema, 'dim'))
         end
     end
     return table.concat(lines, '\n')
@@ -201,7 +200,6 @@ local function guard(self, label, fn, value, context, snap)
     local ok, res, err = pcall(fn, self, value, context)
     if ok then return res, err end
     if Failure.is(res) then error(res:push(snap), 0) end
-    if type(res) == "table" then error(res, 0) end
     self:error(value, snap, label .. " step errored: " .. tostring(res))
 end
 
@@ -231,7 +229,7 @@ local function transform(self, isoname, direction, value, context)
     if self._isos and self._isos[isoname] then
         if direction == 'forward' and not self:validate(value) then return value end
         local ok, res = pcall(self._isos[isoname][direction], self, value, context)
-        if not ok then self:error(value, context, "Iso failed " .. direction .. " transformation: " .. tostring(res)) end
+        if not ok then self:error(value, context, tostring(res)) end
         return res
     end
     if not self._iterate then return value end
@@ -807,9 +805,7 @@ Schema.register 'formatted' {
         if self:validate(instance) then return instance end 
         local result = self:unapply('format', instance, context)
         if not self:validate(result) then
-            local ok, interpreted = pcall(self.unapply, self, 'interpret', result, context)
-            if not ok then error({uninterpretable = result, field = table.concat(context.path, '.')}, 0) end
-            result = interpreted
+            result = self:unapply('interpret', result, context)
         end
         for childschema, childinstance in self:iterate(result, context) do
             result = childschema:prevalidate(childinstance, context)
