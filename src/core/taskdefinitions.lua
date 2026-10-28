@@ -203,6 +203,18 @@ task:transient 'phase' {
     end
 }
 
+task:transient 'blockers' {
+    vextype = 'task',
+    definition = function(t)
+        if not t.dependencies then return {} end
+        local unfinished = {}
+        for _, dependency in ipairs(focus.focus(t.dependencies):intersect(focus.focus('final'):complement()):get()) do
+            unfinished[dependency.vexid] = true
+        end
+        return func.ifilter(t.dependencies, function(vexid) return unfinished[vexid] end)
+    end
+}
+
 task:transient 'lineage' {
     vextype = 'task',
     definition = function(t)

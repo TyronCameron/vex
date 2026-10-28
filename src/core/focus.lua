@@ -67,8 +67,12 @@ for _, phase in ipairs {'initial', 'interim', 'final'} do
     end)
 end
 
+Focus.register_focus('ready', function()
+    return func.ifilter(Focus.getalltasks(), function(task) return task.phase ~= 'final' and #task.blockers == 0 end)
+end)
+
 -----------------------------------------
--- Binary Operations 
+-- Binary Operations
 -----------------------------------------
 
 local deserialize
