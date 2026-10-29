@@ -222,6 +222,14 @@ task:transient 'lineage' {
     end
 }
 
+task:transient 'parent' {
+    vextype = 'task',
+    definition = function(t)
+        local ancestors = focus.focus(t.vexid):reversetree('children'):get()
+        return ancestors[2] and ancestors[2].vexid
+    end
+}
+
 task:transient 'path' {
     vextype = 'task',
     definition = function(t)

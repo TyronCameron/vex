@@ -167,6 +167,13 @@ describe("taskdefinitions", function()
             assert.same({}, task.tasks[grandparent].lineage)
         end)
 
+        it("gives a task's parent, and nothing for a root", function()
+            local child = create({description = "parented child task"})
+            local parent = create({description = "parented parent abstract", vextype = 'abstract', children = {child}})
+            assert.equal(parent, task.tasks[child].parent)
+            assert.is_nil(task.tasks[parent].parent)
+        end)
+
         it("gives the path of the task file", function()
             local vexid = create({description = "located task"})
             assert.equal(task:getcurrentpath(vexid), task.tasks[vexid].path)

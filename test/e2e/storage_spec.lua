@@ -87,7 +87,7 @@ describe("vex storage (e2e, subprocess)", function()
     linked_project()
     for _, vexid in ipairs({"child-task-here-1", "parent-abstract-here-1", "dependent-atom-here-1"}) do
       local fields = helper.frontmatter(dir .. "/" .. vexid .. ".md")
-      for _, transient in ipairs({"wordcount", "phase", "blockers", "lineage", "path", "age"}) do
+      for _, transient in ipairs({"wordcount", "phase", "blockers", "lineage", "parent", "path", "age"}) do
         assert.is_nil(fields[transient], transient .. " was written to " .. vexid)
       end
     end
