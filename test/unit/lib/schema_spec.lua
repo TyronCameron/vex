@@ -343,16 +343,6 @@ describe("schema", function()
         assert.falsy(schema.empty:validate("hello"))
     end)
 
-    it("`schema.absent` accepts any value but never keeps it", function()
-        local s = schema.atleast { status = schema.absent }
-        local instance = { status = "todo" }
-        assert.is_nil(s:prevalidate(instance).status)
-        assert.truthy(s:validate(instance))
-        assert.is_nil(s:postvalidate(instance).status)
-        assert.is_nil(s:apply('format', instance).status)
-        assert.is_nil(s:unapply('format', instance).status)
-    end)
-
     -- ==================== Modifier schemas ====================
 
     it("`schema.default` sets default when value is nil", function()

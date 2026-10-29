@@ -503,7 +503,7 @@ function TaskManager:readfrompath(path)
 end
 
 -- writes a file from disk
-function TaskManager:write(vexid)
+local function persist(self, vexid)
     event:trigger('pre-task-write', vexid)
     local task = self:format(vexid)
     local path = self:getcurrentpath(vexid)
@@ -514,6 +514,20 @@ function TaskManager:write(vexid)
     vexdex:unsafe_locate(vexid, relative(path))
     self:index(vexid)
     event:trigger('post-task-write', vexid, path)
+    return vexid
+end
+
+-- writes a task, then re-resolves and writes the abstracts above it while their status keeps changing
+function TaskManager:write(vexid)
+    persist(self, vexid)
+    local ancestors = focus.focus(vexid):reversetree('children'):get()
+    for i = 2, #ancestors do
+        local ancestor = ancestors[i].vexid
+        local before = self:getsingle(ancestor).status
+        self:resolve(ancestor)
+        if self:getsingle(ancestor).status == before then break end
+        persist(self, ancestor)
+    end
     return vexid
 end
 

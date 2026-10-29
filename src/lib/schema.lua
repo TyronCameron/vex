@@ -690,16 +690,6 @@ Schema.register 'empty' {
     end
 }
 
--- a field that is never stored, whatever value is read for it
-Schema.register 'absent' {
-    isos = setmetatable({}, {__index = function()
-        return {forward = function() return nil end, backward = function() return nil end}
-    end}),
-    prevalidate = function() return nil end,
-    validate = function() return true end,
-    postvalidate = function() return nil end
-}
-
 -- checks for size of a table
 Schema.register 'size' {
     validate = function(self, instance, context)

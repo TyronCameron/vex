@@ -26,22 +26,15 @@ schema.register 'vextype' {
     end
 }
 
-local function derivedstatus(context)
-    return context.taskmanager:transientof(context.task.vextype, 'status')
-end
-
 schema.register 'statemachine' {
     prevalidate = function(self, instance, context)
-        if derivedstatus(context) then return instance end
         self.extra.statemachine = statemachine.new(self.specification.states, context.previous.status, self.specification.initial)
         return instance or self.specification.initial
     end,
     validate = function(self, instance, context)
-        if derivedstatus(context) then return true end
         return self.extra.statemachine:isvalid(instance), "Cannot transition status from " .. tostring(self.extra.statemachine.current) .. " to " .. tostring(instance)
     end,
     postvalidate = function(self, instance, context)
-        if derivedstatus(context) then return instance end
         self.extra.statemachine:transition(instance)
         return instance
     end
@@ -90,12 +83,13 @@ local function acyclic(dependency, context)
     return true
 end
 
-local function haschildren(task)
-    return type(task.children) == "table" and #task.children > 0
+local function holds(task, field)
+    return type(task[field]) == "table" and #task[field] > 0
 end
 
 local function childless(dependency, context)
-    if haschildren(context.root) or haschildren(focus.focus(dependency):get()[1]) then
+    local target = focus.focus(dependency):get()[1]
+    if holds(target, 'children') or holds(target, 'options') then
         cli:throw('dependency-with-children', context.vexid, dependency)
     end
     return true
@@ -152,7 +146,14 @@ task:task 'task' {
 task:task 'abstract':extends 'task' {
     schema = schema.atleast {
         vexbody = schema.maybe {schema.empty},
-        status = schema.absent,
+        status = schema.derive {
+            schema.str,
+            derive = function(self, instance, context)
+                return ({initial = "todo", interim = "doing", final = "done"})[context.task.phase]
+            end
+        },
+        options = schema['nil'],
+        dependencies = schema['nil'],
         children = schema.default {
             schema.vec {
                 schema.all {
@@ -181,20 +182,23 @@ task:task 'decision':extends 'task' {
                 }
             }
         },
-        children = schema.maybe {schema.empty}
+        children = schema['nil'],
+        dependencies = schema['nil']
     }
 }
 
 task:task 'exploration':extends 'task' {
     schema = schema.atleast {
         vexbody = schema.empty,
-        children = schema.maybe {schema.empty},
+        children = schema['nil'],
+        options = schema['nil'],
     }
 }
 
 task:task 'atom':extends 'task' {
     schema = schema.atleast {
-        children = schema.maybe {schema.empty},
+        children = schema['nil'],
+        options = schema['nil'],
     }
 }
 
@@ -239,13 +243,6 @@ task:transient 'phase' {
         if func.all(phases, function(phase) return phase == 'initial' end) then return 'initial' end
         if func.all(phases, function(phase) return phase == 'final' end) then return 'final' end
         return 'interim'
-    end
-}
-
-task:transient 'status' {
-    vextype = 'abstract',
-    definition = function(t)
-        return ({initial = 'todo', interim = 'doing', final = 'done'})[t.phase]
     end
 }
 

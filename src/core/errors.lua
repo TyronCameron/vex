@@ -190,9 +190,9 @@ cli:error 'dependency-cycle' {
 
 cli:error 'dependency-with-children' {
     function(vexid, dependency)
-        return 'Task `' .. tostring(vexid) .. '` cannot depend on `' .. tostring(dependency) .. '`, because one of them has children.'
+        return 'Task `' .. tostring(vexid) .. '` cannot depend on `' .. tostring(dependency) .. '`, because it has children or options.'
     end,
-    hint = "Only tasks without children can take part in dependencies. Depend on the atoms under an abstract instead."
+    hint = "Depend on the atoms under an abstract, or on the option a decision chose, instead."
 }
 
 cli:error "unknown-view" {
