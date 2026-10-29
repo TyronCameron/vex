@@ -7,7 +7,10 @@ return {
         tasktype = 'task'
     },
     taskowners = {},
-    loglimit = 1000
+    loglimit = 1000,
+    paths = {
+        groupby = {'status', 'lineage'}
+    }
 }
 ```
 
@@ -49,7 +52,7 @@ With this config, a task sits under its ancestors and then in a folder named aft
 - Characters that can't appear in a folder name (`/ \ : * ? " < > |`) become `-`.
 - Files move whenever something they depend on changes. Changing a task moves the files of the tasks it links to, so editing a parent's `children` moves its children. Empty folders are removed.
 - vex owns the layout. A file moved by hand is still found, and is moved back the next time it is resolved.
-- After changing `paths.groupby`, run `vex resolve all` to move the existing files. Without it, task files sit flat at `<vexid>.md`.
+- After changing `paths.groupby`, run `vex resolve all` to move the existing files. Without `paths.groupby`, task files sit flat at `<vexid>.md`.
 
 ## Layered config
 
@@ -72,7 +75,7 @@ Nothing creates it; make it when you want it. It holds the same things as `.vex`
 
 | Path | Effect |
 | --- | --- |
-| `config.lua` | Read before the project's `config.lua`; the project's value wins for any setting both define. Useful for settings `vex init` does not write, like `paths.groupby`. |
+| `config.lua` | Read before the project's `config.lua`; the project's value wins for any setting both define. Useful for settings you want in every project. |
 | `tasks/`, `recipes/`, `focuses/`, `views/`, `events/` | Loaded before the same folder in `.vex`, so project extensions can build on them (a task type cannot be defined twice). |
 | `plugin/` | Plugins registered at startup. A file named after a slot's default (`canonicalvexid.lua`, `grouppath.lua`...) replaces it for every project; see [[Plugin architecture]]. |
 

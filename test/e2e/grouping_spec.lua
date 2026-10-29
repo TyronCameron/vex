@@ -43,6 +43,18 @@ describe("vex grouped task paths (e2e, subprocess)", function()
     assert.is_true(exists(vexid .. ".md"))
   end)
 
+  it("nests tasks by status and lineage in a freshly initialised project", function()
+    local fresh = helper.make_tmp_dir()
+    helper.run_vex(fresh, {"init"})
+    local parent = vex(fresh, "add", "Fresh", "parent", "abstract", "--vextype", "abstract")
+    local child = vex(fresh, "add", "Fresh", "child", "task")
+    helper.link(fresh, parent, "children", {child})
+    vex(fresh, "resolve", "all")
+    assert.is_true(helper.is_file(fresh .. "/todo/" .. parent .. ".md"))
+    assert.is_true(helper.is_file(fresh .. "/todo/" .. parent .. "/" .. child .. ".md"))
+    helper.rm_tmp_dir(fresh)
+  end)
+
   it("nests tasks in folders by lineage", function()
     groupby "{'lineage'}"
     local top, middle, leaf = family()

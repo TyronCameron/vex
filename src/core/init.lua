@@ -7,6 +7,9 @@ local default_config = {
     default = {
         tasktype = 'task'
     },
+    paths = {
+        groupby = {"status", "lineage"}
+    },
     taskowners = {},
     loglimit = 1000
 }

@@ -139,6 +139,8 @@ end
 function M.project()
   local dir = M.make_tmp_dir()
   M.vex(dir, "init")
+  local config = dir .. "/.vex/config.lua"
+  M.write_file(config, (M.read_file(config):gsub("  paths = {.-\n  },\n", "")))
   return dir
 end
 
