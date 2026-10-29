@@ -119,7 +119,8 @@ task:task 'task' {
                 schema.all {
                     schema.formatted {schema.vexlink},
                     schema.constraint {acyclic}
-                }
+                },
+                unique = true
             }
         },
         due = schema.maybe {schema.formatted {schema.datetime}},
@@ -138,7 +139,8 @@ task:task 'abstract':extends 'task' {
                     schema.formatted {schema.vexlink},
                     schema.constraint {notself},
                     schema.constraint {singleparent}
-                }
+                },
+                unique = true
             },
             default = function() return {} end 
         }

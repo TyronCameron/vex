@@ -542,7 +542,16 @@ Schema.register 'vec' {
     end,
     prevalidate = function(self, instance, context)
         if instance ~= nil and type(instance) ~= "table" then instance = {instance} end
-        return prevalidate_children(self, instance, context)
+        instance = prevalidate_children(self, instance, context)
+        if self.specification.unique and type(instance) == "table" then
+            local seen = {}
+            instance = func.ifilter(instance, function(element)
+                if seen[element] then return false end
+                seen[element] = true
+                return true
+            end)
+        end
+        return instance
     end,
     validate = function(self, instance, context)
         if type(instance) ~= "table" then 
