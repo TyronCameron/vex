@@ -113,12 +113,11 @@ task:task 'task' {
         },
         vexbody = schema.maybe {schema.str},
         dependencies = schema.maybe {
-            schema.vec {
+            schema.uniquevec {
                 schema.all {
                     schema.formatted {schema.vexlink},
                     schema.constraint {acyclic}
-                },
-                unique = true
+                }
             }
         },
         due = schema.maybe {schema.formatted {schema.datetime}},
@@ -146,13 +145,12 @@ task:task 'abstract':extends 'task' {
         },
         vexbody = schema.maybe {schema.empty},
         children = schema.default {
-            schema.vec {
+            schema.uniquevec {
                 schema.all {
                     schema.formatted {schema.vexlink},
                     schema.constraint {notself},
                     schema.constraint {singleparent}
-                },
-                unique = true
+                }
             },
             default = function() return {} end 
         }
