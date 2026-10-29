@@ -2,7 +2,7 @@ Each `.lua` file in `.vex/focuses` can register named focuses. A named focus is 
 
 ```lua
 focus.register_focus('mine', function()
-    return focus.focus('all'):filter('owner', 'alice'):filter('status', 'doing'):get()
+    return focus.focus('all'):filter('owner', 'alice'):filter('status', 'done'):get()
 end)
 ```
 

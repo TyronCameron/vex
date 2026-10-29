@@ -101,7 +101,7 @@ describe("vex smoke test: every verb, view and focus (e2e, subprocess)", functio
     helper.write_file(decision, helper.read_file(decision):gsub("vextype: task", "vextype: decision"))
     helper.link(dir, DECISION, "options", {CHILD, DEPENDENT})
     vex(dir, "resolve", "all")
-    vex(dir, "set", DEPENDENT, "--status", "doing")
+    vex(dir, "set", DEPENDENT, "--status", "done")
   end)
 
   teardown(function()

@@ -69,7 +69,7 @@ describe("vex user-facing errors (e2e, subprocess)", function()
   end)
 
   it("rejects a skipped status transition and leaves the task unchanged", function()
-    local vexid = vex(dir, "add", "Water", "the", "plants")
+    local vexid = vex(dir, "add", "Water", "the", "plants", "--vextype", "abstract")
     fails(dir, "ERROR: Cannot transition status from todo to done", "set", vexid, "--status", "done")
     fails(dir, "at status", "set", vexid, "--status", "done")
     local raw = helper.run_vex(dir, {"set", vexid, "--status", "done"}).stderr

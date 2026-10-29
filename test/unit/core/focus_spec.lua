@@ -320,17 +320,19 @@ describe("Focus", function()
 
     it("replays a saved focus with the same operations", function()
         local task = require 'core.task'
-        for _, description in ipairs({"saved focus todo task", "saved focus doing task"}) do
+        local vexids = {}
+        for _, description in ipairs({"saved focus todo task", "saved focus finished task"}) do
             local vexid = task:add({description = description})
             task:resolve(vexid)
             task:write(vexid)
+            table.insert(vexids, vexid)
         end
-        task:set("saved-focus-doing-task-1", {status = "doing"})
-        task:resolve("saved-focus-doing-task-1")
-        Focus.focus('all'):filter('status', 'doing'):fuzzy('description', 'saved focus', 0):write()
+        task:set(vexids[2], {status = "done"})
+        task:resolve(vexids[2])
+        Focus.focus('all'):filter('status', 'done'):fuzzy('description', 'saved focus', 0):write()
         local replayed = Focus.read():get()
         assert.equal(1, #replayed)
-        assert.equal("saved-focus-doing-task-1", replayed[1].vexid)
+        assert.equal(vexids[2], replayed[1].vexid)
     end)
 
     it("resolves a set operation's focus name and replays it once saved", function()

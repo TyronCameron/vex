@@ -57,7 +57,7 @@ The task file goes in `taskfolder`. Its vexid comes from the description's first
 ## Editing tasks
 
 ```console
-$ vex set make-coffee-wife-1 --status doing --owner alice
+$ vex set make-coffee-wife-1 --status done --owner alice
 ```
 
 `set` overwrites each field you give it, then resolves the task. To edit a list field by value, put `--insert` or `--remove` before it:

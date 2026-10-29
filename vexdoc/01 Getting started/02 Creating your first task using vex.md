@@ -49,17 +49,17 @@ status: todo
 ## 4. Move it forward
 
 ```console
-$ vex set --status doing
+$ vex set --status done
 ```
 
-`status` follows a state machine: `todo`, then `doing`, then `done`. vex rejects any other move, such as `todo` straight to `done`.
+`status` follows a state machine. A task is `todo` or `done`; an `abstract` goes `todo`, then `doing`, then `done`, and vex rejects any other move.
 
 `set` applies to every task in the focus, so one command can update many tasks:
 
 ```console
 $ vex focus all --filter status:todo
 Focusing on 1 vex
-$ vex set --status doing
+$ vex set --status done
 ```
 
 ## 5. Get data out
@@ -68,7 +68,7 @@ $ vex set --status doing
 $ vex focus all
 Focusing on 1 vex
 $ vex get --vexid --status --cost
-make-coffee-wife-1	doing	15
+make-coffee-wife-1	done	15
 ```
 
 `get` prints one tab-separated line per task in the focus, ready for `cut`, `awk`, `sort` or any other tool that reads TSV.

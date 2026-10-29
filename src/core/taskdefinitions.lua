@@ -27,8 +27,9 @@ schema.register 'vextype' {
 
 schema.register 'statemachine' {
     prevalidate = function(self, instance, context)
-        self.extra.statemachine = statemachine.new(self.specification.states, context.previous.status, self.specification.initial)
-        return instance or self.specification.initial
+        local specification = context.taskmanager:schemaof(context.task.vextype, 'status').specification
+        self.extra.statemachine = statemachine.new(specification.states, context.previous.status, specification.initial)
+        return instance or context.taskmanager:schemaof(context.task.vextype, 'status').specification.initial
     end,
     validate = function(self, instance, context)
         return self.extra.statemachine:isvalid(instance), "Cannot transition status from " .. tostring(self.extra.statemachine.current) .. " to " .. tostring(instance)
@@ -102,9 +103,6 @@ task:task 'task' {
         status = schema.statemachine {
             states = {
                 todo = {
-                    valid = {"doing"},
-                },
-                doing = {
                     valid = {"done"},
                 },
                 done = {
@@ -132,6 +130,20 @@ task:task 'task' {
 
 task:task 'abstract':extends 'task' {
     schema = schema.atleast {
+        status = schema.statemachine {
+            states = {
+                todo = {
+                    valid = {"doing"},
+                },
+                doing = {
+                    valid = {"done"},
+                },
+                done = {
+                    valid = {}
+                }
+            },
+            initial = 'todo'
+        },
         vexbody = schema.maybe {schema.empty},
         children = schema.default {
             schema.vec {

@@ -46,7 +46,7 @@ return {
 }
 ```
 
-With this config, a task sits under its ancestors and then in a folder named after its status: `todo/version-01-1/doing/implement-config-defaults-1.md`.
+With this config, a task sits under its ancestors and then in a folder named after its status: `todo/version-01-1/done/implement-config-defaults-1.md`.
 
 - A list value such as `lineage` adds one folder per element. Unset values and empty lists add none.
 - Characters that can't appear in a folder name (`/ \ : * ? " < > |`) become `-`.
