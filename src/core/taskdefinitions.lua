@@ -10,13 +10,12 @@ local schema = require 'lib.schema'
 
 schema.register 'words' {
     validate = function(self, instance, context)
-        if type(instance) ~= "string" then return false end 
         local count = 0
-        for _ in instance:gmatch("%S+") do
+        for _ in tostring(type(instance) == "string" and instance or ""):gmatch("%S+") do
             count = count + 1
             if count >= self.specification[1] then return true end 
         end
-        return false
+        return false, "Expected at least " .. self.specification[1] .. " words"
     end
 }
 
@@ -264,6 +263,18 @@ task:transient 'status' {
     vextype = 'abstract',
     definition = function(t)
         return ({initial = 'todo', interim = 'doing', final = 'done'})[t.phase]
+    end
+}
+
+task:transient 'blockers' {
+    vextype = 'basetask',
+    definition = function(t)
+        if not t.dependencies then return {} end
+        local unfinished = {}
+        for _, dependency in ipairs(focus.focus(t.dependencies):intersect(focus.focus('final'):complement()):get()) do
+            unfinished[dependency.vexid] = true
+        end
+        return func.ifilter(t.dependencies, function(vexid) return unfinished[vexid] end)
     end
 }
 

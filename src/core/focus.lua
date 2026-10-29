@@ -67,8 +67,12 @@ for _, phase in ipairs {'initial', 'interim', 'final'} do
     end)
 end
 
+Focus.register_focus('ready', function()
+    return func.ifilter(Focus.getalltasks(), function(task) return task.phase ~= 'final' and #task.blockers == 0 end)
+end)
+
 -----------------------------------------
--- Binary Operations 
+-- Binary Operations
 -----------------------------------------
 
 local deserialize
@@ -296,7 +300,7 @@ local function normalised(task, field, value, iso)
     if not fieldschema then return value end
     if iso then
         local ok, result = pcall(fieldschema.unapply, fieldschema, iso, value)
-        if not ok then cli:throw('uninterpretable', value, field) end
+        if not ok then cli:throw('uninterpretable', field, result) end
         value = result
     end
     local ok, result = pcall(fieldschema.prevalidate, fieldschema, value, {})

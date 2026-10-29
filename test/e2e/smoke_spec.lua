@@ -54,6 +54,7 @@ local focuses = {
   {"focus", "initial"},
   {"focus", "interim"},
   {"focus", "final"},
+  {"focus", "ready"},
   {"focus", "prev"},
   {"focus", CHILD .. "," .. PARENT},
   {"focus", "all", "--filter", "status:todo"},

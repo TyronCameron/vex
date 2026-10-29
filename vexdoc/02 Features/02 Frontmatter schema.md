@@ -16,7 +16,7 @@ Every task is validated against the schema of its `vextype` and of each type tha
 | `owner` | text | Optional. Must be one of the `taskowners` in `.vex/config.lua`. |
 | `dependencies` | list of links | Optional. Each entry must be an existing task without `children` or `options`, and dependencies can't form a cycle. Abstracts and decisions can't have any. |
 
-Datetimes are stored as timestamps and written as `YYYY-MM-DD HH:MM:SS`. vex reads `YYYY-MM-DD HH:MM:SS` (a `T` may replace the space), `YYYY-MM-DD`, or a phrase such as `tomorrow 8am`, relative to the moment the task is resolved ([[01 CLI reference#Interpreting times]]). A value it can't read fails resolution with the `uninterpretable` error, and the task file is left as it was. Links are written as `[[vexid]]`, so the task files form an Obsidian vault.
+Datetimes are stored as timestamps and written as `YYYY-MM-DD HH:MM:SS`. vex reads `YYYY-MM-DD HH:MM:SS` (a `T` may replace the space), `YYYY-MM-DD`, or a phrase such as `tomorrow 8am`, relative to the moment the task is resolved ([[01 CLI reference#Interpreting times]]). A value it can't read fails resolution with an error naming the unknown words, and the task file is left as it was. Links are written as `[[vexid]]`, so the task files form an Obsidian vault.
 
 ## Fields by type
 
@@ -36,6 +36,7 @@ Transients are fields vex works out each time they are read. They are never stor
 | --- | --- |
 | `wordcount` | The number of words in the description. |
 | `phase` | `initial`, `interim` or `final`: where `status` sits in the type's state machine. |
+| `blockers` | The vexids of the task's `dependencies` that are not `final` yet. |
 | `lineage` | The vexids of the abstracts above the task, root first. |
 | `path` | Where the task file is. |
 | `age` | Whole days since `created`. |

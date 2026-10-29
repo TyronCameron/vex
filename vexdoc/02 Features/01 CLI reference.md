@@ -93,6 +93,7 @@ $ vex focus --select status,description
 | `none` | No tasks. |
 | `updated` | Tasks modified since the index was last written. |
 | `initial`, `interim`, `final` | Tasks by `phase`: in their type's first status, in between, or in a status with no way out. |
+| `ready` | Tasks that can be started now: not `final`, with no `blockers`. |
 | `prev` | The saved focus. The default wherever a focus is optional. |
 | a vexid | That task. |
 | a path containing `/` | The task file, or every task file in the folder. |
@@ -163,7 +164,7 @@ A saved focus is read again each time it is used, so "next tuesday" always means
 - A day without a time means its first moment, 00:00.
 - Weeks start on Monday, and seasons start on the first of March, June, September and December.
 - Joining words such as `by`, `before`, `on`, `at`, `in`, `the`, `until` and `due` are skipped, so `by 26 July` and `before 26 July` mean 26 July.
-- Any other word fails with the `uninterpretable` error.
+- Any other word fails with an error naming the unknown words and giving examples of phrases vex reads.
 
 ## Views
 
