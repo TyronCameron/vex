@@ -36,6 +36,7 @@ Transients are fields vex works out each time they are read. They are never stor
 | --- | --- |
 | `wordcount` | The number of words in the description. |
 | `phase` | `initial`, `interim` or `final`: where `status` sits in the type's state machine. |
+| `blockers` | The vexids of the task's `dependencies` that are not `final` yet. |
 | `lineage` | The vexids of the abstracts above the task, root first. |
 | `path` | Where the task file is. |
 | `age` | Whole days since `created`. |
