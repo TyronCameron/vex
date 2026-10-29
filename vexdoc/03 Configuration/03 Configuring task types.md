@@ -17,7 +17,7 @@ task:task 'bug':extends 'atom' {
 $ vex add Crash on start --vextype bug --severity high
 ```
 
-A `schema` is a composable mechanism for nested data validation, normalisation, derivation, and conversion. Any time a task is resolved, it is checked (normalised, validated, derived, and/or converted) against the schema. You can make up your own schemas from the following building blocks, amongst others:
+A `schema` validates, normalises, derives and converts a task's fields each time it is resolved. Build yours from these blocks, among others:
 
 | Schema | Accepts |
 | --- | --- |

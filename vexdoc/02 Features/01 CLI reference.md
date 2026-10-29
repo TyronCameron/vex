@@ -71,14 +71,14 @@ $ vex set plan-trip-1 --remove --children book-flights-1
 
 ## Focuses
 
-A focus is a lazy, saved query over your tasks. `vex focus` builds one and saves it, and other commands read it back when you don't give them a focus:
+A focus is a lazy, saved query over your tasks. `vex focus` builds and saves one, and other commands read it back when you give them none. [[05 Getting into focus]] has the details and worked examples:
 
 ```console
 $ vex focus all --filter status:done
 $ vex get --vexid --description
 ```
 
-Flags run in order, each one working on the result of the one before. The two commands below build the same focus as `vex focus all --filter status:done --select status,description`:
+Flags run in order, each on the result of the one before. These two commands build the same focus as `vex focus all --filter status:done --select status,description`:
 
 ```console
 $ vex focus all --filter status:done

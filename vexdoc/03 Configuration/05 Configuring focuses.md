@@ -11,7 +11,7 @@ $ vex focus mine --select due
 $ vex view mine kanban
 ```
 
-A named focus works wherever a focus does: as a starting point, in a list (`mine,all`), and as the value of `--union` and the other set operations. It is evaluated each time it's used, so it always reflects the current tasks.
+A named focus works wherever a focus does (see [[05 Getting into focus]]): as a starting point, in a list (`mine,all`), and as the value of `--union` and the other set operations. It is evaluated each time it's used, so it always reflects the current tasks.
 
 The query methods match the CLI flags: `filter`, `fuzzy`, `between`, `select`, `tree`, `reversetree`, `backlinks`, `forwardlinks`, `orderby`, `groupby`, `rn`, `interpret`, `complement`, `union`, `intersect`, `xor`, `notin` and `onlyin` (see [[01 CLI reference#Focuses]]). After `groupby`, `focus:groups()` returns the tasks as their groups; `focus:get()` always returns them as one list.
 
