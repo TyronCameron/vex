@@ -324,6 +324,14 @@ function Focus:filter(field, value)
     end, field, value)
 end 
 
+-- nil field keeps the tasks that hold no value for the field
+Focus['nil'] = function(self, field)
+    if field == nil then cli:throw('usage', 'You need to provide a field to check for nil.') end
+    return self:chain('nil', function(tasks)
+        return func.ifilter(tasks, function(task) return task[field] == nil end)
+    end, field)
+end
+
 -- fuzzy key:value 
 local function levenshtein(a, b)
     local la, lb = #a, #b
@@ -632,7 +640,7 @@ local function split(str, sep)
 end
 
 local operations = {}
-for _, name in ipairs({'select', 'filter', 'fuzzy', 'between', 'orderby', 'groupby', 'rn', 'tree', 'reversetree',
+for _, name in ipairs({'select', 'filter', 'nil', 'fuzzy', 'between', 'orderby', 'groupby', 'rn', 'tree', 'reversetree',
     'backlinks', 'forwardlinks', 'interpret', 'intersect', 'union', 'complement', 'xor', 'notin', 'onlyin'}) do
     operations[name] = true
 end

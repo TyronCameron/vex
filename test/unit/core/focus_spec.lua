@@ -101,6 +101,12 @@ describe("Focus", function()
         assert.same({tasks[1]}, f:fuzzy("description", "milc", 1):get(tasks))
     end)
 
+    it("nil keeps tasks that have no value for the field", function()
+        local tasks = {{vexid = "a", cost = 1}, {vexid = "b"}, {vexid = "c", cost = 9}}
+        local f = Focus.new("all", function(t) return t end)
+        assert.same({tasks[2]}, f['nil'](f, "cost"):get(tasks))
+    end)
+
     it("between keeps tasks whose field lies within the bounds", function()
         local tasks = {{vexid = "a", cost = 1}, {vexid = "b", cost = 5}, {vexid = "c", cost = 9}}
         local f = Focus.new("all", function(t) return t end)

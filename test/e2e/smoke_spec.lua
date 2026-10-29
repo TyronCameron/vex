@@ -65,6 +65,7 @@ local focuses = {
   {"focus", PARENT, "--forwardlinks"},
   {"focus", CHILD, "--complement"},
   {"focus", "all", "--filter", "vextype:task", "--select", "cost"},
+  {"focus", "all", "--nil", "due"},
   {"focus", "all", "--between", "cost:1:9"},
   {"focus", "all", "--between", "due:2026-01-01:2026-12-31", count = 1},
   {"focus", "all", "--union", "none"},
