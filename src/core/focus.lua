@@ -492,17 +492,25 @@ local function links(task, field)
     return {}
 end
 
+local function alllinks(task, fields)
+    local linked = {}
+    for _, field in ipairs(fields) do
+        for _, vexid in ipairs(links(task, field)) do table.insert(linked, vexid) end
+    end
+    return linked
+end
+
 local function byvexid()
     local tasks = {}
     for _, task in ipairs(Focus.getalltasks()) do tasks[task.vexid] = task end
     return tasks
 end
 
-local function get_children(field)
+local function get_children(fields)
     local tasks = byvexid()
     return function(task) 
         local children = {}
-        for _, child in ipairs(links(task, field)) do
+        for _, child in ipairs(alllinks(task, fields)) do
             table.insert(children, tasks[child])
         end 
         return children
@@ -522,18 +530,19 @@ local function walk(tasks, linksof)
     return walked
 end
 
-function Focus:tree(field)
+function Focus:tree(...)
+    local fields = {...}
     return self:chain('tree', function(tasks) 
-        return walk(tasks, get_children(field))
-    end, field)
+        return walk(tasks, get_children(fields))
+    end, ...)
 end
 
 -- reversetree
-local function get_parents(field)
+local function get_parents(fields)
     local alltasks = Focus.getalltasks()
     return function(task) 
         return func.ifilter(alltasks, function(parent)
-            for _, child in ipairs(links(parent, field)) do
+            for _, child in ipairs(alllinks(parent, fields)) do
                 if child == task.vexid then return true end
             end
             return false
@@ -541,10 +550,11 @@ local function get_parents(field)
     end 
 end
 
-function Focus:reversetree(field)
+function Focus:reversetree(...)
+    local fields = {...}
     return self:chain('reversetree', function(tasks) 
-        return walk(tasks, get_parents(field))
-    end, field)
+        return walk(tasks, get_parents(fields))
+    end, ...)
 end
 
 -- backlinks

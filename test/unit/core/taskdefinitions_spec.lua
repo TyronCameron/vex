@@ -167,6 +167,13 @@ describe("taskdefinitions", function()
             assert.same({}, task.tasks[grandparent].lineage)
         end)
 
+        it("counts a decision as the parent of its options", function()
+            local option = create({description = "decision option task"})
+            local decision = create({description = "decision with option", vextype = 'decision', options = {option}})
+            assert.equal(decision, task.tasks[option].parent)
+            assert.same({decision}, task.tasks[option].lineage)
+        end)
+
         it("gives a task's parent, and nothing for a root", function()
             local child = create({description = "parented child task"})
             local parent = create({description = "parented parent abstract", vextype = 'abstract', children = {child}})

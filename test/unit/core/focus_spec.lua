@@ -447,6 +447,17 @@ describe("Focus", function()
             assert.same({"leaf", "mid", "root"}, vexids(f:reversetree('children'):get(linked)))
         end)
 
+        it("tree and reversetree follow several fields at once", function()
+            local decision = {vexid = "decision", options = {"option"}}
+            local option = {vexid = "option"}
+            local both = {root, decision, option}
+            Focus.getalltasks = function() return both end
+            local f = Focus.new("decision", function() return {decision} end)
+            assert.same({"decision", "option"}, vexids(f:tree('children', 'options'):get()))
+            local g = Focus.new("option", function() return {option} end)
+            assert.same({"option", "decision"}, vexids(g:reversetree('children', 'options'):get()))
+        end)
+
         it("reversetree tolerates tasks without the field", function()
             local f = Focus.new("other", function() return {other} end)
             assert.same({"other", "mid"}, vexids(f:reversetree('dependencies'):get(linked)))

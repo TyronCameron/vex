@@ -216,19 +216,22 @@ task:transient 'blockers' {
     end
 }
 
+local function ancestors(t)
+    return focus.focus(t.vexid):reversetree('children', 'options'):get()
+end
+
 task:transient 'lineage' {
     vextype = 'task',
     definition = function(t)
-        local ancestors = focus.focus(t.vexid):reversetree('children'):get()
-        return func.reverse(func.imap(func.slice(ancestors, 2, 'end'), function(ancestor) return ancestor.vexid end))
+        return func.reverse(func.imap(func.slice(ancestors(t), 2, 'end'), function(ancestor) return ancestor.vexid end))
     end
 }
 
 task:transient 'parent' {
     vextype = 'task',
     definition = function(t)
-        local ancestors = focus.focus(t.vexid):reversetree('children'):get()
-        return ancestors[2] and ancestors[2].vexid
+        local above = ancestors(t)
+        return above[2] and above[2].vexid
     end
 }
 
