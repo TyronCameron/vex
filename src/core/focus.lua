@@ -486,17 +486,15 @@ function Focus:rn()
 end
 
 -- tree field
-local function links(task, field)
-    if type(task[field]) == "string" then return {task[field]} end
-    if type(task[field]) == "table" then return task[field] end
-    return {}
-end
-
--- the vexids a task holds across several fields
-local function linksby(task, fields)
+-- the vexids a task holds across the given fields
+local function links(task, fields)
     local linked = {}
     for _, field in ipairs(fields) do
-        for _, vexid in ipairs(links(task, field)) do table.insert(linked, vexid) end
+        if type(task[field]) == "string" then
+            table.insert(linked, task[field])
+        elseif type(task[field]) == "table" then
+            for _, vexid in ipairs(task[field]) do table.insert(linked, vexid) end
+        end
     end
     return linked
 end
@@ -512,7 +510,7 @@ end
 
 local function followed(task, fields)
     if #fields == 0 then return alllinks(task) end
-    return linksby(task, fields)
+    return links(task, fields)
 end
 
 local function byvexid()
