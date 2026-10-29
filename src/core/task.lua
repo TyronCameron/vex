@@ -395,9 +395,7 @@ function TaskManager:resolve(vexid)
     for _, linked in ipairs(unlinked) do
         self:arrange(linked.vexid, arranged)
     end
-    for _, ancestor in ipairs(func.slice(focus.focus(vexid):reversetree('children'):get(), 2, 'end')) do
-        self:move(ancestor.vexid)
-    end
+    self:arrangebacklinks(vexid, arranged)
     vexdex:writeindex()
     event:trigger('post-task-resolve', vexid, task)
 end
@@ -535,6 +533,16 @@ function TaskManager:move(vexid)
     vexdex:unsafe_locate(vexid, relpath)
     event:trigger('post-task-move', vexid, from, to)
     return vexid
+end
+
+-- moves the files of every task that links to this one, transitively, to where they should live
+function TaskManager:arrangebacklinks(vexid, arranged)
+    focus.focus(vexid):backlinks():each(function(linking)
+        if arranged[linking] then return end
+        arranged[linking] = true
+        self:move(linking)
+        self:arrangebacklinks(linking, arranged)
+    end)
 end
 
 -- moves a task's file, and those of every task it links to, to where they should live
