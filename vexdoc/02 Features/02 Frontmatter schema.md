@@ -7,14 +7,14 @@ Every task is validated against the schema of its `vextype` and of each type tha
 | `vexid` | text | Unique id and filename, generated from the description when the task is added. It can't be changed. |
 | `description` | text | Required. At least 2 words and more than 3 characters. |
 | `vextype` | text | The task type. Defaults to `task` and must be a registered type. |
-| `status` | state | `todo`, then `doing`, then `done`. vex rejects any other move. Defaults to `todo`. |
+| `status` | state | `todo`, then `doing`, then `done`. vex rejects any other move. Defaults to `todo`. An abstract has no stored `status`: it is a transient worked out from its children. |
 | `created` | datetime | Set when the task is added. |
 | `modified` | datetime | Updated whenever vex touches the task: on add, set and every resolve, a reindex included. |
 | `vexbody` | text | Optional. The markdown body below the frontmatter. |
 | `due` | datetime | Optional. |
 | `cost`, `benefit` | number | Optional. |
 | `owner` | text | Optional. Must be one of the `taskowners` in `.vex/config.lua`. |
-| `dependencies` | list of links | Optional. Each entry must be an existing task, and dependencies can't form a cycle. |
+| `dependencies` | list of links | Optional. Each entry must be an existing task, dependencies can't form a cycle, and neither the task nor the one it depends on can have `children`. |
 
 Datetimes are stored as timestamps and written as `YYYY-MM-DD HH:MM:SS`. vex reads `YYYY-MM-DD HH:MM:SS` (a `T` may replace the space), `YYYY-MM-DD`, or a phrase such as `tomorrow 8am`, relative to the moment the task is resolved ([[01 CLI reference#Interpreting times]]). A value it can't read fails resolution with the `uninterpretable` error, and the task file is left as it was. Links are written as `[[vexid]]`, so the task files form an Obsidian vault.
 
@@ -36,6 +36,7 @@ Transients are fields vex works out each time they are read. They are never stor
 | --- | --- |
 | `wordcount` | The number of words in the description. |
 | `phase` | `initial`, `interim` or `final`: where `status` sits in the type's state machine. |
+| `status` | Abstracts only. `todo` when every child is in the `initial` phase, `done` when every child is in the `final` phase, `doing` otherwise. |
 | `lineage` | The vexids of the abstracts above the task, root first. |
 | `path` | Where the task file is. |
 | `age` | Whole days since `created`. |
