@@ -560,7 +560,7 @@ local vec = {
 Schema.register 'vec' (vec)
 
 -- a vec without repeated elements, keeping the first of each
-Schema.register 'uniquevec' {
+Schema.register 'unique' {
     iterate = vec.iterate,
     prevalidate = function(self, instance, context)
         instance = vec.prevalidate(self, instance, context)

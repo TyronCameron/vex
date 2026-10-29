@@ -268,14 +268,14 @@ describe("schema", function()
         assert.falsy(s:validate({ [1] = 1, ["a"] = 2 }))
     end)
 
-    it("`schema.uniquevec` drops repeated elements, keeping the first", function()
-        local s = schema.uniquevec { schema.str }
+    it("`schema.unique` drops repeated elements, keeping the first", function()
+        local s = schema.unique { schema.str }
         assert.same({"a", "b"}, s:prevalidate({"a", "b", "a"}, {}))
         assert.same({"a", "b", "a"}, schema.vec { schema.str }:prevalidate({"a", "b", "a"}, {}))
     end)
 
-    it("`schema.uniquevec` validates like a vec", function()
-        local s = schema.uniquevec { schema.num }
+    it("`schema.unique` validates like a vec", function()
+        local s = schema.unique { schema.num }
         assert.is_true(s:validate({1, 2}))
         assert.is_false(s:validate({a = 1}))
     end)

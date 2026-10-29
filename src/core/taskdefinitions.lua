@@ -113,7 +113,7 @@ task:task 'task' {
         },
         vexbody = schema.maybe {schema.str},
         dependencies = schema.maybe {
-            schema.uniquevec {
+            schema.unique {
                 schema.all {
                     schema.formatted {schema.vexlink},
                     schema.constraint {acyclic}
@@ -145,7 +145,7 @@ task:task 'abstract':extends 'task' {
         },
         vexbody = schema.maybe {schema.empty},
         children = schema.default {
-            schema.uniquevec {
+            schema.unique {
                 schema.all {
                     schema.formatted {schema.vexlink},
                     schema.constraint {notself},
