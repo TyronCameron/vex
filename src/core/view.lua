@@ -8,6 +8,7 @@ local format = require 'lib.format'
 local Focus = require 'core.focus'
 local task = require 'core.task'
 local event = require 'lib.event'
+local statemachine = require 'lib.statemachine'
 
 local View = {}
 View.__index = View
@@ -88,8 +89,27 @@ v:view 'json' {
     end
 }
 
-v:view 'kanban' {
-    display = function(focus, flags)
+-- orders statuses by the most moves any task type needs to reach them from its initial state, then by name
+local function bymoves(field, tasks)
+    local moves = {}
+    if field == 'status' then
+        for _, t in ipairs(tasks) do
+            local status = task:schemaof(t.vextype, 'status').specification
+            local machine = statemachine.new(status.states, status.initial, status.initial)
+            for state, distance in pairs(machine:distances()) do
+                moves[state] = math.max(moves[state] or 0, distance)
+            end
+        end
+    end
+    return function(a, b)
+        local x, y = moves[a] or math.huge, moves[b] or math.huge
+        if x ~= y then return x < y end
+        return tostring(a) < tostring(b)
+    end
+end
+
+local function kanban(columnorder)
+    return function(focus, flags)
         local tasks = focus:get()
         local field = flags.field or 'status'
 
@@ -117,8 +137,20 @@ v:view 'kanban' {
             table.insert(viewable, row)
         end 
 
-        return pretty.tabular(viewable)
+        local columns = func.keys(statuses)
+        table.sort(columns, columnorder(field, tasks))
+        return pretty.tabular(viewable, function()
+            local i = 0
+            return function()
+                i = i + 1
+                return columns[i]
+            end
+        end)
     end
+end
+
+v:view 'kanban' {
+    display = kanban(bymoves)
 }
 
 v:view 'overview' {

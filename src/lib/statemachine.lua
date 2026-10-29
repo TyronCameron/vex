@@ -70,6 +70,21 @@ function StateMachine:isinterim(state)
     return not self:isinitial(state) and not self:isfinal(state)
 end
 
+-- the fewest moves from the initial state to each state that can be reached
+function StateMachine:distances()
+    local distances = {[self.initial] = 0}
+    local queue = {self.initial}
+    for _, state in ipairs(queue) do
+        for to in pairs(self.states[state].valid) do
+            if not distances[to] then
+                distances[to] = distances[state] + 1
+                table.insert(queue, to)
+            end
+        end
+    end
+    return distances
+end
+
 function StateMachine:transition(to, ...)
     if self.current == to then return true end
     local ok, err = self:isvalid(to)

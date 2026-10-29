@@ -30,6 +30,16 @@ describe("statemachine", function()
         assert.is_false(machine:isfinal("open"))
     end)
 
+    it("counts the fewest moves from the initial state to each state", function()
+        local machine = statemachine.new({
+            todo = { valid = {"doing", "done"} },
+            doing = { valid = {"review"} },
+            review = { valid = {"done"} },
+            done = { valid = {} },
+        }, "todo", "todo")
+        assert.same({todo = 0, doing = 1, done = 1, review = 2}, machine:distances())
+    end)
+
     it("treats anything neither initial nor final as interim", function()
         local machine = statemachine.new(states, "doing", "todo")
         assert.is_true(machine:isinterim())

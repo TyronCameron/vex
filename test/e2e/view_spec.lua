@@ -87,6 +87,11 @@ describe("vex view with focus flags (e2e, subprocess)", function()
     assert.truthy(out:find(milk, 1, true), out)
   end)
 
+  it("puts the initial status first in the kanban view, then the rest by moves from it", function()
+    local out = plain(vex(dir, "view", "all", "kanban"))
+    assert.truthy(out:find("todo", 1, true) < out:find("done", 1, true), out)
+  end)
+
   it("still passes a view its own flags", function()
     local out = vex(dir, "view", "all", "kanban", "--field", "vextype")
     assert.truthy(out:find("task", 1, true), out)
