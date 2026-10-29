@@ -52,7 +52,7 @@ status: todo
 $ vex set --status done
 ```
 
-`status` follows a state machine. A task is `todo` or `done`; an `abstract` goes `todo`, then `doing`, then `done`, and vex rejects any other move.
+`status` moves from `todo` to `done`; you can customise how statuses work by reading on.
 
 `set` applies to every task in the focus, so one command can update many tasks:
 
