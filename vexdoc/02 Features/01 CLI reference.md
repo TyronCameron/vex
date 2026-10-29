@@ -163,7 +163,7 @@ A saved focus is read again each time it is used, so "next tuesday" always means
 - A day without a time means its first moment, 00:00.
 - Weeks start on Monday, and seasons start on the first of March, June, September and December.
 - Joining words such as `by`, `before`, `on`, `at`, `in`, `the`, `until` and `due` are skipped, so `by 26 July` and `before 26 July` mean 26 July.
-- Any other word fails with the `uninterpretable` error.
+- Any other word fails with an error naming the unknown words and giving examples of phrases vex reads.
 
 ## Views
 

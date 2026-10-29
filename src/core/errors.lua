@@ -99,10 +99,9 @@ cli:error "unknown-focus-operation" {
 }
 
 cli:error "uninterpretable" {
-    function(value, field)
-        return 'Cannot interpret `' .. tostring(value) .. '` as a value of `' .. tostring(field) .. '`.'
-    end,
-    hint = "Use a phrase such as `tomorrow`, `next tuesday`, `friday arvo`, `in 3 days`, `26 July` or `2026-07-26 09:00`."
+    function(field, failure)
+        return tostring(failure) .. '\n\n' .. pretty.string('while interpreting `' .. tostring(field) .. '`', 'dim')
+    end
 }
 
 cli:error "missing-required-field" {
@@ -120,36 +119,25 @@ cli:error "unknown-vextype" {
     hint = "Ensure that the vextype is correctly written in your `config.lua` file and that this vex task has a matching name."
 }
 
+local function resolutionfailure(step)
+    return function(vexid, failure, path)
+        local footer = pretty.string('the ' .. step .. ' step failed while resolving ', 'dim') .. pretty.string('`' .. tostring(vexid) .. '`', unpack(path and {{filelink = path}} or {}))
+        return failure and (tostring(failure) .. '\n\n' .. footer) or footer
+    end
+end
+
 cli:error 'resolution-failed-validation' {
-    function(vexid, msg, undermsg)
-        return table.concat({
-            'The validation step failed during resolution for vexid `' .. (vexid and tostring(vexid)) .. '`',
-            msg and tostring(msg) or '',
-            undermsg and tostring(undermsg) or ''
-        }, '.\n')
-    end,
+    resolutionfailure('validation'),
     hint = "Ensure that data is correct and that the tasktype definitions in `config.lua` are sound."
 }
 
 cli:error 'resolution-failed-derivation' {
-    function(vexid, msg, undermsg)
-        return table.concat({
-            'The derivation step failed during resolution for vexid `' .. (vexid and tostring(vexid)) .. '`',
-            msg and tostring(msg) or '',
-            undermsg and tostring(undermsg) or ''
-        }, '.\n')
-    end,
+    resolutionfailure('derivation'),
     hint = "Ensure that data is correct and that the tasktype definitions in `config.lua` are sound."
 }
 
 cli:error 'resolution-failed-normalisation' {
-    function(vexid, msg, undermsg)
-        return table.concat({
-            'The normalisation step failed during resolution for vexid `' .. (vexid and tostring(vexid)) .. '`',
-            msg and tostring(msg) or '',
-            undermsg and tostring(undermsg) or ''
-        }, '.\n')
-    end,
+    resolutionfailure('normalisation'),
     hint = "Ensure that data is correct and that the tasktype definitions in `config.lua` are sound."
 }
 

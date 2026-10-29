@@ -66,19 +66,6 @@ function Context:descend(schemakey, instancekey, fn)
     return value
 end
 
-function Context:tostring(content)
-    local path = table.concat(self.path or {}, ".")
-    local types = table.concat(self.types or {}, ".")
-    return table.concat({
-        content and ("\t" .. tostring(content)) or "",
-        "Context:",
-        "\tPath: `" .. path .. "`",
-        "\tSchema types: `" .. types .. "`",
-        "\tSchema: `" .. tostring(self.currentschema or 'unknown') .. "`",
-        "\tInstance: `" .. pretty.any(self.currentvalue or 'unknown') .. "`",
-    }, "\n")
-end
-
 -----------------------------------------------
 -- Schema
 -----------------------------------------------
@@ -141,43 +128,100 @@ function Schema.instantiate(name, specification)
 end
 
 -----------------------------------------------
+-- Failure
+-----------------------------------------------
+
+local Failure = {}
+Failure.__index = Failure
+
+function Failure.new(message, alternatives)
+    return setmetatable({message = tostring(message), alternatives = alternatives or {}, frames = {}}, Failure)
+end
+
+function Failure.is(value)
+    return getmetatable(value) == Failure
+end
+
+function Failure:push(frame)
+    table.insert(self.frames, frame)
+    return self
+end
+
+local function pathname(path)
+    return #path == 0 and '(root)' or table.concat(path, '.')
+end
+
+local function stack(frames)
+    local groups, bypath = {}, {}
+    for _, frame in ipairs(frames) do
+        local path = pathname(frame.path)
+        if not bypath[path] then
+            bypath[path] = {path = path, schema = frame.currentschema._name}
+            table.insert(groups, bypath[path])
+        end
+    end
+    return groups
+end
+
+function Failure:__tostring()
+    local groups = stack(self.frames)
+    local lines = {pretty.string('ERROR:', 'bold', 'red') .. ' ' .. pretty.string(self.message, 'bold')}
+    for _, alternative in ipairs(self.alternatives) do
+        table.insert(lines, '  - ' .. alternative.message)
+    end
+    if #groups > 0 then
+        local data = pretty.string(groups[1].path .. ' =', 'dim') .. ' ' .. pretty.string(pretty.table(self.frames[1].currentvalue), 'red')
+        table.insert(lines, '')
+        table.insert(lines, '  ' .. data)
+    end
+    if #groups > 1 then
+        local width = 0
+        for _, group in ipairs(groups) do width = math.max(width, #group.path) end
+        table.insert(lines, '')
+        table.insert(lines, pretty.string('Stack:', 'bold'))
+        for _, group in ipairs(groups) do
+            table.insert(lines, '  at ' .. group.path .. string.rep(' ', width - #group.path) .. '  ' .. pretty.string(group.schema, 'dim'))
+        end
+    end
+    return table.concat(lines, '\n')
+end
+
+-----------------------------------------------
 -- API
 -----------------------------------------------
 
 function Schema:error(value, context, msg)
-    local err_msg = self._error and self._error(self, value, context) or ""
-    local error_message = {context:tostring(msg)}
-    if err_msg then table.insert(error_message, tostring(err_msg)) end 
-    assert(false, table.concat(error_message, ". "))
+    local err_msg = self._error and self._error(self, value, context)
+    error(Failure.new(msg .. (err_msg and ". " .. tostring(err_msg) or "")):push(context:snapshot()), 0)
+end
+
+-- runs a step of this schema, raising a crash as a Failure with this schema pushed on the stack
+local function guard(self, label, fn, value, context, snap)
+    local ok, res, err = pcall(fn, self, value, context)
+    if ok then return res, err end
+    if Failure.is(res) then error(res:push(snap), 0) end
+    self:error(value, snap, label .. " step errored: " .. tostring(res))
 end
 
 function Schema:prevalidate(value, context)
     context = Context.new(self, value, context)
-    local snap = context:snapshot()
     if not self._prevalidate then return value end 
-    local ok, res = pcall(self._prevalidate, self, value, context)
-    if not ok and type(res) == "table" then error(res, 0) end
-    if not ok then self:error(value, snap, "Prevalidation step errored:\n" .. tostring(res)) end 
-    return res 
+    return (guard(self, "Prevalidation", self._prevalidate, value, context, context:snapshot()))
 end
 
 function Schema:validate(value, context)
     context = Context.new(self, value, context)
     local snap = context:snapshot()
-    local ok, res, err = pcall(self._validate, self, value, context)
-    if not ok then self:error(value, snap, "Validation step errored:\n" .. tostring(res)) end 
+    local res, err = guard(self, "Validation", self._validate, value, context, snap)
     if res then return true end 
-    local errmsg = "Validation failed:\n" .. (err and tostring(err) or '') .. "\n" .. snap:tostring()
-    return res, errmsg
+    local failure = Failure.is(err) and err or Failure.new(err or "Failed `" .. self._name .. "` check")
+    return false, failure:push(snap)
 end
 
 function Schema:postvalidate(value, context)
     context = Context.new(self, value, context)
-    local snap = context:snapshot()
     if not self._postvalidate then return value end 
-    local ok, res = pcall(self._postvalidate, self, value, context)
-    if not ok then self:error(value, snap, "Postvalidation step errored:\n" .. tostring(res)) end 
-    return res 
+    return (guard(self, "Postvalidation", self._postvalidate, value, context, context:snapshot()))
 end
 
 local function transform(self, isoname, direction, value, context)
@@ -185,7 +229,7 @@ local function transform(self, isoname, direction, value, context)
     if self._isos and self._isos[isoname] then
         if direction == 'forward' and not self:validate(value) then return value end
         local ok, res = pcall(self._isos[isoname][direction], self, value, context)
-        if not ok then self:error(value, context, "Iso failed " .. direction .. " transformation: " .. tostring(res)) end
+        if not ok then self:error(value, context, tostring(res)) end
         return res
     end
     if not self._iterate then return value end
@@ -286,7 +330,7 @@ Schema.register 'constraint' {
 -- checks for a single constant value 
 Schema.register 'constant' {
     validate = function(self, instance)
-        return self.specification == instance, "The instance: `" .. tostring(instance) .. "` is not a the exact constant `" .. tostring(self.specification) .. '`'
+        return self.specification == instance, "Expected the constant `" .. tostring(self.specification) .. '`'
     end
 }
 
@@ -408,10 +452,13 @@ Schema.register 'any' {
         if self.specification == nil or func.isempty(self.specification) then 
             return false, "Any schema is empty -- so trivially nothing can match"
         end
+        local alternatives = {}
         for childschema, childinstance in self:iterate(instance, context) do 
-            if childschema:validate(childinstance, context) then return true end 
+            local valid, failure = childschema:validate(childinstance, context)
+            if valid then return true end 
+            table.insert(alternatives, failure)
         end 
-        return false, "No subschema matching instance."
+        return false, Failure.new("No alternative matched", alternatives)
     end
 }
 
@@ -515,6 +562,10 @@ Schema.register 'vec' {
 -- Type schemas
 -----------------------------------------------
 
+local function expected(what, instance)
+    return "Expected " .. what .. ", got " .. type(instance)
+end
+
 -- checks for a number
 Schema.register 'num' {
     prevalidate = function(self, instance, context)
@@ -524,63 +575,63 @@ Schema.register 'num' {
         return instance
     end,
     validate = function(self, instance)
-        return type(instance) == "number", "The instance: `" .. tostring(instance) .. "` is not a number"
+        return type(instance) == "number", expected("a number", instance)
     end
 }
 
 -- checks for a number 
 Schema.register 'func' {
     validate = function(self, instance)
-        return type(instance) == "function", "The instance: `" .. tostring(instance) .. "` is not a function"
+        return type(instance) == "function", expected("a function", instance)
     end
 }
 
 -- checks for an integer 
 Schema.register 'int' {
     validate = function(self, instance)
-        return instance == math.floor(instance), "The instance: `" .. tostring(instance) .. "` is not an integer"
+        return instance == math.floor(instance), "Expected an integer"
     end
 }
 
 -- checks for a nonnegative integer 
 Schema.register 'uint' {
     validate = function(self, instance)
-        return instance == math.floor(instance) and instance >= 0, "The instance: `" .. tostring(instance) .. "` is not a nonnegative integer"
+        return instance == math.floor(instance) and instance >= 0, "Expected a nonnegative integer"
     end
 }
 
 -- checks for a string 
 Schema.register 'str' {
     validate = function(self, instance)
-        return type(instance) == "string", "The instance: `" .. tostring(instance) .. "` is not a string"
+        return type(instance) == "string", expected("a string", instance)
     end
 }
 
 -- checks for a boolean 
 Schema.register 'bool' {
     validate = function(self, instance)
-        return type(instance) == "boolean", "The instance: `" .. tostring(instance) .. "` is not a boolean"
+        return type(instance) == "boolean", expected("a boolean", instance)
     end
 }
 
 -- checks for a thread 
 Schema.register 'thr' {
     validate = function(self, instance)
-        return type(instance) == "thread", "The instance: `" .. tostring(instance) .. "` is not a thread"
+        return type(instance) == "thread", expected("a thread", instance)
     end
 }
 
 -- checks for a table 
 Schema.register 'table' {
     validate = function(self, instance)
-        return type(instance) == "table", "The instance: `" .. tostring(instance) .. "` is not a table"
+        return type(instance) == "table", expected("a table", instance)
     end
 }
 
 -- checks for a table 
 Schema.register 'nil' {
     validate = function(self, instance)
-        return instance == nil, "The instance: `" .. tostring(instance) .. "` is not nil"
+        return instance == nil, expected("nil", instance)
     end
 }
 
@@ -754,9 +805,7 @@ Schema.register 'formatted' {
         if self:validate(instance) then return instance end 
         local result = self:unapply('format', instance, context)
         if not self:validate(result) then
-            local ok, interpreted = pcall(self.unapply, self, 'interpret', result, context)
-            if not ok then error({uninterpretable = result, field = table.concat(context.path, '.')}, 0) end
-            result = interpreted
+            result = self:unapply('interpret', result, context)
         end
         for childschema, childinstance in self:iterate(result, context) do
             result = childschema:prevalidate(childinstance, context)
