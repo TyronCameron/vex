@@ -52,6 +52,7 @@ local function tabularrow(t)
             if result[k] == nil then result[k] = v end
         end
     end
+    if result.path then result.path = pretty.filelink(result.path, result.path) end
     return result
 end
 

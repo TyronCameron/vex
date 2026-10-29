@@ -45,6 +45,11 @@ describe("vex view with focus flags (e2e, subprocess)", function()
     assert.truthy(out:find(milk, 1, true) < out:find(bread, 1, true), out)
   end)
 
+  it("shows a selected path", function()
+    local out = vex(dir, "view", "all", "tabular", "--filter", "vexid:" .. milk, "--select", "path")
+    assert.truthy(out:find(milk .. ".md", 1, true), out)
+  end)
+
   it("keeps a subheader per group when the grouped field isn't selected", function()
     local out = plain(vex(dir, "view", "all", "tabular", "--groupby", "status", "--select", "description"))
     assert.truthy(out:find("│ status: doing", 1, true), out)

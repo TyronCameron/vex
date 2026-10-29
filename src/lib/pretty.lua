@@ -153,6 +153,10 @@ local pretty = {style = {}}
 --     return nil
 -- end
 
+function pretty.filelink(text, path)
+    return PrettyString.new(text):link({filelink = path})
+end
+
 function pretty.string(tab, ...)
     local prettystr;
     if type(tab) == "table" then 
@@ -277,7 +281,7 @@ local box = {
 }
 
 local function strip_ansi(s)
-    return (s:gsub("\27%[[0-9;]*m", ""))
+    return (s:gsub("\27%[[0-9;]*m", ""):gsub("\27%]8;;.-\27\\", ""))
 end
 
 local function width(s)
@@ -313,7 +317,12 @@ end
 
 local function cell(value, w)
     local shown
-    if type(value) == 'table' then
+    if getmetatable(value) == PrettyString then
+        local cut = setmetatable({truncate(value[1], w)}, PrettyString)
+        for i = 2, #value do cut[i] = value[i] end
+        cut._link = value._link
+        return tostring(cut)
+    elseif type(value) == 'table' then
         shown = listcell(value, w)
     else
         shown = value == nil and '' or tostring(value)
