@@ -492,12 +492,27 @@ local function links(task, field)
     return {}
 end
 
-local function alllinks(task, fields)
+-- the vexids a task holds across several fields
+local function linksby(task, fields)
     local linked = {}
     for _, field in ipairs(fields) do
         for _, vexid in ipairs(links(task, field)) do table.insert(linked, vexid) end
     end
     return linked
+end
+
+-- the vexids a task links to through any field
+local function alllinks(task)
+    local linked = {}
+    for target, sources in pairs(vexdex.backlinks) do
+        if sources[task.vexid] then table.insert(linked, target) end
+    end
+    return linked
+end
+
+local function followed(task, fields)
+    if #fields == 0 then return alllinks(task) end
+    return linksby(task, fields)
 end
 
 local function byvexid()
@@ -510,7 +525,7 @@ local function get_children(fields)
     local tasks = byvexid()
     return function(task) 
         local children = {}
-        for _, child in ipairs(alllinks(task, fields)) do
+        for _, child in ipairs(followed(task, fields)) do
             table.insert(children, tasks[child])
         end 
         return children
@@ -542,7 +557,7 @@ local function get_parents(fields)
     local alltasks = Focus.getalltasks()
     return function(task) 
         return func.ifilter(alltasks, function(parent)
-            for _, child in ipairs(alllinks(parent, fields)) do
+            for _, child in ipairs(followed(parent, fields)) do
                 if child == task.vexid then return true end
             end
             return false
@@ -577,8 +592,8 @@ function Focus:forwardlinks()
         local indexed = byvexid()
         local linked = {}
         for _, task in ipairs(tasks) do
-            for target, sources in pairs(vexdex.backlinks) do
-                if sources[task.vexid] then table.insert(linked, indexed[target]) end
+            for _, target in ipairs(alllinks(task)) do
+                table.insert(linked, indexed[target])
             end
         end
         return linked
@@ -649,21 +664,11 @@ local function split(str, sep)
     return unpack(parts)
 end
 
-local operations = {}
-for _, name in ipairs({'select', 'filter', 'nil', 'fuzzy', 'between', 'orderby', 'groupby', 'rn', 'tree', 'reversetree',
-    'backlinks', 'forwardlinks', 'interpret', 'intersect', 'union', 'complement', 'xor', 'notin', 'onlyin'}) do
-    operations[name] = true
-end
-
-function Focus.operates(name)
-    return operations[name] == true
-end
-
 function Focus:apply(args)
     local current = self
     for _, arg in ipairs(args) do
         if cli.isflag(arg) then 
-            if not Focus.operates(arg[1]) then cli:throw('unknown-focus-operation', arg[1]) end
+            if type(Focus[arg[1]]) ~= "function" then cli:throw('unknown-focus-operation', arg[1]) end
             local split_args = {}
             local values = type(arg[2]) == "table" and arg[2] or {arg[2]}
             for _, value in ipairs(values) do
