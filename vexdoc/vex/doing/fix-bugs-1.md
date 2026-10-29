@@ -12,5 +12,4 @@ children:
   - "[[cap-tabular-view-cells-terminal-1]]"
 created: "2026-10-19 07:34:55"
 modified: "2026-10-29 11:29:38"
-status: doing
 ---

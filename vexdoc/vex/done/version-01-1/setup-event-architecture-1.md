@@ -7,5 +7,4 @@ children:
   - "[[implement-event-hooks-1]]"
 created: "2026-10-19 08:00:36"
 modified: "2026-10-29 11:29:37"
-status: done
 ---

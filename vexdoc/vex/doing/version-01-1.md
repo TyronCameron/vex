@@ -15,5 +15,4 @@ children:
   - "[[package-release-vex-1]]"
 created: "2026-06-17 21:05:52"
 modified: "2026-10-29 11:29:37"
-status: doing
 ---

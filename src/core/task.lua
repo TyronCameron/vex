@@ -395,6 +395,9 @@ function TaskManager:resolve(vexid)
     for _, linked in ipairs(unlinked) do
         self:arrange(linked.vexid, arranged)
     end
+    for _, ancestor in ipairs(func.slice(focus.focus(vexid):reversetree('children'):get(), 2, 'end')) do
+        self:move(ancestor.vexid)
+    end
     vexdex:writeindex()
     event:trigger('post-task-resolve', vexid, task)
 end
@@ -503,7 +506,7 @@ function TaskManager:readfrompath(path)
 end
 
 -- writes a file from disk
-local function persist(self, vexid)
+function TaskManager:write(vexid)
     event:trigger('pre-task-write', vexid)
     local task = self:format(vexid)
     local path = self:getcurrentpath(vexid)
@@ -514,20 +517,6 @@ local function persist(self, vexid)
     vexdex:unsafe_locate(vexid, relative(path))
     self:index(vexid)
     event:trigger('post-task-write', vexid, path)
-    return vexid
-end
-
--- writes a task, then re-resolves and writes the abstracts above it while their status keeps changing
-function TaskManager:write(vexid)
-    persist(self, vexid)
-    local ancestors = focus.focus(vexid):reversetree('children'):get()
-    for i = 2, #ancestors do
-        local ancestor = ancestors[i].vexid
-        local before = self:getsingle(ancestor).status
-        self:resolve(ancestor)
-        if self:getsingle(ancestor).status == before then break end
-        persist(self, ancestor)
-    end
     return vexid
 end
 

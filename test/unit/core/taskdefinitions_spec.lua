@@ -173,7 +173,32 @@ describe("taskdefinitions", function()
 
     end)
 
+    describe("task types", function()
+
+        it("all extend basetask", function()
+            for _, name in ipairs({'task', 'abstract', 'decision', 'exploration', 'atom'}) do
+                assert.equal('basetask', task.tasktypes[name].parent, name)
+            end
+        end)
+
+        it("gives every type but abstract a status machine", function()
+            for _, name in ipairs({'task', 'decision', 'exploration', 'atom'}) do
+                assert.truthy(task:schemaof(name, 'status'), name)
+            end
+            assert.is_nil(task:schemaof('abstract', 'status'))
+        end)
+
+    end)
+
     describe("abstract status", function()
+
+        it("is never stored", function()
+            local child = create({description = "unstored status child"})
+            local parent = create({description = "unstored status abstract", vextype = 'abstract', children = {child}})
+            setstatus(child, "doing")
+            assert.is_nil(rawget(task.tasks[parent], 'status'))
+            assert.equal("doing", task.tasks[parent].status)
+        end)
 
         it("is stored as todo, doing or done according to the children", function()
             local first = create({description = "derived status first"})

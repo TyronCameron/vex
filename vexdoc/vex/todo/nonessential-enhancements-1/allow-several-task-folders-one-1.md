@@ -6,5 +6,4 @@ children:
   - "[[decide-one-project-holds-several-1]]"
 created: "2026-10-19 20:55:58"
 modified: "2026-10-29 11:29:40"
-status: todo
 ---
