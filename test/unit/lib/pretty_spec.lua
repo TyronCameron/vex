@@ -161,14 +161,19 @@ describe("pretty", function()
 
     it("`pretty.tabular` cuts a linked value but keeps the link to the whole value", function()
         local path = "/some/long/folder/" .. string.rep("a", 60) .. ".md"
-        local result = pretty.tabular({{path = pretty.filelink(path, path)}}, pairs)
-        assert.truthy(result:find("...", 1, true))
+        local result = pretty.tabular({{path = pretty.string(path, {filelink = path})}}, pairs)
+        assert.truthy(result:find("...\27]8;;\27\\", 1, true))
         assert.truthy(result:find("\27]8;;file://" .. path .. "\27\\", 1, true))
     end)
 
     it("`pretty.tabular` pads a linked value by what shows", function()
-        local lines = pretty.tabular({{a = pretty.filelink("abc", "/x")}, {a = "abcdef"}}, pairs)
+        local lines = pretty.tabular({{a = pretty.string("abc", {filelink = "/x"})}, {a = "abcdef"}}, pairs)
         assert.truthy(lines:find("abc\27]8;;\27\\    ", 1, true))
+    end)
+
+    it("`pretty.tabular` keeps a cut styled value closed", function()
+        local result = pretty.tabular({{a = pretty.string(string.rep("b", 60), "bold")}}, pairs)
+        assert.truthy(result:find(string.rep("b", 37) .. "...\27[0m", 1, true))
     end)
 
     it("`pretty.tabular` cuts values to the given maximum width", function()
