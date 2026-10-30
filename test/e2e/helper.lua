@@ -139,6 +139,8 @@ end
 function M.project()
   local dir = M.make_tmp_dir()
   M.vex(dir, "init")
+  local config = dir .. "/.vex/config.lua"
+  M.write_file(config, (M.read_file(config):gsub("  paths = {.-\n  },\n", "")))
   return dir
 end
 
@@ -188,7 +190,7 @@ function M.link(dir, vexid, field, targets)
   end
   local content = M.read_file(path)
     :gsub("\n" .. field .. ": %[%]\n", "\n", 1)
-    :gsub("\nstatus: ", "\n" .. table.concat(items, "\n") .. "\nstatus: ", 1)
+    :gsub("\n%-%-%-\n", "\n" .. table.concat(items, "\n") .. "\n---\n", 1)
   M.write_file(path, content)
 end
 

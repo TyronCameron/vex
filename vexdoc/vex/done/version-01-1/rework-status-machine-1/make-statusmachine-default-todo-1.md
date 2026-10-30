@@ -3,8 +3,8 @@ vexid: make-statusmachine-default-todo-1
 vextype: atom
 description: Make statusmachine by default only have todo and done
 created: "2026-10-19 07:43:12"
-modified: "2026-10-19 09:22:06"
-status: todo
+modified: "2026-10-29 05:14:17"
+status: done
 ---
 
 Needs more thinking (some maths) before changing anything.

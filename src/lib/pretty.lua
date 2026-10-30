@@ -276,8 +276,12 @@ local box = {
     cross     = '┼',
 }
 
+-- the escape sequences that style text (colours, bold) and link it (OSC 8); none of them take up room on screen
+local styling = "\27%[[0-9;]*m"
+local hyperlink = "\27%]8;;.-\27\\"
+
 local function strip_ansi(s)
-    return (s:gsub("\27%[[0-9;]*m", ""))
+    return (s:gsub(styling, ""):gsub(hyperlink, ""))
 end
 
 local function width(s)
@@ -289,14 +293,26 @@ local function pad(s, w)
     return s .. string.rep(' ', w - width(s))
 end
 
+-- cuts s to w columns ending in `...`, dropping visible characters but keeping every escape sequence so styles and links stay closed
 local function truncate(s, w)
     if width(s) <= w then return s end
-    local kept = {}
-    for char in strip_ansi(s):gmatch('[%z\1-\127\194-\244][\128-\191]*') do
-        if #kept == w - 3 then break end
-        table.insert(kept, char)
+    local kept, shown, cut = {}, 0, false
+    local rest = s
+    while #rest > 0 do
+        local escape = rest:match('^' .. styling) or rest:match('^' .. hyperlink)
+        local char = escape or rest:match('^[%z\1-\127\194-\244][\128-\191]*')
+        rest = rest:sub(#char + 1)
+        if escape then
+            table.insert(kept, char)
+        elseif shown < w - 3 then
+            table.insert(kept, char)
+            shown = shown + 1
+        elseif not cut then
+            table.insert(kept, '...')
+            cut = true
+        end
     end
-    return table.concat(kept) .. '...'
+    return table.concat(kept)
 end
 
 local defaultmaxwidth = 40

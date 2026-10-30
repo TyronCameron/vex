@@ -531,7 +531,7 @@ Schema.register 'maybe' {
 }
 
 -- checks for number-only indexes and optionally an underlying schema on those values
-Schema.register 'vec' {
+local vec = {
     iterate = function(self, instance, context)
         return coroutine.wrap(function()
             if type(instance) ~= "table" then return end
@@ -556,6 +556,24 @@ Schema.register 'vec' {
         return validate_children(self, instance, context)
     end,
     postvalidate = postvalidate_children
+}
+Schema.register 'vec' (vec)
+
+-- a vec without repeated elements, keeping the first of each
+Schema.register 'unique' {
+    iterate = vec.iterate,
+    prevalidate = function(self, instance, context)
+        instance = vec.prevalidate(self, instance, context)
+        if instance == nil then return nil end
+        local seen = {}
+        return func.ifilter(instance, function(element)
+            if seen[element] then return false end
+            seen[element] = true
+            return true
+        end)
+    end,
+    validate = vec.validate,
+    postvalidate = vec.postvalidate
 }
 
 -----------------------------------------------

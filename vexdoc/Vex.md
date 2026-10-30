@@ -140,10 +140,7 @@ Vex needs to know how to move files around anyway, and I think it will do so wit
 
 ## Statuses
 
-There are 3 main statuses: 
-- todo (inactive before doing)
-- doing (active)
-- done (inactive after doing)
+Tasks have 2 statuses: todo (not started) and done. Abstracts also have doing (some children started).
 
 Users can create new statuses for their tasks, which are subtypes of the above. 
 

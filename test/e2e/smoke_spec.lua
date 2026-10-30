@@ -65,6 +65,7 @@ local focuses = {
   {"focus", PARENT, "--forwardlinks"},
   {"focus", CHILD, "--complement"},
   {"focus", "all", "--filter", "vextype:task", "--select", "cost"},
+  {"focus", "all", "--nil", "due"},
   {"focus", "all", "--between", "cost:1:9"},
   {"focus", "all", "--between", "due:2026-01-01:2026-12-31", count = 1},
   {"focus", "all", "--union", "none"},
@@ -100,7 +101,7 @@ describe("vex smoke test: every verb, view and focus (e2e, subprocess)", functio
     helper.write_file(decision, helper.read_file(decision):gsub("vextype: task", "vextype: decision"))
     helper.link(dir, DECISION, "options", {CHILD, DEPENDENT})
     vex(dir, "resolve", "all")
-    vex(dir, "set", DEPENDENT, "--status", "doing")
+    vex(dir, "set", DEPENDENT, "--status", "done")
   end)
 
   teardown(function()

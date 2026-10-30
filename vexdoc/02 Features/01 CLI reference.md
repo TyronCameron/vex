@@ -57,7 +57,7 @@ The task file goes in `taskfolder`. Its vexid comes from the description's first
 ## Editing tasks
 
 ```console
-$ vex set make-coffee-wife-1 --status doing --owner alice
+$ vex set make-coffee-wife-1 --status done --owner alice
 ```
 
 `set` overwrites each field you give it, then resolves the task. To edit a list field by value, put `--insert` or `--remove` before it:
@@ -110,6 +110,7 @@ Values are separated by `:`.
 | `--select field,field` | Only those fields, plus `vexid`. Transients are included once selected. |
 | `--filter field:value` | Tasks whose `field` equals `value`. |
 | `--fuzzy field:value[:n]` | Tasks whose `field` contains `value` within `n` edits (default 3). |
+| `--nil field` | Tasks that hold no value for `field`, transients included: `--nil due`. |
 | `--between field:low:high` | Tasks with `low <= field <= high`. Leave `low` or `high` empty for an open side: `cost::9`. Dates may be `YYYY-MM-DD`. |
 | `--tree field` | The tasks and everything reachable by following `field`, such as `children`. |
 | `--reversetree field` | The tasks and everything that reaches them through `field`. |

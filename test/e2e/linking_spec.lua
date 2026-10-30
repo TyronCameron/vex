@@ -6,8 +6,7 @@ describe("vex linking (e2e, subprocess)", function()
   local dir
 
   before_each(function()
-    dir = helper.make_tmp_dir()
-    helper.run_vex(dir, {"init"})
+    dir = helper.project()
   end)
 
   after_each(function()

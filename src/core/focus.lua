@@ -324,6 +324,14 @@ function Focus:filter(field, value)
     end, field, value)
 end 
 
+-- nil field keeps the tasks that hold no value for the field
+Focus['nil'] = function(self, field)
+    if field == nil then cli:throw('usage', 'You need to provide a field to check for nil.') end
+    return self:chain('nil', function(tasks)
+        return func.ifilter(tasks, function(task) return task[field] == nil end)
+    end, field)
+end
+
 -- fuzzy key:value 
 local function levenshtein(a, b)
     local la, lb = #a, #b
@@ -478,10 +486,31 @@ function Focus:rn()
 end
 
 -- tree field
-local function links(task, field)
-    if type(task[field]) == "string" then return {task[field]} end
-    if type(task[field]) == "table" then return task[field] end
-    return {}
+-- the vexids a task holds across the given fields
+local function links(task, fields)
+    local linked = {}
+    for _, field in ipairs(fields) do
+        if type(task[field]) == "string" then
+            table.insert(linked, task[field])
+        elseif type(task[field]) == "table" then
+            for _, vexid in ipairs(task[field]) do table.insert(linked, vexid) end
+        end
+    end
+    return linked
+end
+
+-- the vexids a task links to through any field
+local function alllinks(task)
+    local linked = {}
+    for target, sources in pairs(vexdex.backlinks) do
+        if sources[task.vexid] then table.insert(linked, target) end
+    end
+    return linked
+end
+
+local function followed(task, fields)
+    if #fields == 0 then return alllinks(task) end
+    return links(task, fields)
 end
 
 local function byvexid()
@@ -490,11 +519,11 @@ local function byvexid()
     return tasks
 end
 
-local function get_children(field)
+local function get_children(fields)
     local tasks = byvexid()
     return function(task) 
         local children = {}
-        for _, child in ipairs(links(task, field)) do
+        for _, child in ipairs(followed(task, fields)) do
             table.insert(children, tasks[child])
         end 
         return children
@@ -514,18 +543,19 @@ local function walk(tasks, linksof)
     return walked
 end
 
-function Focus:tree(field)
+function Focus:tree(...)
+    local fields = {...}
     return self:chain('tree', function(tasks) 
-        return walk(tasks, get_children(field))
-    end, field)
+        return walk(tasks, get_children(fields))
+    end, ...)
 end
 
 -- reversetree
-local function get_parents(field)
+local function get_parents(fields)
     local alltasks = Focus.getalltasks()
     return function(task) 
         return func.ifilter(alltasks, function(parent)
-            for _, child in ipairs(links(parent, field)) do
+            for _, child in ipairs(followed(parent, fields)) do
                 if child == task.vexid then return true end
             end
             return false
@@ -533,10 +563,11 @@ local function get_parents(field)
     end 
 end
 
-function Focus:reversetree(field)
+function Focus:reversetree(...)
+    local fields = {...}
     return self:chain('reversetree', function(tasks) 
-        return walk(tasks, get_parents(field))
-    end, field)
+        return walk(tasks, get_parents(fields))
+    end, ...)
 end
 
 -- backlinks
@@ -559,8 +590,8 @@ function Focus:forwardlinks()
         local indexed = byvexid()
         local linked = {}
         for _, task in ipairs(tasks) do
-            for target, sources in pairs(vexdex.backlinks) do
-                if sources[task.vexid] then table.insert(linked, indexed[target]) end
+            for _, target in ipairs(alllinks(task)) do
+                table.insert(linked, indexed[target])
             end
         end
         return linked
@@ -631,21 +662,11 @@ local function split(str, sep)
     return unpack(parts)
 end
 
-local operations = {}
-for _, name in ipairs({'select', 'filter', 'fuzzy', 'between', 'orderby', 'groupby', 'rn', 'tree', 'reversetree',
-    'backlinks', 'forwardlinks', 'interpret', 'intersect', 'union', 'complement', 'xor', 'notin', 'onlyin'}) do
-    operations[name] = true
-end
-
-function Focus.operates(name)
-    return operations[name] == true
-end
-
 function Focus:apply(args)
     local current = self
     for _, arg in ipairs(args) do
         if cli.isflag(arg) then 
-            if not Focus.operates(arg[1]) then cli:throw('unknown-focus-operation', arg[1]) end
+            if type(Focus[arg[1]]) ~= "function" then cli:throw('unknown-focus-operation', arg[1]) end
             local split_args = {}
             local values = type(arg[2]) == "table" and arg[2] or {arg[2]}
             for _, value in ipairs(values) do
