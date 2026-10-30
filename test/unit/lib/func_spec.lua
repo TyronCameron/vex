@@ -4,16 +4,6 @@ local func = require 'lib.func'
 
 describe("func", function()
 
-    -- ==================== unescape ====================
-
-    it("`func.unescape` turns \\n, \\t, \\r and \\\\ into the characters they name", function()
-        assert.equal("a\nb\tc\rd\\e", func.unescape("a\\nb\\tc\\rd\\\\e"))
-    end)
-
-    it("`func.unescape` leaves other text alone", function()
-        assert.equal("a,b \\x", func.unescape("a,b \\x"))
-    end)
-
     -- ==================== imap ====================
 
     it("`func.imap` maps values over an indexed table", function()

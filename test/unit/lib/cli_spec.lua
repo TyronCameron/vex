@@ -218,6 +218,12 @@ describe("CLI", function()
             assert.equal("Buy milk, eggs", parsed({"Buy", "milk,", "eggs"}):text())
         end)
 
+        it("reads positional words as literals, rejoining lists and unescaping", function()
+            assert.same({",", "a,b"}, parsed({",", "a,b"}):literals())
+            assert.same({"\n", "\t", "\r", "\\"}, parsed({"\\n", "\\t", "\\r", "\\\\"}):literals())
+            assert.same({"", "x\\y"}, parsed({"", "x\\y"}):literals())
+        end)
+
         it("maps each flag to the valueless flag just before it", function()
             local args = parsed({"--insert", "--children", "a,b", "--status", "done", "--remove", "--options", "c"})
             assert.same({children = "insert", options = "remove"}, args:modifiers())

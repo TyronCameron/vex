@@ -24,11 +24,6 @@ local function join_lines(lines)
     return table.concat(lines, "\n")
 end
 
--- a separator word: a bare comma arrives from the cli as a list, and \n, \t and \r are spelled out
-local function separator(word)
-    return func.unescape(type(word) == "table" and table.concat(word, ",") or word)
-end
-
 cli:verb "show" {
     function(args)
         local f = focus_pop_args(args)
@@ -154,7 +149,7 @@ cli:verb "get" {
             end
         end
         if #fields == 0 then fields = {'vexid'} end
-        local rowsep, colsep = unpack(func.imap(args:positional(), separator))
+        local rowsep, colsep = unpack(args:literals())
         local lines = {}
         f:each(function(vexid)
             table.insert(lines, task:get(vexid, fields, colsep))
