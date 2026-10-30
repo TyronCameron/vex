@@ -14,6 +14,8 @@ return {
 }
 ```
 
+This repository's own config sets `taskfolder = "vexdoc/vex"`: its backlog is the `vex` folder of this wiki.
+
 ## Settings
 
 | Setting | Effect |
@@ -50,15 +52,9 @@ With this config, a task sits under its ancestors and then in a folder named aft
 
 - A list value such as `lineage` adds one folder per element. Unset values and empty lists add none.
 - Characters that can't appear in a folder name (`/ \ : * ? " < > |`) become `-`.
-- Files move whenever something they depend on changes. Changing a task moves the files of the tasks it links to, so editing a parent's `children` moves its children. Empty folders are removed.
+- Files move whenever something they depend on changes. Resolving a task re-files every task linked to it or from it, transitively: editing a parent's `children` moves its children, and finishing a dependency moves its dependents. Empty folders are removed.
 - vex owns the layout. A file moved by hand is still found, and is moved back the next time it is resolved.
 - After changing `paths.groupby`, run `vex resolve all` to move the existing files. Without `paths.groupby`, task files sit flat at `<vexid>.md`.
-
-## Layered config
-
-vex reads every config on the way down to the project: your user config (`~/.vex/config.lua`), then the `config.lua` of each enclosing `.vex` folder, outermost first. Later files override earlier ones key by key. Shared settings such as `taskowners` can live in a parent folder and be refined per project.
-
-This repository's own config sets `taskfolder = "vexdoc/vex"`: its backlog is the `vex` folder of this wiki.
 
 ## The global folder
 

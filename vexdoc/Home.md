@@ -19,12 +19,16 @@ Because a task is a text file, anything that reads and writes text can work with
   - [[05 Getting into focus]]: build, save and reuse queries, with the named focuses and worked examples.
   - [[06 Status and state machines]]: how `status` moves, and what `ready` and `final` mean.
   - [[07 Working with git and a team]]: what to commit, and what to run after a pull.
+  - [[08 Links and backlinks]]: how tasks link, and what follows from a change.
+  - [[09 Errors and troubleshooting]]: every named error, and common fixes.
 - **Configuration**
   - [[01 Configuring vex (config.lua)]]: the project config file.
   - [[02 Configuring views]], [[03 Configuring task types]], [[04 Configuring recipes]], [[05 Configuring focuses]] and [[06 Configuring event hooks]]: extending vex from your `.vex` folder.
 - **Technical documentation**
   - [[Plugin architecture]]: how each part of vex's behaviour is a swappable plugin.
   - [[The index]] and [[Events and hooks]]: what lives in `.vex/vexdex`.
+  - [[Resolution pipeline]]: from `add` to a file on disk, and what moves with it.
+  - [[Contributing]]: tests, where code goes and the backlog.
 - [[Vex]]: the original design journal.
 
 ## Examples

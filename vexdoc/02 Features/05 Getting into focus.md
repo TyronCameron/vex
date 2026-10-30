@@ -1,4 +1,4 @@
-A focus is a saved query over your tasks. Most commands act on a focus, and `vex focus` builds one. This page has a cheatsheet, the named focuses, the snags to know about and worked queries. [[01 CLI reference#Focuses]] describes every flag.
+A focus is a saved query over your tasks. `vex focus` builds one and most other commands act on it. [[01 CLI reference#Focuses]] describes every flag.
 
 ## Cheatsheet
 
@@ -63,7 +63,7 @@ The same goes for phrases: a saved `--interpret --between due:now:"next tuesday"
 
 ### `prev` is the default
 
-Every `vex focus`, `vex add` and `vex recipe` saves its focus, and every command that takes a `[focus]` uses the saved one when you leave it out. That is why `vex add Fix the leak` followed by `vex set --owner alice` edits the new task. It also means building a focus replaces the one you had. To look at tasks without losing your focus, use `vex view`, which applies its flags for that one command only.
+`vex focus`, `vex add` and `vex recipe` save their focus, and a command given no focus uses the saved one: `vex add Fix the leak` then `vex set --owner alice` edits the new task. Building a focus replaces the one you had; `vex view` applies its flags for one command only, so use it to look without losing your focus.
 
 `vex remove` clears the focus. With none saved, a command fails with `no-focus`.
 
@@ -85,27 +85,25 @@ filter	args = 	{
 
 ### Flags build on each other
 
-A flag works on the result of the one before it. Start with a name to begin afresh, or leave the name off to carry on from `prev`:
+Each flag works on the result of the one before. Leave the starting point off to carry on from `prev`:
 
 ```console
 $ vex focus all --filter status:todo
 $ vex focus --select owner,due
 ```
 
-The second command filters and selects. `vex focus ready --filter owner:alice` starts again from `ready`.
+The second command filters and selects. Naming a starting point, as in `vex focus ready --filter owner:alice`, begins afresh.
 
 ### Smaller snags
 
-- `--select` always keeps `vexid`, and may name transients such as `urgency`. `--filter`, `--between` and `--orderby` accept them too.
+- `--select` always keeps `vexid`. Transients such as `urgency` work in `--select`, `--filter`, `--between` and `--orderby`.
 - Values are separated by `:`. Quote a value containing spaces or colons: `--filter description:"Fix the leak"`.
 - Set operations take a named focus or a vexid, not a query: `--notin final` works, `--notin "all --filter ..."` doesn't. Save the query as a named focus first.
-- `--complement` inverts against all tasks, and set operations gather groups back into one list.
+- Set operations gather groups back into one list.
 - A comma outside quotes is a union: `vex focus a-1,b-1`.
-- `--groupby` changes what the flags after it do: `--orderby` sorts inside each group and `--rn` restarts at 1 in each. The `tabular` view draws a heading for each group.
+- After `--groupby`, `--orderby` sorts inside each group and `--rn` restarts at 1 in each. The `tabular` view draws a heading per group.
 
 ## Example queries
-
-The examples use `vex get` for brevity. Replace it with `vex view tabular --select field,field` for more detail.
 
 ### Tasks ready to work on, most urgent first
 

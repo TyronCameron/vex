@@ -25,8 +25,6 @@
 | `vex recipe [recipe] Description [--fields...]` | Creates tasks from a recipe and focuses on them. With no recipe, lists the recipes. |
 | `vex autocomplete shell` | Prints a completion script for `bash`, `zsh`, `fish` or `powershell`. |
 | `vex suggest position words...` | Returns completions. The completion script calls it. |
-| `vex inline file` | Turns `#vex` tags in a file into tasks and links each tag to its task (see [[#Inline tags]]). |
-| `vex open [focus]` | Opens each task in the focus in your editor, at the tag that created it if there is one. |
 
 Every user mistake, such as an unknown focus or an invalid field, fails with a named error and a hint.
 
@@ -190,14 +188,3 @@ $ vex recipe abstract Ship v0.2
 ```
 
 A recipe creates one or more tasks with fields already filled in. vex ships `abstract`; add your own in `.vex/recipes` ([[04 Configuring recipes]]).
-
-## Inline tags
-
-Write a task where the work is, in any text file:
-
-```txt
--- #vex Handle a missing config file
--- #atom Retry the upload --due 2026-08-01
-```
-
-`vex inline <file>` creates a task for each new tag. The tag word sets the type (`#vex`, `#abstract`, `#atom`, `#explore`, `#decision`), the rest of the line works like `vex add`, and an indented tag becomes a child of the tag above it. vex then rewrites each tag to carry the task's vexid, so later runs update the same task, and `vex open` jumps from a task back to its tag.

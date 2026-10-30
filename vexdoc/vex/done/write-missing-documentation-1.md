@@ -9,9 +9,7 @@ children:
   - "[[write-contributing-guide-1]]"
   - "[[document-global-folder-layering-1]]"
   - "[[document-links-backlinks-1]]"
-  - "[[add-inline-tags-open-walkthrough-1]]"
   - "[[write-troubleshooting-faq-1]]"
 created: "2026-10-29 23:48:40"
-modified: "2026-10-29 23:48:42"
-status: todo
+modified: "2026-10-30 00:54:43"
 ---

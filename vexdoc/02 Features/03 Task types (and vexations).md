@@ -20,7 +20,7 @@ $ vex add Ship the beta --vextype abstract
 $ vex set ship-beta-1 --insert --children write-release-notes-1
 ```
 
-An abstract has no stored `status`; it is worked out from its children each time it is read: `todo` while every child is untouched, `done` once every child is finished and `doing` in between. Abstracts only hold `children`, decisions only `options` and atoms `dependencies`. Nothing can depend on an abstract or a decision: depend on the atoms under it.
+An abstract's `status` is worked out from its children ([[06 Status and state machines]]). Nothing can depend on an abstract or a decision: depend on the atoms under it.
 
 Parents are always found through `children`. `--reversetree children` walks up from a task, and the `lineage` transient lists its abstracts.
 

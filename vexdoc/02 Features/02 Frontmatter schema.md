@@ -7,14 +7,14 @@ Every task is validated against the schema of its `vextype` and of each type tha
 | `vexid` | text | Unique id and filename, generated from the description when the task is added. It can't be changed. |
 | `description` | text | Required. At least 2 words and more than 3 characters. |
 | `vextype` | text | The task type. Defaults to `task` and must be a registered type. |
-| `status` | state | `todo`, then `done`. vex rejects any other move. Defaults to `todo`. Abstracts have no stored `status`: vex works it out from their children each time it is read (`todo` when every child is in the `initial` phase, `done` when every child is in the `final` phase, `doing` otherwise). |
+| `status` | state | `todo`, then `done`. vex rejects any other move. Defaults to `todo`. Abstracts store none: it is worked out from their children ([[06 Status and state machines]]). |
 | `created` | datetime | Set when the task is added. |
 | `modified` | datetime | Updated whenever vex touches the task: on add, set and every resolve, a reindex included. |
 | `vexbody` | text | Optional. The markdown body below the frontmatter. |
 | `due` | datetime | Optional. |
 | `cost`, `benefit` | number | Optional. |
 | `owner` | text | Optional. Must be one of the `taskowners` in `.vex/config.lua`. |
-| `dependencies` | list of links | Optional. Each entry must be an existing task without `children` or `options`, and dependencies can't form a cycle. Abstracts and decisions can't have any. |
+| `dependencies` | list of links | Optional. Each entry must be an existing task without `children` or `options`, and dependencies can't form a cycle. |
 
 Datetimes are stored as timestamps and written as `YYYY-MM-DD HH:MM:SS`. vex reads `YYYY-MM-DD HH:MM:SS` (a `T` may replace the space), `YYYY-MM-DD`, or a phrase such as `tomorrow 8am`, relative to the moment the task is resolved ([[01 CLI reference#Interpreting times]]). A value it can't read fails resolution with an error naming the unknown words, and the task file is left as it was. Links are written as `[[vexid]]`, so the task files form an Obsidian vault.
 
