@@ -397,9 +397,8 @@ function TaskManager:resolve(vexid)
     local arranged = {}
     self:arrange(vexid, arranged)
     for _, linked in ipairs(unlinked) do
-        self:arrange(linked.vexid, arranged)
+        self:arrangeforwardlinks(linked.vexid, arranged)
     end
-    self:arrangebacklinks(vexid, arranged)
     vexdex:writeindex()
     event:trigger('post-task-resolve', vexid, task)
 end
@@ -539,6 +538,16 @@ function TaskManager:move(vexid)
     return vexid
 end
 
+-- moves a task's file, and those of every task it links to, to where they should live
+function TaskManager:arrangeforwardlinks(vexid, arranged)
+    if arranged[vexid] then return end
+    arranged[vexid] = true
+    self:move(vexid)
+    focus.focus(vexid):forwardlinks():each(function(linked)
+        self:arrangeforwardlinks(linked, arranged)
+    end)
+end
+
 -- moves the files of every task that links to this one, transitively, to where they should live
 function TaskManager:arrangebacklinks(vexid, arranged)
     focus.focus(vexid):backlinks():each(function(linking)
@@ -549,14 +558,10 @@ function TaskManager:arrangebacklinks(vexid, arranged)
     end)
 end
 
--- moves a task's file, and those of every task it links to, to where they should live
+-- moves a task's file, and those of every task it links to or is linked from, to where they should live
 function TaskManager:arrange(vexid, arranged)
-    if arranged[vexid] then return end
-    arranged[vexid] = true
-    self:move(vexid)
-    focus.focus(vexid):forwardlinks():each(function(linked)
-        self:arrange(linked, arranged)
-    end)
+    self:arrangeforwardlinks(vexid, arranged)
+    self:arrangebacklinks(vexid, arranged)
 end
 
 -- deletes a file from disk
@@ -569,7 +574,7 @@ function TaskManager:delete(vexid)
     tidy(path)
     local arranged = {}
     for _, task in ipairs(linked) do
-        self:arrange(task.vexid, arranged)
+        self:arrangeforwardlinks(task.vexid, arranged)
     end
     vexdex:writeindex()
     event:trigger('post-task-delete', vexid, path)
