@@ -46,8 +46,11 @@ return {
         local content = f:read("*a")
         f:close()
 
+        if not content:match("^%-%-%-\n") then return nil end
+
         local task = {}
         local frontmatter, body = content:match("^%-%-%-\n(.-)\n%-%-%-\n(.*)$")
+        assert(frontmatter, "the frontmatter is never closed")
         frontmatter = frontmatter:match("^%s*(.-)%s*$")
         assert(#frontmatter > 0, "frontmatter must not be empty")
 

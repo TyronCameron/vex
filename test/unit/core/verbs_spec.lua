@@ -43,6 +43,40 @@ describe("verbs", function()
         assert.truthy(out:find("todo", 1, true))
     end)
 
+    describe("get separators", function()
+        local first, second
+
+        before_each(function()
+            first = run("add Separated first task --cost 1")
+            second = run("add Separated second task --cost 2")
+            run("focus " .. first .. "," .. second)
+        end)
+
+        it("joins rows with a newline and columns with a tab by default", function()
+            assert.equal(first .. "\t1\n" .. second .. "\t2", run("get --vexid --cost"))
+        end)
+
+        it("takes the row separator, then the column separator, after the focus", function()
+            assert.equal(first .. "," .. second, run("get prev ,"))
+            assert.equal(first .. "|1;" .. second .. "|2", run("get prev ; | --vexid --cost"))
+        end)
+
+        it("reads the escapes \\n and \\t in a separator", function()
+            assert.equal(first .. "\n" .. second, run("get prev '\\n'"))
+            assert.equal(first .. "\t1\n" .. second .. "\t2", run("get prev '\\n' '\\t' --vexid --cost"))
+        end)
+
+        it("joins with nothing when a separator is emptied", function()
+            assert.equal(first .. second, run("get prev ''"))
+            assert.equal(first .. "1\n" .. second .. "2", run("get prev '\\n' '' --vexid --cost"))
+        end)
+
+        it("prints no trailing tab", function()
+            assert.equal(first .. "," .. second, (run("get prev ,"):gsub("[^%S]+$", "")))
+            assert.is_nil(run("get prev ,"):find("\t", 1, true))
+        end)
+    end)
+
     it("show prints the task file", function()
         local vexid = run("add Show this task")
         assert.truthy(run("show " .. vexid):find("Show this task", 1, true))

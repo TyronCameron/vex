@@ -111,6 +111,17 @@ describe("vex storage (e2e, subprocess)", function()
     assert.is_nil(out:find(started, 1, true))
   end)
 
+  it("keeps task bodies out of the index and still reads them for queries", function()
+    local vexid = vex(dir, "add", "Body", "stays", "home", "--vexbody", "Window seat please")
+    vex(dir, "add", "Empty", "body", "here")
+    for _, file in ipairs({"index.lua"}) do
+      assert.is_nil(helper.read_file(dir .. "/.vex/vexdex/" .. file):find("Window seat", 1, true))
+    end
+    assert.equal("Window seat please", vex(dir, "get", vexid, "--vexbody"))
+    assert.truthy(vex(dir, "focus", "all", "--filter", "vexbody:Window seat please"):find("Focusing on 1 vex", 1, true))
+    assert.truthy(vex(dir, "view", "all", "overview"):find("Tasks with no vexbody: 50.0%", 1, true))
+  end)
+
   it("rebuilds the same tasks elsewhere by replaying the verb log", function()
     vex(dir, "add", "Plan", "a", "trip", "--vextype", "abstract")
     vex(dir, "add", "Book", "flights", "--cost", "5", "--vexbody", "Window seat, please")

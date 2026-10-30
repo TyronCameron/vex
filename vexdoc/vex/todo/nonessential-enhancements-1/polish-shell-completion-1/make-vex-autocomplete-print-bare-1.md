@@ -3,7 +3,7 @@ vexid: make-vex-autocomplete-print-bare-1
 vextype: atom
 description: Make vex autocomplete print a bare script
 created: "2026-10-19 09:21:54"
-modified: "2026-10-19 09:21:54"
+modified: "2026-10-30 03:17:28"
 status: todo
 ---
 

@@ -5,7 +5,7 @@ description: Create the next occurrence when a recurring task is done
 created: "2026-10-19 21:29:42"
 dependencies: 
   - "[[let-task-types-register-hooks-1]]"
-modified: "2026-10-20 09:47:51"
+modified: "2026-10-30 03:17:28"
 status: todo
 ---
 

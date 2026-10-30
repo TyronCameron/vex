@@ -26,6 +26,10 @@ local Task = {}
 
 function Task:__index(key)
     if Task[key] then return Task[key] end
+    if key == 'vexbody' then
+        local held = taskmanager:getsingle(rawget(self, 'vexid'))
+        return held and rawget(held, 'vexbody')
+    end
     local transient = taskmanager:transientof(rawget(self, 'vextype'), key)
     return transient and transient.definition(self)
 end
@@ -38,12 +42,12 @@ function Task.new(task)
 end
 
 -- gets data from a task and returns it as a string for the command line
-function Task:tostring(fields)
+function Task:tostring(fields, colsep)
     return table.concat(func.imap(fields, function(field)
         local value = self[field]
         if value == nil then return "" end
         return type(value) == "table" and table.concat(value, ",") or tostring(value)
-    end), "\t")
+    end), colsep or "\t")
 end
 
 -- show 
@@ -253,9 +257,9 @@ function TaskManager:remove(vexid)
 end
 
 -- gets data from a task and returns it as a string for the command line
-function TaskManager:get(vexid, fields)
+function TaskManager:get(vexid, fields, colsep)
     event:trigger('pre-task-get', vexid, fields)
-    local result = self:format(vexid):tostring(fields)
+    local result = self:format(vexid):tostring(fields, colsep)
     event:trigger('post-task-get', vexid, fields, result)
     return result
 end
@@ -331,14 +335,19 @@ function TaskManager:reindexall()
         vexdex:unsafe_remove(key)
     end
 
-    local vexids = func.ifilter(func.imap(lfsext.walk(vexdex.path .. '/' .. config.taskfolder), function(path) 
-        local t = self:readfrompath(path)
-        return t and t.vexid
-    end), function(vexid) return vexid end)
+    local vexids, paths = {}, {}
+    for _, path in ipairs(lfsext.walk(vexdex.path .. '/' .. config.taskfolder)) do
+        local task, err = self:readfrompath(path)
+        if err then cli:throw('unreadable-task', path, err) end
+        if task then
+            if paths[task.vexid] then cli:throw('duplicate-vexid', task.vexid, paths[task.vexid], path) end
+            paths[task.vexid] = path
+            table.insert(vexids, task.vexid)
+        end
+    end
 
-    for _, vexid in ipairs(vexids) do self:read(vexid) end
+    for _, vexid in ipairs(vexids) do self:index(vexid) end
     self:resolveall(vexids)
-    vexdex:writeindex()
     event:trigger('post-task-reindexall')
     return self 
 end
@@ -364,9 +373,9 @@ local function derive(vextype, task, context)
     return res
 end 
 
--- adds it to the index
+-- adds it to the index, which is saved when the verb finishes
 function TaskManager:index(vexid)
-    vexdex:add(vexid, self.tasks[vexid])
+    vexdex:unsafe_add(vexid, self.tasks[vexid])
 end
 
 -- resolves one task and returns the vexids of the tasks linked to or from it, and of those it stopped linking to
@@ -408,7 +417,6 @@ function TaskManager:resolvesingle(vexid)
     vexdex:unsafe_link(vexid, context.links)
     vexdex:unsafe_add(vexid, task)
 
-    vexdex:writeindex()
     event:trigger('post-task-resolve', vexid, task)
     return func.imerge(unlinked, func.imerge(task.forwardlinks, task.backlinks))
 end
@@ -522,7 +530,7 @@ function TaskManager:read(vexid)
     return task
 end
 
--- reads a file from disk and adds it to memory by path
+-- reads a file from disk and adds it to memory by path; a file that looks like a task but cannot be read gives nil and the reason
 function TaskManager:readfrompath(path)
     event:trigger('pre-task-read', path)
     local ok, task = pcall(taskformat.read, path)
@@ -530,12 +538,11 @@ function TaskManager:readfrompath(path)
         task = self:unformat(task)
         self.tasks[task.vexid] = Task.new(task)
         if relative(path) then vexdex:unsafe_locate(task.vexid, relative(path)) end
-        self:index(task.vexid)
         event:trigger('post-task-read', path, self.tasks[task.vexid])
         return task
     else 
         event:trigger('post-task-read', path, nil)
-        return nil 
+        return nil, not ok and task or nil
     end
 end
 
@@ -582,7 +589,6 @@ function TaskManager:delete(vexid)
     local linkedids = func.imap(linked, function(task) return task.vexid end)
     self:resolveall(linkedids)
     for _, linkedid in ipairs(linkedids) do self:write(linkedid) end
-    vexdex:writeindex()
     event:trigger('post-task-delete', vexid, path)
     return vexid
 end

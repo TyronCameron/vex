@@ -15,6 +15,7 @@ local verbs = {
   {"show", "all"},
   {"get", "all", "--status", "--cost"},
   {"get", "all", "--select", "status,cost"},
+  {"get", "all", ",", ";", "--vexid", "--cost"},
   {"set", DEPENDENT, "--cost", "4"},
   {"set", PARENT, "--insert", "--children", DEPENDENT},
   {"set", PARENT, "--remove", "--children", DEPENDENT},
@@ -81,6 +82,8 @@ local focuses = {
   {"focus", "./"},
   {"focus", "all", "--interpret", "--between", "due:yesterday:next year"},
   {"focus", "all", "--groupby", "owner", "--orderby", "due:desc:cost", "--rn"},
+  {"focus", "all", "--orderby", "created:desc", "--first", "2", count = 2},
+  {"focus", "all", "--orderby", "created:desc", "--last", "2", count = 2},
 }
 
 local function name(row)

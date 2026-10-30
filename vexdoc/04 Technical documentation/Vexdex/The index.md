@@ -4,7 +4,7 @@ The vexdex (`src/core/vexdex.lua`) is vex's index: a map from each vexid to its 
 
 | File | Holds |
 | --- | --- |
-| `index.bin` | Every task's fields, unformatted: timestamps as numbers, links as bare vexids. |
+| `index.bin` | Every task's fields except the body, unformatted: timestamps as numbers, links as bare vexids. The body lives only in the task file, and a query on `vexbody` (or the overview's body count) reads it from there. |
 | `backlinks.bin` | For every task, the tasks that link to it. |
 | `paths.bin` | Where each task file is, relative to `taskfolder`. |
 | `focus.bin` | The saved focus, as the list of operations that rebuild it. |
@@ -17,6 +17,10 @@ With `paths.groupby` set, a file's location depends on its fields and on other t
 
 Every write goes through `VexDex:atomic`. The data is written to a new file in `.vex/tmp` and then renamed into place, so an interrupted write never leaves a half-written file. If the rename fails, vex stops with the `write` error and leaves the data in `.vex/tmp`.
 
+## When the index is saved
+
+Commands change the index in memory as they go and save it once, when the command finishes successfully. A command that fails, because a task doesn't validate or a file can't be read, saves nothing, so the index on disk is never left half-updated. Reading a task never changes the index: only resolving, writing and `vex resolve all` do, so a file you edited by hand is not in the index until it is resolved.
+
 ## Loading and rebuilding
 
 When a command starts, vex loads the index from `.vex/vexdex`. If the folder or the index doesn't exist yet, as in a fresh clone, vex creates it, starting empty.
@@ -27,7 +31,7 @@ When a command starts, vex loads the index from `.vex/vexdex`. If the folder or 
 $ vex resolve all
 ```
 
-This clears the index, reads and resolves every task file under `taskfolder`, and writes the index again.
+This clears the index, reads every task file under `taskfolder` and resolves each. It stops, changing nothing, if a file starts a frontmatter (`---`) but can't be read, or if two files hold the same vexid. Markdown files without frontmatter are ignored.
 
 ## See also
 

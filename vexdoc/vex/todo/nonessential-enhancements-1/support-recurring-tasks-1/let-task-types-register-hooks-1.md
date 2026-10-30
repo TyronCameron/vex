@@ -3,7 +3,7 @@ vexid: let-task-types-register-hooks-1
 vextype: atom
 description: Let task types register hooks that receive the task manager and focus
 created: "2026-10-19 21:29:42"
-modified: "2026-10-19 21:29:42"
+modified: "2026-10-30 03:17:28"
 status: todo
 ---
 

@@ -16,6 +16,8 @@ if globaldir then
     package.path = globaldir .. "/?.lua;" .. package.path
 end
 
+math.randomseed(os.time())
+
 local plugin = require 'lib.plugin'
 plugin:addenum("tagger", {"canonicalvexid"})
 plugin:addenum("taskpath", {"grouppath"})

@@ -35,6 +35,15 @@ function Arguments:text()
     end), " ")
 end
 
+local escapes = {n = "\n", t = "\t", r = "\r", ["\\"] = "\\"}
+
+-- the positional words as strings, with comma lists joined back up and \n, \t, \r and \\ read as the characters they name
+function Arguments:literals()
+    return func.imap(self:positional(), function(word)
+        return (table.concat(type(word) == "table" and word or {word}, ","):gsub("\\(.)", function(char) return escapes[char] end))
+    end)
+end
+
 -- maps each flag to the valueless flag right before it: --insert --children a => {children = "insert"}
 function Arguments:modifiers()
     local modifiers = {}

@@ -174,14 +174,14 @@ describe("task", function()
 
     end)
 
-    it("reading a task from disk indexes it unformatted", function()
+    it("reading a task from disk unformats it", function()
         local dependency = create({description = "read dependency task"})
         local vexid = create({description = "indexed then read task", dependencies = {dependency}})
         vexdex:unsafe_remove(vexid)
         task.tasks[vexid] = nil
-        task:read(vexid)
-        assert.is_number(vexdex:get(vexid).created)
-        assert.same({dependency}, vexdex:get(vexid).dependencies)
+        local read = task:read(vexid)
+        assert.is_number(read.created)
+        assert.same({dependency}, read.dependencies)
     end)
 
     it("runs each prevalidate step once per resolve", function()
@@ -420,6 +420,94 @@ describe("task", function()
             assert.truthy(func.any(fired['post-task-read'], function(args)
                 return args[1] == path and args[2] and args[2].vexid == vexid
             end))
+        end)
+
+    end)
+
+    describe("body", function()
+
+        local function reloaded(vexid)
+            local plain = {}
+            for field, value in pairs(vexdex:get(vexid)) do
+                if field ~= 'vexbody' then plain[field] = value end
+            end
+            local entry = setmetatable(plain, getmetatable(vexdex:get(vexid)))
+            task.tasks[vexid] = nil
+            return entry
+        end
+
+        it("is read from the task file when the index entry holds none", function()
+            local vexid = create({description = "body kept in file task", vexbody = "kept in the file"})
+            assert.equal("kept in the file", reloaded(vexid).vexbody)
+        end)
+
+        it("is empty for a task whose file has no body", function()
+            local vexid = create({description = "no body in file task"})
+            assert.equal("", reloaded(vexid).vexbody or "")
+        end)
+
+    end)
+
+    describe("reading and rebuilding", function()
+
+        local function handmade(properties)
+            local vexid = create(properties)
+            local path = task:getabspath(vexid)
+            vexdex:unsafe_remove(vexid)
+            task.tasks = {}
+            return vexid, path
+        end
+
+        it("reading a task file does not put the task in the index", function()
+            local vexid, path = handmade({description = "read but not indexed task"})
+            assert.equal(vexid, task:read(vexid).vexid)
+            assert.is_nil(vexdex:get(vexid))
+            os.remove(path)
+        end)
+
+        it("reindexall refuses a task file it cannot read, naming the file", function()
+            local cli = require 'lib.cli'
+            local broken = vexdex.path .. "/broken-unreadable-1.md"
+            local f = io.open(broken, "w")
+            f:write("---\nvexid: broken-unreadable-1\ndescription: never closed\n")
+            f:close()
+            stub(cli, 'throw', function(_, name, path) error(name .. " " .. path) end)
+            local ok, err = pcall(task.reindexall, task)
+            cli.throw:revert()
+            os.remove(broken)
+            task:reindexall()
+            assert.is_false(ok)
+            assert.truthy(err:find("unreadable-task", 1, true))
+            assert.truthy(err:find("broken-unreadable-1.md", 1, true))
+        end)
+
+        it("reindexall ignores a markdown file that is not a task", function()
+            local notes = vexdex.path .. "/notes-not-a-task.md"
+            local f = io.open(notes, "w")
+            f:write("just some notes\n")
+            f:close()
+            task:reindexall()
+            os.remove(notes)
+            assert.is_nil(vexdex:get("notes-not-a-task"))
+        end)
+
+        it("reindexall refuses two files holding the same vexid, naming both", function()
+            local cli = require 'lib.cli'
+            local vexid, path = handmade({description = "task held by two files"})
+            local copy = vexdex.path .. "/copy-of-" .. vexid .. ".md"
+            local original = io.open(path):read("*a")
+            local f = io.open(copy, "w")
+            f:write(original)
+            f:close()
+            stub(cli, 'throw', function(_, name, id, first, second) error(table.concat({name, id, first, second}, "|")) end)
+            local ok, err = pcall(task.reindexall, task)
+            cli.throw:revert()
+            os.remove(copy)
+            task:reindexall()
+            assert.is_false(ok)
+            assert.truthy(err:find("duplicate-vexid|" .. vexid, 1, true))
+            assert.truthy(err:find("copy-of-" .. vexid .. ".md", 1, true))
+            assert.truthy(err:find("/" .. vexid .. ".md", 1, true))
         end)
 
     end)

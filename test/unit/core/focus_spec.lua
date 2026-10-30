@@ -236,6 +236,51 @@ describe("Focus", function()
             assert.same({1, 2, 1, 1, 1}, func.imap(numbered, function(t) return t.rn end))
         end)
 
+        it("first keeps the first n tasks in the order given", function()
+            assert.same({"b", "e"}, vexids(f:orderby('cost'):first('2'):get(tasks)))
+            assert.same({"a", "b"}, vexids(f:first(2):get(tasks)))
+        end)
+
+        it("last keeps the last n tasks without reversing them", function()
+            assert.same({"a", "d"}, vexids(f:orderby('cost'):last('2'):get(tasks)))
+        end)
+
+        it("first and last return everything when n is larger than the list", function()
+            assert.same({"a", "b", "c", "d", "e"}, vexids(f:first('99'):get(tasks)))
+            assert.same({"a", "b", "c", "d", "e"}, vexids(f:last('99'):get(tasks)))
+        end)
+
+        it("first and last keep n tasks within each group", function()
+            assert.same({"b", "a", "c"}, vexids(f:groupby('owner'):first('1'):get(tasks)))
+            assert.same({"e", "d", "c"}, vexids(f:groupby('owner'):last('1'):get(tasks)))
+        end)
+
+        it("first and last reject an n that is not a positive whole number", function()
+            stub(cli, 'throw', function(self, name) error(name) end)
+            for _, operation in ipairs({'first', 'last'}) do
+                for _, n in ipairs({'0', '-1', 'two', '1.5', ''}) do
+                    local ok, err = pcall(function() f[operation](f, n) end)
+                    assert.is_false(ok, operation .. ' ' .. n)
+                    assert.truthy(err:find('usage', 1, true))
+                end
+                assert.is_false(pcall(function() f[operation](f) end))
+            end
+            cli.throw:revert()
+        end)
+
+        it("a saved first focus gives the same tasks", function()
+            local task = require 'core.task'
+            for _, properties in ipairs({{description = "limited first task"}, {description = "limited second task"}}) do
+                local vexid = task:add(properties)
+                task:resolve(vexid)
+                task:write(vexid)
+            end
+            local limited = Focus.focus('all'):orderby('vexid'):last('1')
+            limited:write()
+            assert.same(vexids(limited:get()), vexids(Focus.read():get()))
+            assert.equal(1, #Focus.read():get())
+        end)
+
         it("a saved grouped focus gives the same groups", function()
             local task = require 'core.task'
             for _, properties in ipairs({{description = "grouped todo task"}, {description = "grouped doing task"}}) do

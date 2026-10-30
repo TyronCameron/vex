@@ -20,6 +20,7 @@ A focus is a saved query over your tasks. `vex focus` builds one and most other 
 | `--orderby field[:desc]` | Tasks sorted by those fields. |
 | `--groupby field` | Tasks in groups. Later flags work per group. |
 | `--rn` | Numbers each group's tasks from 1. |
+| `--first n`, `--last n` | The first or last `n` tasks, per group after `--groupby`. Order them with `--orderby` first. |
 | `--step field` | The tasks one hop along `field`: `children`, `forwardlinks`, `backlinks`. |
 | `--tree field`, `--reversetree field` | The tasks plus everything reachable from, or reaching, them through `field`. |
 | `--union`, `--intersect`, `--xor`, `--notin`, `--onlyin`, `--complement` | Set operations. |
@@ -101,6 +102,7 @@ The second command filters and selects. Naming a starting point, as in `vex focu
 - Set operations take a named focus or a vexid, not a query: `--notin final` works, `--notin "all --filter ..."` doesn't. Save the query as a named focus first.
 - Set operations gather groups back into one list.
 - A comma outside quotes is a union: `vex focus a-1,b-1`.
+- To use the saved focus's vexids as a value elsewhere, print them as a comma list: `vex set final-1 --dependencies $(vex get prev ,)` ([[01 CLI reference#Feeding a focus into a list field]]).
 - After `--groupby`, `--orderby` sorts inside each group and `--rn` restarts at 1 in each. The `tabular` view draws a heading per group.
 
 ## Example queries
