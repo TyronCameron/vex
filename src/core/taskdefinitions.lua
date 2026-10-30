@@ -27,7 +27,9 @@ schema.register 'vextype' {
 
 schema.register 'statemachine' {
     prevalidate = function(self, instance, context)
-        self.extra.statemachine = statemachine.new(self.specification.states, context.previous.status, self.specification.initial)
+        local previous = context.previous
+        for _, key in ipairs(context.path) do previous = previous and previous[key] end
+        self.extra.statemachine = statemachine.new(self.specification.states, previous, self.specification.initial)
         return instance or self.specification.initial
     end,
     validate = function(self, instance, context)
@@ -36,7 +38,7 @@ schema.register 'statemachine' {
     postvalidate = function(self, instance, context)
         self.extra.statemachine:transition(instance)
         return instance
-    end 
+    end
 }
 
 schema.register 'vexlink' {
@@ -82,7 +84,48 @@ local function acyclic(dependency, context)
     return true
 end
 
-task:task 'task' {
+local function holds(task, field)
+    return type(task[field]) == "table" and #task[field] > 0
+end
+
+local function childless(dependency, context)
+    local target = focus.focus(dependency):get()[1]
+    if holds(target, 'children') or holds(target, 'options') then
+        cli:throw('dependency-with-children', context.vexid, dependency)
+    end
+    return true
+end
+
+local function status()
+    return schema.statemachine {
+        states = {
+            todo = {
+                valid = {"doing"},
+            },
+            doing = {
+                valid = {"done"},
+            },
+            done = {
+                valid = {}
+            }
+        },
+        initial = 'todo'
+    }
+end
+
+local function dependencies()
+    return schema.maybe {
+        schema.vec {
+            schema.all {
+                schema.formatted {schema.vexlink},
+                schema.constraint {acyclic},
+                schema.constraint {childless}
+            }
+        }
+    }
+end
+
+task:task 'basetask' {
     schema = schema.atleast {
         vexid = schema.all(schema.str, schema.size {3}),
         description = schema.all {
@@ -99,29 +142,7 @@ task:task 'task' {
             schema.formatted {schema.datetime},
             derive = function(self, instance, context) return os.time() end
         },
-        status = schema.statemachine {
-            states = {
-                todo = {
-                    valid = {"doing"},
-                },
-                doing = {
-                    valid = {"done"},
-                },
-                done = {
-                    valid = {}
-                }
-            },
-            initial = 'todo'
-        },
         vexbody = schema.maybe {schema.str},
-        dependencies = schema.maybe {
-            schema.vec {
-                schema.all {
-                    schema.formatted {schema.vexlink},
-                    schema.constraint {acyclic}
-                }
-            }
-        },
         due = schema.maybe {schema.formatted {schema.datetime}},
         cost = schema.maybe {schema.num},
         benefit = schema.maybe {schema.num},
@@ -129,9 +150,18 @@ task:task 'task' {
     }
 }
 
-task:task 'abstract':extends 'task' {
+task:task 'task':extends 'basetask' {
+    schema = schema.atleast {
+        status = status(),
+        dependencies = dependencies()
+    }
+}
+
+task:task 'abstract':extends 'basetask' {
     schema = schema.atleast {
         vexbody = schema.maybe {schema.empty},
+        options = schema['nil'],
+        dependencies = schema['nil'],
         children = schema.default {
             schema.vec {
                 schema.all {
@@ -145,8 +175,9 @@ task:task 'abstract':extends 'task' {
     }
 }
 
-task:task 'decision':extends 'task' {
+task:task 'decision':extends 'basetask' {
     schema = schema.atleast {
+        status = status(),
         options = schema.vec {
             schema.formatted {schema.vexlink}
         },
@@ -160,20 +191,27 @@ task:task 'decision':extends 'task' {
                 }
             }
         },
-        children = schema.maybe {schema.empty}
+        children = schema['nil'],
+        dependencies = schema['nil']
     }
 }
 
-task:task 'exploration':extends 'task' {
+task:task 'exploration':extends 'basetask' {
     schema = schema.atleast {
+        status = status(),
+        dependencies = dependencies(),
         vexbody = schema.empty,
-        children = schema.maybe {schema.empty},
+        children = schema['nil'],
+        options = schema['nil'],
     }
 }
 
-task:task 'atom':extends 'task' {
+task:task 'atom':extends 'basetask' {
     schema = schema.atleast {
-        children = schema.maybe {schema.empty},
+        status = status(),
+        dependencies = dependencies(),
+        children = schema['nil'],
+        options = schema['nil'],
     }
 }
 
@@ -185,14 +223,14 @@ recipe:recipe 'abstract' {
 }
 
 task:transient 'wordcount' {
-    vextype = 'task',
+    vextype = 'basetask',
     definition = function(t)
         return select(2, t.description:gsub('%S+', ''))
     end
 }
 
 task:transient 'phase' {
-    vextype = 'task',
+    vextype = 'basetask',
     definition = function(t)
         local status = task:schemaof(t.vextype, 'status').specification
         local machine = statemachine.new(status.states, t.status, status.initial)
@@ -202,8 +240,34 @@ task:transient 'phase' {
     end
 }
 
+local function childphases(t)
+    local children = rawget(t, 'children')
+    if type(children) ~= "table" then children = {children} end
+    local indexed = func.ifilter(focus.focus('all'):get(), function(child)
+        return func.any(children, function(vexid) return vexid == child.vexid end)
+    end)
+    return func.imap(indexed, function(child) return child.phase end)
+end
+
+task:transient 'phase' {
+    vextype = 'abstract',
+    definition = function(t)
+        local phases = childphases(t)
+        if func.all(phases, function(phase) return phase == 'initial' end) then return 'initial' end
+        if func.all(phases, function(phase) return phase == 'final' end) then return 'final' end
+        return 'interim'
+    end
+}
+
+task:transient 'status' {
+    vextype = 'abstract',
+    definition = function(t)
+        return ({initial = 'todo', interim = 'doing', final = 'done'})[t.phase]
+    end
+}
+
 task:transient 'blockers' {
-    vextype = 'task',
+    vextype = 'basetask',
     definition = function(t)
         if not t.dependencies then return {} end
         local unfinished = {}
@@ -215,7 +279,7 @@ task:transient 'blockers' {
 }
 
 task:transient 'lineage' {
-    vextype = 'task',
+    vextype = 'basetask',
     definition = function(t)
         local ancestors = focus.focus(t.vexid):reversetree('children'):get()
         return func.reverse(func.imap(func.slice(ancestors, 2, 'end'), function(ancestor) return ancestor.vexid end))
@@ -223,21 +287,21 @@ task:transient 'lineage' {
 }
 
 task:transient 'path' {
-    vextype = 'task',
+    vextype = 'basetask',
     definition = function(t)
         return task:getcurrentpath(t.vexid)
     end
 }
 
 task:transient 'age' {
-    vextype = 'task',
+    vextype = 'basetask',
     definition = function(t)
         return t.created and math.floor((os.time() - t.created) / 86400)
     end
 }
 
 task:transient 'urgency' {
-    vextype = 'task',
+    vextype = 'basetask',
     definition = function(t)
         local ranked = focus.focus('final'):complement():groupby('owner'):orderby('due'):rn():filter('vexid', t.vexid):get()[1]
         return ranked and ranked.rn

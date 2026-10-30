@@ -11,6 +11,5 @@ children:
   - "[[write-list-fields-csv-view-1]]"
   - "[[cap-tabular-view-cells-terminal-1]]"
 created: "2026-10-19 07:34:55"
-modified: "2026-10-24 12:50:25"
-status: todo
+modified: "2026-10-29 11:29:38"
 ---
