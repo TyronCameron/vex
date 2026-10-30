@@ -112,10 +112,9 @@ Values are separated by `:`.
 | `--fuzzy field:value[:n]` | Tasks whose `field` contains `value` within `n` edits (default 3). |
 | `--nil field` | Tasks that hold no value for `field`, transients included: `--nil due`. |
 | `--between field:low:high` | Tasks with `low <= field <= high`. Leave `low` or `high` empty for an open side: `cost::9`. Dates may be `YYYY-MM-DD`. |
-| `--tree field` | The tasks and everything reachable by following `field`, such as `children`. |
-| `--reversetree field` | The tasks and everything that reaches them through `field`. |
-| `--backlinks` | The tasks that link to these tasks. |
-| `--forwardlinks` | The tasks these tasks link to. |
+| `--step field[:field...]` | The tasks one hop along `field`, such as `children`, `forwardlinks` or `backlinks`. |
+| `--tree field[:field...]` | The tasks and everything reachable by following `field`, hop after hop. |
+| `--reversetree field[:field...]` | The tasks and everything that reaches them through `field`. |
 | `--complement` | Every task not in the focus. |
 | `--union focus` | Tasks in either focus. |
 | `--intersect focus` | Tasks in both. |
@@ -126,6 +125,8 @@ Values are separated by `:`.
 | `--orderby field[:desc]:field...` | The tasks sorted by each field in turn, ascending unless followed by `desc`. Ties keep their order, and missing values sort last. |
 | `--groupby field[:desc]:field...` | The tasks in groups that share those fields' values, ordered as `--orderby` would order them. |
 | `--rn` | Each task numbered from 1 within its group, in the field `rn`. |
+
+With no field, `--step`, `--tree` and `--reversetree` follow every link a task holds. `backlinks` and `forwardlinks` are transients (the tasks linking to a task, and the tasks it links to), so `--tree backlinks` collects everything that depends on a task, directly or not.
 
 ### Grouping and ordering
 

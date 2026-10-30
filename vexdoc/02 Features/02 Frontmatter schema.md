@@ -38,6 +38,8 @@ Transients are fields vex works out each time they are read. They are never stor
 | `phase` | `initial`, `interim` or `final`: where `status` sits in the type's state machine. |
 | `blockers` | The vexids of the task's `dependencies` that are not `final` yet. |
 | `lineage` | The vexids of the abstracts above the task, root first. |
+| `backlinks` | The vexids of the tasks that link to the task. |
+| `forwardlinks` | The vexids of the tasks the task links to. |
 | `path` | Where the task file is. |
 | `age` | Whole days since `created`. |
 | `urgency` | The task's rank among its owner's open tasks by `due`, soonest first: 1 is the most urgent. Tasks without a due date rank last, and finished tasks have none. |

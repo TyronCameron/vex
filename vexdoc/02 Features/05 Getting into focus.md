@@ -1,4 +1,4 @@
-A focus is a saved query over your tasks. Most commands act on a focus, and `vex focus` builds one. This page is a cheatsheet, a reference for the named focuses, the snags to know about, and worked queries. The flags are described in full in [[01 CLI reference#Focuses]].
+A focus is a saved query over your tasks. Most commands act on a focus, and `vex focus` builds one. This page has a cheatsheet, the named focuses, the snags to know about and worked queries. [[01 CLI reference#Focuses]] describes every flag.
 
 ## Cheatsheet
 
@@ -15,12 +15,13 @@ A focus is a saved query over your tasks. Most commands act on a focus, and `vex
 | `--filter field:value` | Tasks where `field` equals `value`. |
 | `--fuzzy field:value[:n]` | Tasks where `field` contains `value`, give or take `n` typos. |
 | `--between field:low:high` | Tasks where `field` is in the range. Either end may be empty. |
+| `--nil field` | Tasks with no value for `field`. |
 | `--select a,b` | Only those fields. |
 | `--orderby field[:desc]` | Tasks sorted by those fields. |
 | `--groupby field` | Tasks in groups. Later flags work per group. |
 | `--rn` | Numbers each group's tasks from 1. |
-| `--tree field`, `--reversetree field` | The tasks plus everything below, or above, them through `field`. |
-| `--backlinks`, `--forwardlinks` | The tasks that link to these, or that these link to. |
+| `--step field` | The tasks one hop along `field`: `children`, `forwardlinks`, `backlinks`. |
+| `--tree field`, `--reversetree field` | The tasks plus everything reachable from, or reaching, them through `field`. |
 | `--union`, `--intersect`, `--xor`, `--notin`, `--onlyin`, `--complement` | Set operations. |
 | `--interpret` | Reads the next flag's values as phrases such as `next tuesday`. |
 
@@ -33,9 +34,9 @@ A focus starts from one of these:
 | `all` | Every task. |
 | `none` | No tasks. |
 | `updated` | Tasks modified since the index was last written. |
-| `initial` | Tasks in their type's first status (`todo`). |
-| `interim` | Tasks in between (`doing`). |
-| `final` | Tasks with no way out of their status (`done`). |
+| `initial` | Tasks in their type's first status: `todo`, and abstracts whose children are all untouched. |
+| `interim` | Tasks in between: abstracts with some children done. |
+| `final` | Tasks with no way out of their status: `done`, and abstracts whose children are all done. |
 | `ready` | Tasks that aren't `final` and have no `blockers`: work you can start now. |
 | `prev` | The saved focus. |
 | a vexid | That one task. |
@@ -53,7 +54,7 @@ A focus saves the steps that build it, not the tasks they found. Every command t
 ```console
 $ vex focus all --filter status:todo
 Focusing on 5 vexes
-$ vex set --status doing
+$ vex set --status done
 $ vex focus
 Current focus on 0 vexes
 ```
@@ -109,17 +110,25 @@ The examples use `vex get` for brevity. Replace it with `vex view tabular --sele
 ### Tasks ready to work on, most urgent first
 
 ```console
-$ vex focus ready --orderby urgency:due
+$ vex focus ready --nil children --orderby urgency:due
 $ vex view tabular --select owner,due,urgency
+┌─────────────────────────────┬─────────────────────┬───────┬─────────┐
+│ vexid                       │ due                 │ owner │ urgency │
+├─────────────────────────────┼─────────────────────┼───────┼─────────┤
+│ fix-flaky-webhook-retry-1   │ 2026-10-31 00:00:00 │ bob   │ 1       │
+│ tidy-readme-1               │                     │       │ 1       │
+│ migrate-existing-invoices-1 │ 2026-11-06 00:00:00 │ alice │ 2       │
+│ choose-payment-provider-1   │                     │       │ 3       │
+│ refunds-slow-1              │                     │       │ 4       │
+└─────────────────────────────┴─────────────────────┴───────┴─────────┘
 ```
 
-`ready` drops finished and blocked tasks. `urgency` ranks each owner's open tasks by `due`, so every owner's most urgent task comes first, then everyone's second, and `due` breaks ties.
+`ready` drops finished and blocked tasks, and `--nil children` drops abstracts, which nobody works on directly. `urgency` ranks each owner's open tasks by `due`, so everyone's most urgent task comes first, then everyone's second, and `due` breaks ties.
 
 ### Open decisions
 
 ```console
 $ vex focus all --filter vextype:decision --notin final
-Focusing on 1 vex
 ```
 
 `--notin final` drops decisions already `done`.
@@ -128,7 +137,6 @@ Focusing on 1 vex
 
 ```console
 $ vex focus all --filter vextype:exploration --notin final
-Focusing on 1 vex
 ```
 
 ### Tasks not under any abstract
@@ -137,45 +145,43 @@ Focusing on 1 vex
 $ vex focus all --filter vextype:abstract --tree children --complement
 Focusing on 4 vexes
 $ vex get
+refunds-slow-1
 choose-payment-provider-1
 old-finished-chore-1
 tidy-readme-1
-refunds-slow-1
 ```
 
-`--tree children` gathers every abstract and everything beneath it. `--complement` keeps the rest. Add `--notin final` to leave out finished tasks.
+`--tree children` gathers every abstract and everything beneath it, and `--complement` keeps the rest. Add `--notin final` to leave out finished tasks.
 
 ### Each owner's backlog
 
 ```console
-$ vex view ready tabular --groupby owner --orderby due --select owner,due,status
+$ vex view ready tabular --nil children --groupby owner --orderby due --select owner,due,status
 ┌───────────────────────────────┬─────────────────────┬───────┬────────┐
 │ vexid                         │ due                 │ owner │ status │
 ├───────────────────────────────┼─────────────────────┼───────┼────────┤
 │ owner: alice                                                         │
-│ │ migrate-existing-invoices-1 │ 2026-10-30 00:00:00 │ alice │ todo   │
+│ │ migrate-existing-invoices-1 │ 2026-11-06 00:00:00 │ alice │ todo   │
 │ owner: bob                                                           │
-│ │ fix-flaky-webhook-retry-1   │ 2026-10-30 00:00:00 │ bob   │ todo   │
+│ │ fix-flaky-webhook-retry-1   │ 2026-10-31 00:00:00 │ bob   │ todo   │
 │ owner:                                                               │
-│ │ ship-billing-rewrite-1      │                     │       │ todo   │
 │ │ tidy-readme-1               │                     │       │ todo   │
-│ │ refunds-slow-1              │                     │       │ todo   │
 │ │ choose-payment-provider-1   │                     │       │ todo   │
+│ │ refunds-slow-1              │                     │       │ todo   │
 └───────────────────────────────┴─────────────────────┴───────┴────────┘
 ```
 
-Tasks without an owner form their own group. Use `vex focus ready --groupby owner --orderby due --rn` to save it with a position in each backlog.
+Tasks without an owner form their own group. To save the backlog with each task's position in it, use `vex focus ready --nil children --groupby owner --orderby due --rn`.
 
 ### Close off an abstract
 
 ```console
-$ vex focus ship-billing-rewrite-1 --tree children --notin final
-Focusing on 4 vexes
-$ vex set --status doing
+$ vex focus ship-billing-rewrite-1 --tree children --nil children --notin final
+Focusing on 3 vexes
 $ vex set --status done
 ```
 
-`--tree children` takes the abstract and everything under it. Status moves one step at a time ([[06 Status and state machines]]), so `done` needs `doing` first, and `--notin final` leaves out tasks already done, which can't go back to `doing`. The focus is run again for each command, so the second `set` still sees the right tasks.
+`--tree children` takes the abstract and everything under it, `--nil children` keeps the tasks that are not abstracts, and `--notin final` leaves out those already done. An abstract has no status to set: it is `done` once all its children are ([[06 Status and state machines]]).
 
 ### Tasks created in the last week
 
@@ -183,4 +189,15 @@ $ vex set --status done
 $ vex focus all --interpret --between created:"1 week ago":now
 ```
 
-`--interpret` reads `1 week ago` and `now` as times. See [[01 CLI reference#Interpreting times]] for every phrase vex understands.
+`--interpret` reads `1 week ago` and `now` as times. See [[01 CLI reference#Interpreting times]] for the phrases vex understands.
+
+### Everything that depends on a task
+
+```console
+$ vex focus migrate-existing-invoices-1 --step backlinks
+Focusing on 2 vexes
+$ vex focus migrate-existing-invoices-1 --tree backlinks
+Focusing on 3 vexes
+```
+
+`--step` goes one hop, to the tasks that link directly to this one (its parent and a dependent). `--tree` keeps going until nothing links further up. Use `forwardlinks` for the other direction, and see [[08 Links and backlinks]].
