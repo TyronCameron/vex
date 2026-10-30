@@ -369,11 +369,9 @@ function TaskManager:index(vexid)
     vexdex:add(vexid, self.tasks[vexid])
 end
 
--- resolves a task, then every task linked to or from it that has not been resolved yet
-function TaskManager:resolvesingle(vexid, resolved)
+-- resolves one task and returns the vexids of the tasks linked to or from it, and of those it stopped linking to
+function TaskManager:resolvesingle(vexid)
     if not vexid then cli:throw('missing-required-field', vexid, 'vexid') end 
-    if resolved[vexid] then return end
-    resolved[vexid] = true
     event:trigger('pre-task-resolve', vexid)
 
     local previous = vexdex:get(vexid) or {}
@@ -410,21 +408,24 @@ function TaskManager:resolvesingle(vexid, resolved)
     vexdex:unsafe_link(vexid, context.links)
     vexdex:unsafe_add(vexid, task)
 
-    focus.focus(vexid):step('forwardlinks', 'backlinks'):each(function(linked)
-        self:resolvesingle(linked, resolved)
-    end)
-    for _, linked in ipairs(unlinked) do
-        if vexdex:get(linked) then self:resolvesingle(linked, resolved) end
-    end
     vexdex:writeindex()
     event:trigger('post-task-resolve', vexid, task)
+    return func.imerge(unlinked, func.imerge(task.forwardlinks, task.backlinks))
 end
 
 -- resolves the given tasks and everything linked to them, each once, writes the linked tasks and moves every file to where it belongs
 function TaskManager:resolveall(vexids)
-    local resolved, requested = {}, {}
-    for _, vexid in ipairs(vexids) do requested[vexid] = true end
-    for _, vexid in ipairs(vexids) do self:resolvesingle(vexid, resolved) end
+    local resolved, requested, pending = {}, {}, {}
+    for _, vexid in ipairs(vexids) do
+        requested[vexid] = true
+        table.insert(pending, vexid)
+    end
+    for _, vexid in ipairs(pending) do
+        if not resolved[vexid] and (requested[vexid] or vexdex:get(vexid)) then
+            resolved[vexid] = true
+            for _, linked in ipairs(self:resolvesingle(vexid)) do table.insert(pending, linked) end
+        end
+    end
     for vexid in pairs(resolved) do
         if not requested[vexid] then self:write(vexid) end
         self:move(vexid)
