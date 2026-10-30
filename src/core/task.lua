@@ -173,11 +173,6 @@ function TaskManager:transientof(vextype, name)
     end
 end
 
--- Get a table of tasks 
-function TaskManager:gettasks(focus)
-    
-end
-
 -- the vexids a task links to, held in any field its type's schemas validate as a vexlink
 function TaskManager:forwardlinks(task)
     local linked, seen = {}, {}
