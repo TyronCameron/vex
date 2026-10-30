@@ -256,6 +256,19 @@ function Schema:unapply(isoname, value, context)
     return transform(self, isoname, 'backward', value, Context.new(self, value, context))
 end
 
+-- every value that sits under a schema of the given name
+function Schema:collect(name, value, context)
+    if value == nil then return {} end
+    if self._name == name then return {value} end
+    if not self._iterate then return {} end
+    context = Context.new(self, value, context)
+    local found = {}
+    for childschema, childvalue in self:iterate(value, context) do
+        found = func.imerge(found, childschema:collect(name, childvalue, context))
+    end
+    return found
+end
+
 function Schema:get(data, path, isoname, context)
     local current_schema = self
     local current_value = data

@@ -457,6 +457,19 @@ describe("schema", function()
         assert.truthy(s:validate(s:prevalidate(nil)))
     end)
 
+    it("`collect` gathers the values that sit under a named schema, wherever they are nested", function()
+        local s = schema.atleast {
+            first = schema.maybe { schema.str },
+            many = schema.vec { schema.formatted { schema.str } },
+            count = schema.num
+        }
+        local found = s:collect('str', {first = "a", many = {"b", "c"}, count = 1})
+        table.sort(found)
+        assert.same({"a", "b", "c"}, found)
+        assert.same({}, s:collect('str', {count = 1}))
+        assert.same({1}, s:collect('num', {first = "a", count = 1}))
+    end)
+
     it("`apply` formats every element of a vec through its element's iso", function()
         local s = schema.maybe { schema.vec { schema.formatted { schema.datetime } } }
         assert.same({os.date("%Y-%m-%d %H:%M:%S", 0), os.date("%Y-%m-%d %H:%M:%S", 60)}, s:apply('format', {0, 60}))

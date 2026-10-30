@@ -453,16 +453,15 @@ describe("Focus", function()
             assert.same({"option", "decision"}, vexids(g:reversetree('children', 'options'):get()))
         end)
 
-        it("tree and reversetree follow every link when given no field", function()
-            local vexdex = require 'core.vexdex'
-            vexdex:unsafe_link("mid", {"leaf", "other"})
-            local f = Focus.new("mid", function() return {mid} end)
-            local reached = vexids(f:tree():get(linked))
-            table.sort(reached)
-            assert.same({"leaf", "mid", "other"}, reached)
-            local g = Focus.new("leaf", function() return {leaf} end)
-            assert.same({"leaf", "mid"}, vexids(g:reversetree():get(linked)))
-            vexdex:unsafe_remove("mid")
+        it("tree and reversetree follow forwardlinks like any other field", function()
+            local hub = {vexid = "hub", forwardlinks = {"leaf", "other"}}
+            local spoke = {vexid = "leaf", forwardlinks = {}}
+            local far = {vexid = "other", forwardlinks = {}}
+            Focus.getalltasks = function() return {hub, spoke, far} end
+            local f = Focus.new("hub", function() return {hub} end)
+            assert.same({"hub", "leaf", "other"}, vexids(f:tree('forwardlinks'):get()))
+            local g = Focus.new("leaf", function() return {spoke} end)
+            assert.same({"leaf", "hub"}, vexids(g:reversetree('forwardlinks'):get()))
         end)
 
         it("reversetree tolerates tasks without the field", function()
@@ -470,22 +469,36 @@ describe("Focus", function()
             assert.same({"other", "mid"}, vexids(f:reversetree('dependencies'):get(linked)))
         end)
 
-        it("backlinks collects the tasks that link to each task", function()
-            local vexdex = require 'core.vexdex'
-            vexdex:unsafe_link("mid", {"other"})
-            local f = Focus.new("other", function() return {other} end)
-            local result = vexids(f:backlinks():get(linked))
-            vexdex:unsafe_remove("mid")
-            assert.same({"mid"}, result)
+        it("step moves one hop along a field", function()
+            local f = Focus.new("root", function() return {root} end)
+            assert.same({"mid"}, vexids(f:step('children'):get(linked)))
+            assert.same({"leaf"}, vexids(f:step('children'):step('children'):get(linked)))
         end)
 
-        it("forwardlinks collects the tasks each task links to", function()
-            local vexdex = require 'core.vexdex'
-            vexdex:unsafe_link("mid", {"other"})
-            local f = Focus.new("mid", function() return {mid} end)
-            local result = vexids(f:forwardlinks():get(linked))
-            vexdex:unsafe_remove("mid")
-            assert.same({"other"}, result)
+        it("step follows several fields, visits each task once and skips ids that match no task", function()
+            local twin = {vexid = "twin", children = {"leaf", "ghost"}, dependencies = {"other"}}
+            local both = {mid, twin, leaf, other}
+            Focus.getalltasks = function() return both end
+            local f = Focus.new("both", function() return {mid, twin} end)
+            assert.same({"leaf", "other"}, vexids(f:step('children', 'dependencies'):get()))
+        end)
+
+        it("tree, reversetree and step need a field", function()
+            stub(cli, 'throw', function(self, name) error(name) end)
+            local f = Focus.new("root", function() return {root} end)
+            for _, operation in ipairs({'tree', 'reversetree', 'step'}) do
+                local ok, err = pcall(function() return f[operation](f) end)
+                assert.is_false(ok)
+                assert.truthy(err:find('usage', 1, true))
+            end
+            cli.throw:revert()
+        end)
+
+        it("step follows forwardlinks like any other field", function()
+            local hub = {vexid = "hub", forwardlinks = {"other", "leaf"}}
+            Focus.getalltasks = function() return {hub, leaf, other} end
+            local f = Focus.new("hub", function() return {hub} end)
+            assert.same({"other", "leaf"}, vexids(f:step('forwardlinks'):get()))
         end)
 
     end)

@@ -25,8 +25,6 @@
 | `vex recipe [recipe] Description [--fields...]` | Creates tasks from a recipe and focuses on them. With no recipe, lists the recipes. |
 | `vex autocomplete shell` | Prints a completion script for `bash`, `zsh`, `fish` or `powershell`. |
 | `vex suggest position words...` | Returns completions. The completion script calls it. |
-| `vex inline file` | Turns `#vex` tags in a file into tasks and links each tag to its task (see [[#Inline tags]]). |
-| `vex open [focus]` | Opens each task in the focus in your editor, at the tag that created it if there is one. |
 
 Every user mistake, such as an unknown focus or an invalid field, fails with a named error and a hint.
 
@@ -71,14 +69,14 @@ $ vex set plan-trip-1 --remove --children book-flights-1
 
 ## Focuses
 
-A focus is a lazy, saved query over your tasks. `vex focus` builds one and saves it, and other commands read it back when you don't give them a focus:
+A focus is a lazy, saved query over your tasks. `vex focus` builds and saves one, and other commands read it back when you give them none. [[05 Getting into focus]] has the details and worked examples:
 
 ```console
 $ vex focus all --filter status:done
 $ vex get --vexid --description
 ```
 
-Flags run in order, each one working on the result of the one before. The two commands below build the same focus as `vex focus all --filter status:done --select status,description`:
+Flags run in order, each on the result of the one before. These two commands build the same focus as `vex focus all --filter status:done --select status,description`:
 
 ```console
 $ vex focus all --filter status:done
@@ -112,10 +110,9 @@ Values are separated by `:`.
 | `--fuzzy field:value[:n]` | Tasks whose `field` contains `value` within `n` edits (default 3). |
 | `--nil field` | Tasks that hold no value for `field`, transients included: `--nil due`. |
 | `--between field:low:high` | Tasks with `low <= field <= high`. Leave `low` or `high` empty for an open side: `cost::9`. Dates may be `YYYY-MM-DD`. |
-| `--tree field` | The tasks and everything reachable by following `field`, such as `children`. |
-| `--reversetree field` | The tasks and everything that reaches them through `field`. |
-| `--backlinks` | The tasks that link to these tasks. |
-| `--forwardlinks` | The tasks these tasks link to. |
+| `--step field[:field...]` | The tasks one hop along `field`, such as `children`, `forwardlinks` or `backlinks`. |
+| `--tree field[:field...]` | The tasks and everything reachable by following `field`, hop after hop. |
+| `--reversetree field[:field...]` | The tasks and everything that reaches them through `field`. |
 | `--complement` | Every task not in the focus. |
 | `--union focus` | Tasks in either focus. |
 | `--intersect focus` | Tasks in both. |
@@ -126,6 +123,8 @@ Values are separated by `:`.
 | `--orderby field[:desc]:field...` | The tasks sorted by each field in turn, ascending unless followed by `desc`. Ties keep their order, and missing values sort last. |
 | `--groupby field[:desc]:field...` | The tasks in groups that share those fields' values, ordered as `--orderby` would order them. |
 | `--rn` | Each task numbered from 1 within its group, in the field `rn`. |
+
+`backlinks` and `forwardlinks` are transients (the tasks linking to a task, and the tasks it links to), so `--tree backlinks` collects everything that depends on a task, directly or not.
 
 ### Grouping and ordering
 
@@ -189,14 +188,3 @@ $ vex recipe abstract Ship v0.2
 ```
 
 A recipe creates one or more tasks with fields already filled in. vex ships `abstract`; add your own in `.vex/recipes` ([[04 Configuring recipes]]).
-
-## Inline tags
-
-Write a task where the work is, in any text file:
-
-```txt
--- #vex Handle a missing config file
--- #atom Retry the upload --due 2026-08-01
-```
-
-`vex inline <file>` creates a task for each new tag. The tag word sets the type (`#vex`, `#abstract`, `#atom`, `#explore`, `#decision`), the rest of the line works like `vex add`, and an indented tag becomes a child of the tag above it. vex then rewrites each tag to carry the task's vexid, so later runs update the same task, and `vex open` jumps from a task back to its tag.

@@ -98,9 +98,7 @@ cli:verb "resolve" {
             task:reindexall()
         end 
         local f = focus_pop_args(args)
-        f:each(function(vexid)
-            task:resolve(vexid)
-        end)
+        task:resolveall(func.imap(f:get(), function(t) return t.vexid end))
     end,
     doc = "Validates, updates and normalises fields and tasks",
     args = "[focus]",
@@ -132,9 +130,6 @@ cli:verb "remove" {
             table.insert(lines, pretty.any(vexid))
         end)
         vexdex:setfocus(nil)
-        focus.focus('all'):each(function(vexid)
-            task:resolve(vexid)
-        end)
         return join_lines(lines)
     end,
     doc = "Deletes tasks in the focus, and drops your focus. Runs resolve on all linked tasks thereafter. Not recommended for regular use.",

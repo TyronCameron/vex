@@ -48,6 +48,12 @@ function VexDex:remove(vexid)
     return self:writeindex()
 end
 
+function VexDex:linksto(vexid)
+    local sources = func.keys(self.backlinks[vexid] or {})
+    table.sort(sources)
+    return sources
+end
+
 function VexDex:unsafe_link(vexid, links)
     for target, sources in pairs(self.backlinks) do
         sources[vexid] = nil

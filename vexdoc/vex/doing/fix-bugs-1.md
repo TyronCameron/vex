@@ -10,6 +10,7 @@ children:
   - "[[reject-changing-vexid-named-1]]"
   - "[[write-list-fields-csv-view-1]]"
   - "[[cap-tabular-view-cells-terminal-1]]"
+  - "[[fix-show-printing-list-fields-1]]"
 created: "2026-10-19 07:34:55"
-modified: "2026-10-29 11:29:38"
+modified: "2026-10-30 01:33:49"
 ---

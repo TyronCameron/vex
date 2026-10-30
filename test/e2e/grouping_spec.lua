@@ -96,6 +96,40 @@ describe("vex grouped task paths (e2e, subprocess)", function()
     assert.is_false(helper.is_dir(dir .. "/" .. top))
   end)
 
+  it("moves a dependent between folders as the tasks it depends on finish", function()
+    groupby "{'blockers'}"
+    local first = vex(dir, "add", "Blocking", "first", "task")
+    local second = vex(dir, "add", "Blocking", "second", "task")
+    local dependent = vex(dir, "add", "Dependent", "task", "--dependencies", first .. "," .. second)
+    assert.is_true(exists(first .. "/" .. second .. "/" .. dependent .. ".md"))
+    vex(dir, "set", first, "--status", "done")
+    assert.is_true(exists(second .. "/" .. dependent .. ".md"))
+    vex(dir, "set", second, "--status", "done")
+    assert.is_true(exists(dependent .. ".md"))
+    assert.is_false(helper.is_dir(dir .. "/" .. second))
+  end)
+
+  it("moves a whole subtree when its root is reparented", function()
+    groupby "{'lineage'}"
+    local top, middle, leaf = family()
+    local other = vex(dir, "add", "Other", "root", "abstract", "--vextype", "abstract")
+    vex(dir, "set", top, "--remove", "--children", middle)
+    vex(dir, "set", other, "--insert", "--children", middle)
+    assert.is_true(exists(other .. "/" .. middle .. ".md"))
+    assert.is_true(exists(other .. "/" .. middle .. "/" .. leaf .. ".md"))
+    assert.is_false(helper.is_dir(dir .. "/" .. top))
+  end)
+
+  it("settles a link cycle without looping", function()
+    groupby "{'lineage'}"
+    local first = vex(dir, "add", "Cycle", "first", "--vextype", "abstract")
+    local second = vex(dir, "add", "Cycle", "second", "--vextype", "abstract")
+    helper.link(dir, first, "children", {second})
+    helper.link(dir, second, "children", {first})
+    local result = helper.run_vex(dir, {"resolve", "all"})
+    assert.is_nil(result.stderr:find("Internal error", 1, true), result.stderr)
+  end)
+
   it("moves a task between folders when the grouped field changes", function()
     groupby "{'status'}"
     local vexid = vex(dir, "add", "Status", "grouped", "task")

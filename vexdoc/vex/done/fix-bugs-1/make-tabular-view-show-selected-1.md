@@ -3,7 +3,7 @@ vexid: make-tabular-view-show-selected-1
 vextype: atom
 description: Make the tabular view show only selected fields
 created: "2026-10-19 09:21:47"
-modified: "2026-10-19 09:22:56"
+modified: "2026-10-30 01:33:49"
 status: done
 ---
 
