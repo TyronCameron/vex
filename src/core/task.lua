@@ -376,6 +376,7 @@ function TaskManager:resolvesingle(vexid, resolved)
     resolved[vexid] = true
     event:trigger('pre-task-resolve', vexid)
 
+    local previous = vexdex:get(vexid) or {}
     local task = self:getsingle(vexid) or {}
     if not task.vextype then cli:throw('missing-required-field', task.vexid, 'vextype') end 
 
@@ -386,7 +387,7 @@ function TaskManager:resolvesingle(vexid, resolved)
         vexid = vexid,
         taskmanager = self, 
         task = task, 
-        previous = vexdex:get(vexid) or {},
+        previous = previous,
         links = {},
     }
 
@@ -402,7 +403,9 @@ function TaskManager:resolvesingle(vexid, resolved)
         if not derive(parent, task, context) then cli:throw('resolution-failed-derivation', vexid) end 
     end 
 
-    local unlinked = vexdex:unlinked(vexid, context.links)
+    local unlinked = func.ifilter(previous.forwardlinks or {}, function(target)
+        return not func.any(context.links, function(link) return link == target end)
+    end)
     self.tasks[vexid] = task
     vexdex:unsafe_link(vexid, context.links)
     vexdex:unsafe_add(vexid, task)
