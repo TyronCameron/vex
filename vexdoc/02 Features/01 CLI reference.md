@@ -140,7 +140,6 @@ Values are separated by `:`.
 | `--xor focus` | Tasks in exactly one. |
 | `--notin focus` | Tasks in this focus but not the other. |
 | `--onlyin focus` | Tasks in the other focus but not this one. |
-| `--interpret` | Reads the next flag's values as natural-language times (see below). |
 | `--orderby field[:desc]:field...` | The tasks sorted by each field in turn, ascending unless followed by `desc`. Ties keep their order, and missing values sort last. |
 | `--groupby field[:desc]:field...` | The tasks in groups that share those fields' values, ordered as `--orderby` would order them. |
 | `--rn` | Each task numbered from 1 within its group, in the field `rn`. |
@@ -169,12 +168,12 @@ Commands and views list the groups one after another, and the `tabular` view giv
 
 ### Interpreting times
 
-Dates and times can be written as phrases, read relative to now: in `add` and `set` (`--due "friday arvo"`), in a hand-edited task file, and in focus values. `--interpret` before `--filter` or `--between` reads that flag's values through each field's interpret iso:
+Dates and times can be written as phrases, read relative to now: in `add` and `set` (`--due "friday arvo"`), in a hand-edited task file, and in focus values:
 
 ```console
-$ vex focus all --interpret --between due:now:"next tuesday"
-$ vex focus all --interpret --between due::yesterday
-$ vex focus all --interpret --filter due:tomorrow
+$ vex focus all --between due:now:"next tuesday"
+$ vex focus all --between due::yesterday
+$ vex focus all --filter due:tomorrow
 ```
 
 A saved focus is read again each time it is used, so "next tuesday" always means the coming Tuesday. Phrases combine a day, a time of day and an offset, in any order:

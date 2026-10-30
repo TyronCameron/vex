@@ -24,7 +24,6 @@ A focus is a saved query over your tasks. `vex focus` builds one and most other 
 | `--step field` | The tasks one hop along `field`: `children`, `forwardlinks`, `backlinks`. |
 | `--tree field`, `--reversetree field` | The tasks plus everything reachable from, or reaching, them through `field`. |
 | `--union`, `--intersect`, `--xor`, `--notin`, `--onlyin`, `--complement` | Set operations. |
-| `--interpret` | Reads the next flag's values as phrases such as `next tuesday`. |
 
 ## Named focuses
 
@@ -60,7 +59,7 @@ $ vex focus
 Current focus on 0 vexes
 ```
 
-The same goes for phrases: a saved `--interpret --between due:now:"next tuesday"` always means the coming Tuesday.
+The same goes for phrases: a saved `--between due:now:"next tuesday"` always means the coming Tuesday.
 
 ### `prev` is the default
 
@@ -186,10 +185,10 @@ $ vex set --status done
 ### Tasks created in the last week
 
 ```console
-$ vex focus all --interpret --between created:"1 week ago":now
+$ vex focus all --between created:"1 week ago":now
 ```
 
-`--interpret` reads `1 week ago` and `now` as times. See [[01 CLI reference#Interpreting times]] for the phrases vex understands.
+`--between` reads `1 week ago` and `now` as times. See [[01 CLI reference#Interpreting times]] for the phrases vex understands.
 
 ### Everything that depends on a task
 
