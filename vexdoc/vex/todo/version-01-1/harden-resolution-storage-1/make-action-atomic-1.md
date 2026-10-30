@@ -3,7 +3,7 @@ vexid: make-action-atomic-1
 vextype: atom
 description: Consider making every action atomic
 created: "2026-10-30 04:17:57"
-modified: "2026-10-30 05:34:47"
+modified: "2026-10-30 07:09:14"
 status: todo
 ---
 **Undecided.** This is a place to weigh the idea, not a commitment, and nothing tests it. Decide first whether vex should guarantee that a command either writes everything or nothing.

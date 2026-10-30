@@ -31,7 +31,7 @@ When a command starts, vex loads the index from `.vex/vexdex`. If the folder or 
 $ vex resolve all
 ```
 
-This clears the index, reads every task file under `taskfolder` and resolves each. It stops, changing nothing, if a file starts a frontmatter (`---`) but can't be read, or if two files hold the same vexid. Markdown files without frontmatter are ignored.
+This clears the index, reads every task file under `taskfolder` and resolves each. It stops, changing nothing, if two files hold the same vexid. Files it can't read, and files whose frontmatter holds no `vexid` (such as notes from other Obsidian plugins), are ignored.
 
 ## See also
 

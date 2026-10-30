@@ -16,7 +16,7 @@ Every task is validated against the schema of its `vextype` and of each type tha
 | `owner` | text | Optional. Must be one of the `taskowners` in `.vex/config.lua`. |
 | `dependencies` | list of links | Optional. Each entry must be an existing task without `children` or `options`, and dependencies can't form a cycle. |
 
-Datetimes are stored as timestamps and written as `YYYY-MM-DD HH:MM:SS`. vex reads `YYYY-MM-DD HH:MM:SS` (a `T` may replace the space), `YYYY-MM-DD`, or a phrase such as `tomorrow 8am`, relative to the moment the task is resolved ([[01 CLI reference#Interpreting times]]). A value it can't read fails resolution with an error naming the unknown words, and the task file is left as it was. Links are written as `[[vexid]]`, so the task files form an Obsidian vault.
+Datetimes are stored as timestamps and written as `YYYY-MM-DD HH:MM:SS`. vex reads `YYYY-MM-DD HH:MM:SS` (a `T` may replace the space, the seconds may be left out, and a `Z` or `+HH:MM` zone may follow), `YYYY-MM-DD`, or a phrase such as `tomorrow 8am`, relative to the moment the task is resolved ([[01 CLI reference#Interpreting times]]). A value it can't read fails resolution with an error naming the unknown words, and the task file is left as it was. Links are written as `[[vexid]]`, so the task files form an Obsidian vault.
 
 ## Fields by type
 

@@ -57,6 +57,28 @@ describe("vex storage (e2e, subprocess)", function()
     assert.truthy(vex(dir, "get", vexid, "--cost"):find("9", 1, true))
   end)
 
+  it("keeps fields written by other tools through a set", function()
+    local vexid = vex(dir, "add", "Shared", "with", "tasknotes")
+    local path = dir .. "/" .. vexid .. ".md"
+    helper.write_file(path, helper.read_file(path):gsub("\nstatus: todo\n",
+      '\nstatus: todo\ncontexts: [office, "home, garden"]\nblockedBy:\n  - uid: "[[other]]"\n    reltype: FINISHTOSTART\ndue: 2026-10-01T08:00:00+02:00\n'))
+    vex(dir, "resolve", "all")
+    vex(dir, "set", vexid, "--cost", "1")
+    local content = helper.read_file(path)
+    assert.truthy(content:find('contexts: \n  - office\n  - "home, garden"\n', 1, true))
+    assert.truthy(content:find('blockedBy: \n  - \n    reltype: FINISHTOSTART\n    uid: "[[other]]"\n', 1, true))
+    assert.truthy(content:find('\ndue: "2026-10-01 ', 1, true))
+  end)
+
+  it("ignores files in the task folder that are not readable tasks", function()
+    local vexid = vex(dir, "add", "Real", "task", "here")
+    helper.write_file(dir .. "/Buy groceries.md", "---\ntitle: Buy groceries\nstatus: todo\n---\n")
+    helper.write_file(dir .. "/broken.md", "---\nvexid: broken-1\ndescription: never closed\n")
+    vex(dir, "resolve", "all")
+    assert.truthy(vex(dir, "focus", "all"):find("Focusing on 1 vex", 1, true))
+    assert.truthy(vex(dir, "show", vexid):find("Real task here", 1, true))
+  end)
+
   it("keeps a hand-written natural-language time until vex next writes the task as a date", function()
     local vexid = vex(dir, "add", "Hand", "dated", "task")
     local path = dir .. "/" .. vexid .. ".md"

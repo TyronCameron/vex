@@ -4,7 +4,55 @@ local function parse_yaml_value(s)
     if s == "false" then return false end
     local n = tonumber(s)
     if n then return n end
+    local flow = not s:match("^%[%[") and s:match("^%[(.*)%]$")
+    if flow then
+        local list = {}
+        if flow:match("^%s*$") then return list end
+        for quote, item in (flow .. ","):gmatch('%s*(["\']?)(.-)%1%s*,') do
+            list[#list + 1] = quote == "" and parse_yaml_value(item) or item
+        end
+        return list
+    end
     return (s:match('^"(.*)"$') or s:match("^'(.*)'$") or s)
+end
+
+local function keyvalue(s)
+    local key, value = s:match("^([^\"'%[{][^:]-):%s+(.*)$")
+    if key then return key, value end
+    key = s:match("^([^\"'%[{][^:]-):$")
+    return key, key and ""
+end
+
+local parseblock
+
+local function parseentry(lines, i, indent, value)
+    local nextline = lines[i + 1]
+    if value ~= "" then return parse_yaml_value(value), i + 1 end
+    if nextline and (nextline.indent > indent or nextline.indent == indent and nextline.text:match("^%-")) then
+        return parseblock(lines, i + 1, nextline.indent)
+    end
+    return nil, i + 1
+end
+
+function parseblock(lines, i, indent)
+    local isseq = lines[i].text:match("^%-") ~= nil
+    local block = {}
+    while lines[i] and lines[i].indent == indent and (lines[i].text:match("^%-") ~= nil) == isseq do
+        if isseq then
+            local dash, item = lines[i].text:match("^(%-%s*)(.*)$")
+            if keyvalue(item) then
+                lines[i] = {indent = indent + #dash, text = item}
+                block[#block + 1], i = parseblock(lines, i, indent + #dash)
+            else
+                block[#block + 1], i = parseentry(lines, i, indent + 1, item)
+            end
+        else
+            local key, value = keyvalue(lines[i].text)
+            if not key then break end
+            block[key], i = parseentry(lines, i, indent, value)
+        end
+    end
+    return block, i
 end
 
 local function to_yaml_value(v, indent)
@@ -25,9 +73,12 @@ local function to_yaml_value(v, indent)
             end
             return "\n" .. table.concat(lines, "\n")
         else
+            local keys = {}
+            for k in pairs(v) do keys[#keys + 1] = k end
+            table.sort(keys)
             local lines = {}
-            for k, val in pairs(v) do
-                lines[#lines + 1] = inner .. k .. ": " .. to_yaml_value(val, inner)
+            for _, k in ipairs(keys) do
+                lines[#lines + 1] = inner .. k .. ": " .. to_yaml_value(v[k], inner)
             end
             return "\n" .. table.concat(lines, "\n")
         end
@@ -48,31 +99,19 @@ return {
 
         if not content:match("^%-%-%-\n") then return nil end
 
-        local task = {}
         local frontmatter, body = content:match("^%-%-%-\n(.-)\n%-%-%-\n(.*)$")
         assert(frontmatter, "the frontmatter is never closed")
         frontmatter = frontmatter:match("^%s*(.-)%s*$")
         assert(#frontmatter > 0, "frontmatter must not be empty")
 
-        if frontmatter then
-            local lastkey = nil
-            for line in frontmatter:gmatch("[^\n]+") do
-                local item = line:match("^%s+%-%s*(.*)$")
-                if item and lastkey then
-                    if type(task[lastkey]) ~= "table" then task[lastkey] = {} end
-                    table.insert(task[lastkey], parse_yaml_value(item))
-                else
-                    local key, value = line:match("^([%w_]+):%s*(.*)$")
-                    if key then
-                        task[key] = (value == "[]") and {} or parse_yaml_value(value)
-                        lastkey = key
-                    end
-                end
-            end
-            task.vexbody = body
-        else
-            task.vexbody = content
+        local lines = {}
+        for line in frontmatter:gmatch("[^\n]+") do
+            local indent, text = line:match("^(%s*)(.-)%s*$")
+            if text ~= "" and not text:match("^#") then lines[#lines + 1] = {indent = #indent, text = text} end
         end
+        local task, nextline = parseblock(lines, 1, lines[1].indent)
+        assert(nextline > #lines, "cannot read the line `" .. tostring(lines[nextline] and lines[nextline].text) .. "`")
+        task.vexbody = body
 
         return task
     end,
