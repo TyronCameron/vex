@@ -420,15 +420,15 @@ function TaskManager:resolvesingle(vexid, resolved)
     event:trigger('post-task-resolve', vexid, task)
 end
 
--- resolves the given tasks and everything linked to them, each once, writes the linked tasks and files them where they belong
+-- resolves the given tasks and everything linked to them, each once, writes the linked tasks and moves every file to where it belongs
 function TaskManager:resolveall(vexids)
     local resolved, requested = {}, {}
     for _, vexid in ipairs(vexids) do requested[vexid] = true end
     for _, vexid in ipairs(vexids) do self:resolvesingle(vexid, resolved) end
     for vexid in pairs(resolved) do
         if not requested[vexid] then self:write(vexid) end
+        self:move(vexid)
     end
-    self:arrange(resolved)
 end
 
 function TaskManager:resolve(vexid)
@@ -568,11 +568,6 @@ function TaskManager:move(vexid)
     vexdex:unsafe_locate(vexid, relpath)
     event:trigger('post-task-move', vexid, from, to)
     return vexid
-end
-
--- moves the files of the given tasks to where they should live
-function TaskManager:arrange(vexids)
-    for vexid in pairs(vexids) do self:move(vexid) end
 end
 
 -- deletes a file from disk

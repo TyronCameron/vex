@@ -3,7 +3,7 @@ How a task goes from `vex add` to a file on disk, and what else moves when it do
 ## add, resolve, write
 
 1. **`TaskManager:add`** makes a vexid with the `tagger` plugin and holds the new task in memory only.
-2. **`TaskManager:resolve`** runs the schema of the task's type and of each type it extends, from the root down. Each schema runs three steps: normalise (fill defaults, convert values), validate, and derive (compute fields, record links). A failure throws a named `resolution-failed-*` error and nothing is written. Resolution then indexes the task and **arranges** files (below).
+2. **`TaskManager:resolve`** runs the schema of the task's type and of each type it extends, from the root down. Each schema runs three steps: normalise (fill defaults, convert values), validate, and derive (compute fields, record links). A failure throws a named `resolution-failed-*` error and nothing is written. Resolution then indexes the task and moves files into place (below).
 3. **`TaskManager:write`** formats the task back to its readable form (a timestamp becomes `YYYY-MM-DD HH:MM:SS`, a vexid becomes `[[vexid]]`), writes it through the `taskformat` plugin to a temporary file and renames it into place ([[The index]]).
 
 `add`, `set` and `recipe` do all three. `vex resolve all` first rebuilds the index from the files on disk (`TaskManager:reindexall`), then resolves each.
@@ -18,7 +18,7 @@ Resolving a task also resolves every task linked to it or from it, and every tas
 
 ## Arranging files
 
-A task's file belongs where the `taskpath` plugin puts it, which with `paths.groupby` depends on its fields and its ancestors. After the cascade, `TaskManager:arrange` moves each resolved task's file there. So a parent's change moves its children, and a finished dependency moves its dependents. A move that is already in place does nothing, and emptied folders are removed.
+A task's file belongs where the `taskpath` plugin puts it, which with `paths.groupby` depends on its fields and its ancestors. After the cascade, `TaskManager:move` puts each resolved task's file there. So a parent's change moves its children, and a finished dependency moves its dependents. A move that is already in place does nothing, and emptied folders are removed.
 
 ## Removing
 
