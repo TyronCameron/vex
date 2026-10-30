@@ -53,7 +53,7 @@ describe("vex resolution never loses or skips data (e2e, subprocess)", function(
     assert.equal(0, count("--filter", "cost:9"), "vex get indexed an unresolved file")
   end)
 
-  it("does not commit the tasks before a failing one when setting a focus " .. AUDIT, function()
+  it("does not commit the tasks before a failing one when setting a focus (make-action-atomic-1)", function()
     local first = vex(dir, "add", "First", "of", "focus")
     local second = vex(dir, "add", "Second", "of", "focus")
     local third = vex(dir, "add", "Third", "of", "focus", "--vextype", "atom")
@@ -75,5 +75,23 @@ describe("vex resolution never loses or skips data (e2e, subprocess)", function(
     assert.is_true(result.code ~= 0, "expected the set to fail")
     assert.equal(before, helper.read_file(path(child)))
     assert.equal(0, count("--filter", "vextype:abstract") - 1, "the index kept the change the file did not")
+  end)
+
+  it("saves nothing to the index when resolve all fails " .. AUDIT, function()
+    local ok = vex(dir, "add", "Fine", "task", "here", "--cost", "1")
+    local bad = vex(dir, "add", "Bad", "task", "here", "--cost", "1")
+    local index = dir .. "/.vex/vexdex/index.bin"
+    local before = helper.read_file(index)
+    edit(bad, "\ncost: 1\n", "\ncost: lots\n")
+    edit(ok, "\ncost: 1\n", "\ncost: 2\n")
+    local result = helper.run_vex(dir, {"resolve", "all"})
+    assert.is_true(result.code ~= 0)
+    assert.equal(before, helper.read_file(index))
+  end)
+
+  it("saves the index once a command succeeds " .. AUDIT, function()
+    local vexid = vex(dir, "add", "Saved", "task", "here", "--cost", "1")
+    vex(dir, "set", vexid, "--cost", "5")
+    assert.equal(1, count("--filter", "cost:5"))
   end)
 end)

@@ -21,13 +21,15 @@ function VexDex.new(path)
         modified = os.time(),
         index = {},
         backlinks = {},
-        paths = {}
+        paths = {},
+        dirty = false
     }, VexDex)
     return this:ensureindex()
 end
 
 function VexDex:unsafe_add(vexid, storage)
     self.index[vexid] = storage
+    self.dirty = true
     return self
 end
 
@@ -40,6 +42,7 @@ function VexDex:unsafe_remove(vexid)
     self.index[vexid] = nil
     self.backlinks[vexid] = nil
     self.paths[vexid] = nil
+    self.dirty = true
     return self:unsafe_link(vexid, {})
 end
 
@@ -55,6 +58,7 @@ function VexDex:linksto(vexid)
 end
 
 function VexDex:unsafe_link(vexid, links)
+    self.dirty = true
     for target, sources in pairs(self.backlinks) do
         sources[vexid] = nil
         if next(sources) == nil then self.backlinks[target] = nil end
@@ -72,6 +76,7 @@ function VexDex:link(vexid, links)
 end
 
 function VexDex:unsafe_locate(vexid, path)
+    if self.paths[vexid] ~= path then self.dirty = true end
     self.paths[vexid] = path
     return self
 end
@@ -132,6 +137,7 @@ function VexDex:writeindex()
     self:atomic(self:vexpath("vexdex/paths.lua"), function(path)
         pretty.write(path, self.paths)
     end)
+    self.dirty = false
     return self 
 end
 
@@ -214,6 +220,7 @@ event:register('*', 'vexdex', function(name, ...)
     local time = os.date("%Y-%m-%d %H:%M:%S")
     vexdex:log("event-log.txt", time .. "\t" .. name .. "\t" .. pretty.table({...}):gsub("\n%s*", " "))
     local args = ...
+    if name:match("^post%-verb%-") and vexdex.dirty then vexdex:writeindex() end
     if name:match("^pre%-verb%-") and args.raw then
         vexdex:log("verb-log.txt", time .. "\t" .. args.raw)
         vexdex:trimlog("verb-log.txt", limit):trimlog("event-log.txt", limit)

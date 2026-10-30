@@ -17,6 +17,10 @@ With `paths.groupby` set, a file's location depends on its fields and on other t
 
 Every write goes through `VexDex:atomic`. The data is written to a new file in `.vex/tmp` and then renamed into place, so an interrupted write never leaves a half-written file. If the rename fails, vex stops with the `write` error and leaves the data in `.vex/tmp`.
 
+## When the index is saved
+
+Commands change the index in memory as they go and save it once, when the command finishes successfully. A command that fails, because a task doesn't validate or a file can't be read, saves nothing, so the index on disk is never left half-updated. Reading a task never changes the index: only resolving, writing and `vex resolve all` do, so a file you edited by hand is not in the index until it is resolved.
+
 ## Loading and rebuilding
 
 When a command starts, vex loads the index from `.vex/vexdex`. If the folder or the index doesn't exist yet, as in a fresh clone, vex creates it, starting empty.
@@ -27,7 +31,7 @@ When a command starts, vex loads the index from `.vex/vexdex`. If the folder or 
 $ vex resolve all
 ```
 
-This clears the index, reads and resolves every task file under `taskfolder`, and writes the index again.
+This clears the index, reads every task file under `taskfolder` and resolves each. It stops, changing nothing, if a file starts a frontmatter (`---`) but can't be read, or if two files hold the same vexid. Markdown files without frontmatter are ignored.
 
 ## See also
 

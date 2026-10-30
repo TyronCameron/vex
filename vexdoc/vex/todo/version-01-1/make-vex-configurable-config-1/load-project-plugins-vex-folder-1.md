@@ -3,7 +3,7 @@ vexid: load-project-plugins-vex-folder-1
 vextype: atom
 description: Load project plugins from the vex folder
 created: "2026-10-19 09:21:53"
-modified: "2026-10-30 03:20:23"
+modified: "2026-10-30 04:18:18"
 status: todo
 ---
 

@@ -3,7 +3,7 @@ vexid: enable-disable-standalone-1
 vextype: atom
 description: Enable and disable standalone plugins from config
 created: "2026-10-19 09:21:53"
-modified: "2026-10-30 03:20:23"
+modified: "2026-10-30 04:18:18"
 status: todo
 ---
 

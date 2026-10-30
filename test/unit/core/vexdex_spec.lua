@@ -142,4 +142,37 @@ describe("vexdex", function()
 
     end)
 
+    describe("saving", function()
+        local event = require 'lib.event'
+
+        before_each(function() vexdex:writeindex() end)
+
+        it("is dirty once the index changes and clean once it is written", function()
+            assert.is_false(vexdex.dirty)
+            vexdex:unsafe_add("__dirty", {vexid = "__dirty"})
+            assert.is_true(vexdex.dirty)
+            vexdex:writeindex()
+            assert.is_false(vexdex.dirty)
+            vexdex:remove("__dirty")
+        end)
+
+        it("stays clean when a task is located where it already is", function()
+            vexdex:unsafe_locate("__where", "a/__where.md"):writeindex()
+            vexdex:unsafe_locate("__where", "a/__where.md")
+            assert.is_false(vexdex.dirty)
+            vexdex:unsafe_locate("__where", "b/__where.md")
+            assert.is_true(vexdex.dirty)
+            vexdex:remove("__where")
+        end)
+
+        it("does not reach the disk until a verb finishes", function()
+            vexdex:unsafe_add("__staged", {vexid = "__staged"})
+            assert.is_nil(vexdex.new(vexdex.path):get("__staged"))
+            event:trigger('post-verb-get', {}, nil)
+            assert.same({vexid = "__staged"}, vexdex.new(vexdex.path):get("__staged"))
+            assert.is_false(vexdex.dirty)
+            vexdex:remove("__staged")
+        end)
+    end)
+
 end)
