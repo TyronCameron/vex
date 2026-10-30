@@ -370,7 +370,7 @@ function TaskManager:index(vexid)
 end
 
 -- resolves a task, then every task linked to or from it that has not been resolved yet
-function TaskManager:resolvetask(vexid, resolved)
+function TaskManager:resolvesingle(vexid, resolved)
     if not vexid then cli:throw('missing-required-field', vexid, 'vexid') end 
     if resolved[vexid] then return end
     resolved[vexid] = true
@@ -408,10 +408,10 @@ function TaskManager:resolvetask(vexid, resolved)
     vexdex:unsafe_add(vexid, task)
 
     focus.focus(vexid):step('forwardlinks', 'backlinks'):each(function(linked)
-        self:resolvetask(linked, resolved)
+        self:resolvesingle(linked, resolved)
     end)
     for _, linked in ipairs(unlinked) do
-        if vexdex:get(linked) then self:resolvetask(linked, resolved) end
+        if vexdex:get(linked) then self:resolvesingle(linked, resolved) end
     end
     vexdex:writeindex()
     event:trigger('post-task-resolve', vexid, task)
@@ -421,7 +421,7 @@ end
 function TaskManager:resolveall(vexids)
     local resolved, requested = {}, {}
     for _, vexid in ipairs(vexids) do requested[vexid] = true end
-    for _, vexid in ipairs(vexids) do self:resolvetask(vexid, resolved) end
+    for _, vexid in ipairs(vexids) do self:resolvesingle(vexid, resolved) end
     for vexid in pairs(resolved) do
         if not requested[vexid] then self:write(vexid) end
     end
