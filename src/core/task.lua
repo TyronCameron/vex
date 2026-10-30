@@ -26,6 +26,10 @@ local Task = {}
 
 function Task:__index(key)
     if Task[key] then return Task[key] end
+    if key == 'vexbody' then
+        local held = taskmanager:getsingle(rawget(self, 'vexid'))
+        return held and rawget(held, 'vexbody')
+    end
     local transient = taskmanager:transientof(rawget(self, 'vextype'), key)
     return transient and transient.definition(self)
 end

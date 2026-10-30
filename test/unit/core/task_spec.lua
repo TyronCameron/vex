@@ -424,6 +424,30 @@ describe("task", function()
 
     end)
 
+    describe("body", function()
+
+        local function reloaded(vexid)
+            local plain = {}
+            for field, value in pairs(vexdex:get(vexid)) do
+                if field ~= 'vexbody' then plain[field] = value end
+            end
+            local entry = setmetatable(plain, getmetatable(vexdex:get(vexid)))
+            task.tasks[vexid] = nil
+            return entry
+        end
+
+        it("is read from the task file when the index entry holds none", function()
+            local vexid = create({description = "body kept in file task", vexbody = "kept in the file"})
+            assert.equal("kept in the file", reloaded(vexid).vexbody)
+        end)
+
+        it("is empty for a task whose file has no body", function()
+            local vexid = create({description = "no body in file task"})
+            assert.equal("", reloaded(vexid).vexbody or "")
+        end)
+
+    end)
+
     describe("reading and rebuilding", function()
 
         local function handmade(properties)

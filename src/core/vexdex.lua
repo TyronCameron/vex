@@ -114,7 +114,9 @@ function VexDex:readindex()
 end
 
 local function data(task)
-    return func.map(task, function(value) return value end)
+    local plain = func.map(task, function(value) return value end)
+    plain.vexbody = nil
+    return plain
 end
 
 function VexDex:writeindex()
@@ -123,7 +125,7 @@ function VexDex:writeindex()
         binser.writeFile(path, func.map(self.index, data))
     end)
     self:atomic(self:vexpath("vexdex/index.lua"), function(path)
-        pretty.write(path, self.index)
+        pretty.write(path, func.map(self.index, data))
     end)
     self:atomic(self:vexpath("vexdex/backlinks.bin"), function(path)
         binser.writeFile(path, self.backlinks)

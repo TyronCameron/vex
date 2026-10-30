@@ -45,7 +45,7 @@ $ vex view all tabular --groupby vextype:status --orderby vexid --select vextype
 
 ## `csv`
 
-The same data as comma-separated values, quoted where needed, for spreadsheets, `duckdb` or scripts:
+The same data as comma-separated values, quoted where needed, for spreadsheets, `duckdb` or scripts. Like the other views it leaves out the body, which lives only in the task file:
 
 ```console
 $ vex view all csv > tasks.csv
@@ -53,7 +53,7 @@ $ vex view all csv > tasks.csv
 
 ## `json`
 
-The tasks as a JSON array.
+The tasks as a JSON array, without their bodies.
 
 ## `kanban`
 
