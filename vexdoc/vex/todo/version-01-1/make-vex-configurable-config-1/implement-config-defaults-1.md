@@ -3,7 +3,7 @@ vexid: implement-config-defaults-1
 vextype: atom
 description: "Choose each plugin slot's active member from config.lua"
 created: "2026-07-06 12:00:00"
-modified: "2026-10-30 03:17:28"
+modified: "2026-10-30 03:20:23"
 status: todo
 ---
 

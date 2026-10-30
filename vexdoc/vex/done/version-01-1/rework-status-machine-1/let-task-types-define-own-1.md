@@ -3,7 +3,7 @@ vexid: let-task-types-define-own-1
 vextype: atom
 description: Let task types define their own statuses as subtypes of todo doing and done
 created: "2026-10-19 20:55:58"
-modified: "2026-10-30 03:17:27"
+modified: "2026-10-30 03:20:23"
 status: done
 ---
 

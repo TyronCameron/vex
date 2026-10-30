@@ -3,7 +3,7 @@ vexid: publish-vexdoc-hugo-site-github-1
 vextype: atom
 description: Publish vexdoc as a Hugo site on GitHub Pages
 created: "2026-10-19 09:26:52"
-modified: "2026-10-30 03:17:28"
+modified: "2026-10-30 03:20:22"
 status: done
 ---
 
