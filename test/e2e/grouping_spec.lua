@@ -63,6 +63,20 @@ describe("vex grouped task paths (e2e, subprocess)", function()
     assert.is_true(exists(top .. "/" .. middle .. "/" .. leaf .. ".md"))
   end)
 
+  it("moves an abstract between status folders as its children progress", function()
+    groupby "{'status'}"
+    local parent = vex(dir, "add", "Status", "parent", "--vextype", "abstract")
+    local child = vex(dir, "add", "Status", "child", "task")
+    local sibling = vex(dir, "add", "Status", "sibling", "task")
+    vex(dir, "set", parent, "--insert", "--children", child .. "," .. sibling)
+    assert.is_true(exists("todo/" .. parent .. ".md"))
+    vex(dir, "set", child, "--status", "done")
+    assert.is_true(exists("doing/" .. parent .. ".md"))
+    assert.is_false(exists("todo/" .. parent .. ".md"))
+    vex(dir, "set", sibling, "--status", "done")
+    assert.is_true(exists("done/" .. parent .. ".md"))
+  end)
+
   it("moves a task and everything below it out when it is unlinked", function()
     groupby "{'lineage'}"
     local top, middle, leaf = family()

@@ -176,6 +176,13 @@ cli:error 'dependency-cycle' {
     hint = "Dependencies must not form a cycle. Remove one of the dependencies."
 }
 
+cli:error 'dependency-with-children' {
+    function(vexid, dependency)
+        return 'Task `' .. tostring(vexid) .. '` cannot depend on `' .. tostring(dependency) .. '`, because it has children or options.'
+    end,
+    hint = "Depend on the atoms under an abstract, or on the option a decision chose, instead."
+}
+
 cli:error "unknown-view" {
     function(viewname)
         return 'A view of name `' .. tostring(viewname) .. '` does not exist.'

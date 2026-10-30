@@ -89,14 +89,18 @@ v:view 'json' {
     end
 }
 
--- orders statuses by the most moves any task type needs to reach them from its initial state, then by name
+-- orders statuses by the most moves any task type needs to reach them from its initial state (a type without a status machine counts its phase), then by name
 local function bymoves(field, tasks)
     local moves = {}
     if field == 'status' then
         for _, t in ipairs(tasks) do
-            local status = task:schemaof(t.vextype, 'status').specification
-            local machine = statemachine.new(status.states, status.initial, status.initial)
-            for state, distance in pairs(machine:distances()) do
+            local status = task:schemaof(t.vextype, 'status')
+            local distances = {[t.status] = ({initial = 0, interim = 1, final = 2})[t.phase]}
+            if status then
+                local machine = statemachine.new(status.specification.states, status.specification.initial, status.specification.initial)
+                distances = machine:distances()
+            end
+            for state, distance in pairs(distances) do
                 moves[state] = math.max(moves[state] or 0, distance)
             end
         end

@@ -190,7 +190,7 @@ function M.link(dir, vexid, field, targets)
   end
   local content = M.read_file(path)
     :gsub("\n" .. field .. ": %[%]\n", "\n", 1)
-    :gsub("\nstatus: ", "\n" .. table.concat(items, "\n") .. "\nstatus: ", 1)
+    :gsub("\n%-%-%-\n", "\n" .. table.concat(items, "\n") .. "\n---\n", 1)
   M.write_file(path, content)
 end
 
