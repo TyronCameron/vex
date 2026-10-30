@@ -1,6 +1,7 @@
 local task = require "core.task"
 local recipe = require 'core.recipe'
 local focus = require 'core.focus'
+local vexdex = require 'core.vexdex'
 local config = require 'core.config'
 local cli = require 'lib.cli'
 local func = require 'lib.func'
@@ -288,6 +289,20 @@ task:transient 'parent' {
     definition = function(t)
         local ancestors = focus.focus(t.vexid):reversetree('children', 'options'):get()
         return ancestors[2] and ancestors[2].vexid
+    end
+}
+
+task:transient 'backlinks' {
+    vextype = 'basetask',
+    definition = function(t)
+        return vexdex:linksto(t.vexid)
+    end
+}
+
+task:transient 'forwardlinks' {
+    vextype = 'basetask',
+    definition = function(t)
+        return vexdex:linksfrom(t.vexid)
     end
 }
 

@@ -499,17 +499,8 @@ local function links(task, fields)
     return linked
 end
 
--- the vexids a task links to through any field
-local function alllinks(task)
-    local linked = {}
-    for target, sources in pairs(vexdex.backlinks) do
-        if sources[task.vexid] then table.insert(linked, target) end
-    end
-    return linked
-end
-
 local function followed(task, fields)
-    if #fields == 0 then return alllinks(task) end
+    if #fields == 0 then return vexdex:linksfrom(task.vexid) end
     return links(task, fields)
 end
 
@@ -570,32 +561,22 @@ function Focus:reversetree(...)
     end, ...)
 end
 
--- backlinks
-function Focus:backlinks()
-    return self:chain('backlinks', function(tasks) 
-        local indexed = byvexid()
-        local linked = {}
+-- step field...
+function Focus:step(...)
+    local fields = {...}
+    return self:chain('step', function(tasks)
+        local children = get_children(fields)
+        local stepped, seen = {}, {}
         for _, task in ipairs(tasks) do
-            for vexid in pairs(vexdex.backlinks[task.vexid] or {}) do
-                table.insert(linked, indexed[vexid])
+            for _, linked in ipairs(children(task)) do
+                if not seen[linked] then
+                    seen[linked] = true
+                    table.insert(stepped, linked)
+                end
             end
         end
-        return linked
-    end)
-end
-
--- forwardlinks
-function Focus:forwardlinks()
-    return self:chain('forwardlinks', function(tasks) 
-        local indexed = byvexid()
-        local linked = {}
-        for _, task in ipairs(tasks) do
-            for _, target in ipairs(alllinks(task)) do
-                table.insert(linked, indexed[target])
-            end
-        end
-        return linked
-    end)
+        return stepped
+    end, ...)
 end
 
 -----------------------------------------

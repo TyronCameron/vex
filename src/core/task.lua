@@ -220,7 +220,7 @@ function TaskManager:remove(vexid)
     assert(vexid, "remove() requires an id or focus")
     event:trigger('pre-task-remove', vexid)
     if vexdex:get(vexid) then
-        focus.focus(vexid):backlinks():each_task(function(linker)
+        focus.focus(vexid):step('backlinks'):each_task(function(linker)
             for field, value in pairs(linker) do
                 if value == vexid then
                     linker[field] = nil
@@ -389,7 +389,7 @@ function TaskManager:resolve(vexid)
         if not derive(parent, task, context) then cli:throw('resolution-failed-derivation', vexid) end 
     end 
 
-    local unlinked = vexdex:get(vexid) and focus.focus(vexid):forwardlinks():get() or {}
+    local unlinked = vexdex:get(vexid) and focus.focus(vexid):step('forwardlinks'):get() or {}
     self.tasks[vexid] = task
     vexdex:unsafe_link(vexid, context.links)
     vexdex:unsafe_add(vexid, task)
@@ -397,7 +397,7 @@ function TaskManager:resolve(vexid)
     local arranged = {}
     self:arrange(vexid, arranged)
     for _, linked in ipairs(unlinked) do
-        self:arrangeforwardlinks(linked.vexid, arranged)
+        self:arrange(linked.vexid, arranged)
     end
     vexdex:writeindex()
     event:trigger('post-task-resolve', vexid, task)
@@ -538,43 +538,27 @@ function TaskManager:move(vexid)
     return vexid
 end
 
--- moves a task's file, and those of every task it links to, to where they should live
-function TaskManager:arrangeforwardlinks(vexid, arranged)
+-- moves a task's file, and those of every task linked to it or from it, transitively, to where they should live
+function TaskManager:arrange(vexid, arranged)
     if arranged[vexid] then return end
     arranged[vexid] = true
     self:move(vexid)
-    focus.focus(vexid):forwardlinks():each(function(linked)
-        self:arrangeforwardlinks(linked, arranged)
+    focus.focus(vexid):step('forwardlinks', 'backlinks'):each(function(linked)
+        self:arrange(linked, arranged)
     end)
-end
-
--- moves the files of every task that links to this one, transitively, to where they should live
-function TaskManager:arrangebacklinks(vexid, arranged)
-    focus.focus(vexid):backlinks():each(function(linking)
-        if arranged[linking] then return end
-        arranged[linking] = true
-        self:move(linking)
-        self:arrangebacklinks(linking, arranged)
-    end)
-end
-
--- moves a task's file, and those of every task it links to or is linked from, to where they should live
-function TaskManager:arrange(vexid, arranged)
-    self:arrangeforwardlinks(vexid, arranged)
-    self:arrangebacklinks(vexid, arranged)
 end
 
 -- deletes a file from disk
 function TaskManager:delete(vexid)
     event:trigger('pre-task-delete', vexid)
-    local linked = focus.focus(vexid):forwardlinks():get()
+    local linked = focus.focus(vexid):step('forwardlinks'):get()
     local path = self:getcurrentpath(vexid)
     os.remove(path)
     vexdex:unsafe_remove(vexid)
     tidy(path)
     local arranged = {}
     for _, task in ipairs(linked) do
-        self:arrangeforwardlinks(task.vexid, arranged)
+        self:arrange(task.vexid, arranged)
     end
     vexdex:writeindex()
     event:trigger('post-task-delete', vexid, path)

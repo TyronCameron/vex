@@ -470,22 +470,28 @@ describe("Focus", function()
             assert.same({"other", "mid"}, vexids(f:reversetree('dependencies'):get(linked)))
         end)
 
-        it("backlinks collects the tasks that link to each task", function()
-            local vexdex = require 'core.vexdex'
-            vexdex:unsafe_link("mid", {"other"})
-            local f = Focus.new("other", function() return {other} end)
-            local result = vexids(f:backlinks():get(linked))
-            vexdex:unsafe_remove("mid")
-            assert.same({"mid"}, result)
+        it("step moves one hop along a field", function()
+            local f = Focus.new("root", function() return {root} end)
+            assert.same({"mid"}, vexids(f:step('children'):get(linked)))
+            assert.same({"leaf"}, vexids(f:step('children'):step('children'):get(linked)))
         end)
 
-        it("forwardlinks collects the tasks each task links to", function()
+        it("step follows several fields, visits each task once and skips ids that match no task", function()
+            local twin = {vexid = "twin", children = {"leaf", "ghost"}, dependencies = {"other"}}
+            local both = {mid, twin, leaf, other}
+            Focus.getalltasks = function() return both end
+            local f = Focus.new("both", function() return {mid, twin} end)
+            assert.same({"leaf", "other"}, vexids(f:step('children', 'dependencies'):get()))
+        end)
+
+        it("step follows every link when given no field", function()
             local vexdex = require 'core.vexdex'
-            vexdex:unsafe_link("mid", {"other"})
+            vexdex:unsafe_link("mid", {"other", "leaf"})
             local f = Focus.new("mid", function() return {mid} end)
-            local result = vexids(f:forwardlinks():get(linked))
+            local result = vexids(f:step():get(linked))
             vexdex:unsafe_remove("mid")
-            assert.same({"other"}, result)
+            table.sort(result)
+            assert.same({"leaf", "other"}, result)
         end)
 
     end)
