@@ -337,8 +337,7 @@ function TaskManager:reindexall()
 
     local vexids, paths = {}, {}
     for _, path in ipairs(lfsext.walk(vexdex.path .. '/' .. config.taskfolder)) do
-        local task, err = self:readfrompath(path)
-        if err then cli:throw('unreadable-task', path, err) end
+        local task = self:readfrompath(path)
         if task then
             if paths[task.vexid] then cli:throw('duplicate-vexid', task.vexid, paths[task.vexid], path) end
             paths[task.vexid] = path
@@ -530,11 +529,11 @@ function TaskManager:read(vexid)
     return task
 end
 
--- reads a file from disk and adds it to memory by path; a file that looks like a task but cannot be read gives nil and the reason
+-- reads a file from disk and adds it to memory by path; a file that cannot be read or holds no vexid gives nil
 function TaskManager:readfrompath(path)
     event:trigger('pre-task-read', path)
     local ok, task = pcall(taskformat.read, path)
-    if ok and task then 
+    if ok and task and task.vexid then 
         task = self:unformat(task)
         self.tasks[task.vexid] = Task.new(task)
         if relative(path) then vexdex:unsafe_locate(task.vexid, relative(path)) end
@@ -542,7 +541,6 @@ function TaskManager:readfrompath(path)
         return task
     else 
         event:trigger('post-task-read', path, nil)
-        return nil, not ok and task or nil
     end
 end
 

@@ -3,7 +3,7 @@ vexid: create-report-view-1
 vextype: atom
 description: Create report view
 created: "2026-05-19 21:27:24"
-modified: "2026-10-30 05:34:47"
+modified: "2026-10-30 07:09:14"
 status: todo
 ---
 

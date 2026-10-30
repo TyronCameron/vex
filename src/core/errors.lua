@@ -43,13 +43,6 @@ cli:error "move-failed" {
     hint = "Check that the folder is writable and that nothing else holds the file open."
 }
 
-cli:error "unreadable-task" {
-    function(path, reason)
-        return 'Cannot read the task file `' .. tostring(path) .. '`: ' .. tostring(reason)
-    end,
-    hint = "Fix the file, or move it out of the task folder if it isn't a task. Nothing was changed."
-}
-
 cli:error "duplicate-vexid" {
     function(vexid, first, second)
         return 'The vexid `' .. tostring(vexid) .. '` is held by two files: `' .. tostring(first) .. '` and `' .. tostring(second) .. '`.'

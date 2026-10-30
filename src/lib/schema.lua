@@ -713,17 +713,22 @@ Schema.register 'datetime' {
         format = {
             backward = function(self, value)
                 if type(value) ~= "string" then return value end
-                local y, mo, d, h, mi, s = value:match("^(%d%d%d%d)-(%d%d)-(%d%d)[T ](%d%d):(%d%d):(%d%d)$")
+                local y, mo, d, h, mi, s, zone = value:match("^(%d%d%d%d)-(%d%d)-(%d%d)[T ](%d%d):(%d%d):?(%d?%d?)[%.%d]*(.-)$")
                 if not y then
                     y, mo, d = value:match("^(%d%d%d%d)-(%d%d)-(%d%d)$")
-                    h, mi, s = 0, 0, 0
+                    h, mi, s, zone = 0, 0, 0, ""
                 end
                 if not y then return value end
-                return os.time({
+                local sign, zh, zm = zone:match("^([+-])(%d%d):?(%d%d)$")
+                if zone ~= "" and zone ~= "Z" and not sign then return value end
+                local epoch = os.time({
                     year = tonumber(y), month = tonumber(mo), day = tonumber(d),
-                    hour = tonumber(h), min = tonumber(mi), sec = tonumber(s), 
-                    isdst = false 
+                    hour = tonumber(h), min = tonumber(mi), sec = tonumber(s) or 0,
+                    isdst = false
                 })
+                if zone == "" then return epoch end
+                local offset = sign and tonumber(sign .. 1) * (zh * 3600 + zm * 60) or 0
+                return epoch + epoch - os.time(os.date("!*t", epoch)) - offset
             end,
             forward = function(self, epoch)
                 return os.date("%Y-%m-%d %H:%M:%S", epoch)

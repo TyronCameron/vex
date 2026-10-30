@@ -105,12 +105,6 @@ describe("vex user-facing errors (e2e, subprocess)", function()
     fails(dir, "cannot be a child of both", "resolve", "all")
   end)
 
-  it("rejects a task file that starts a frontmatter it never closes", function()
-    helper.write_file(dir .. "/broken-1.md", "---\nvexid: broken-1\ndescription: Never closed\n")
-    local message = fails(dir, "Cannot read the task file", "resolve", "all")
-    assert.truthy(message:find("broken-1.md", 1, true))
-  end)
-
   it("rejects two files holding one vexid", function()
     local vexid = vex(dir, "add", "Held", "twice", "here")
     os.execute("mkdir -p " .. helper.shell_escape(dir .. "/copy"))

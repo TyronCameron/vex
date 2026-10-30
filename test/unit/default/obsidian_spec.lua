@@ -125,4 +125,42 @@ describe("obsidian", function()
         os.remove(tmp)
     end)
 
+    -- ==================== YAML written by other tools ====================
+
+    local function readtext(content)
+        local tmp = os.tmpname()
+        writefile(tmp, content)
+        local task = obsidian.read(tmp)
+        os.remove(tmp)
+        return task
+    end
+
+    it("reads a flow list, keeping quoted commas and wikilinks", function()
+        local task = readtext('---\ncontexts: [office, "home, garden", 3]\nempty: []\nlink: [[a]]\n---\n')
+        assert.same({"office", "home, garden", 3}, task.contexts)
+        assert.same({}, task.empty)
+        assert.equal("[[a]]", task.link)
+    end)
+
+    it("reads a list of maps", function()
+        local task = readtext('---\nblockedBy:\n  - uid: "[[a]]"\n    reltype: FINISHTOSTART\n  - uid: "[[b]]"\n    gap: P1D\n---\n')
+        assert.same({{uid = "[[a]]", reltype = "FINISHTOSTART"}, {uid = "[[b]]", gap = "P1D"}}, task.blockedBy)
+    end)
+
+    it("reads a nested map, a list at its key's indent and an empty key", function()
+        local task = readtext('---\nTN-meta:\n  at: 2026-10-01T08:00\n  note: "a: b"\ntags:\n- task\n- work\ndue:\nstatus: todo\n---\n')
+        assert.same({at = "2026-10-01T08:00", note = "a: b"}, task["TN-meta"])
+        assert.same({"task", "work"}, task.tags)
+        assert.is_nil(task.due)
+        assert.equal("todo", task.status)
+    end)
+
+    it("round-trips a list of maps", function()
+        local tmp = os.tmpname()
+        local entries = {{startTime = "2025-01-20T10:00:00Z", endTime = "2025-01-20T11:30:00Z"}, {startTime = "2025-01-21T10:00:00Z"}}
+        obsidian.write(tmp, to_iter({timeEntries = entries}), nil)
+        assert.same(entries, obsidian.read(tmp).timeEntries)
+        os.remove(tmp)
+    end)
+
 end)

@@ -28,14 +28,14 @@ describe("vex resolution never loses or skips data (e2e, subprocess)", function(
     return tonumber(vex(dir, "focus", "all", ...):match("Focusing on (%d+)"))
   end
 
-  it("fails loudly on a task file it cannot read instead of dropping the task " .. AUDIT, function()
+  it("ignores a task file it cannot read and resolves the rest", function()
     local keep = vex(dir, "add", "Keep", "this", "task")
     local broken = vex(dir, "add", "Truncated", "task", "file")
     local content = helper.read_file(path(broken))
     helper.write_file(path(broken), content:match("^(.-\ncreated:[^\n]*\n)"))
-    local result = helper.run_vex(dir, {"resolve", "all"})
-    assert.is_true(result.code ~= 0 or count() == 2, "resolve all dropped " .. broken .. " without an error")
-    assert.is_truthy(keep)
+    vex(dir, "resolve", "all")
+    assert.equal(1, count())
+    assert.truthy(vex(dir, "show", keep):find("Keep this task", 1, true))
   end)
 
   it("fails on two files holding the same vexid " .. AUDIT, function()

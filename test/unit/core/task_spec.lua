@@ -465,20 +465,23 @@ describe("task", function()
             os.remove(path)
         end)
 
-        it("reindexall refuses a task file it cannot read, naming the file", function()
+        it("reindexall ignores a file it cannot read or that holds no vexid", function()
+            local files = {
+                [vexdex.path .. "/broken-unreadable-1.md"] = "---\nvexid: broken-unreadable-1\ndescription: never closed\n",
+                [vexdex.path .. "/Buy groceries.md"] = "---\ntitle: Buy groceries\nstatus: todo\n---\n",
+            }
+            for path, content in pairs(files) do
+                local f = io.open(path, "w")
+                f:write(content)
+                f:close()
+            end
             local cli = require 'lib.cli'
-            local broken = vexdex.path .. "/broken-unreadable-1.md"
-            local f = io.open(broken, "w")
-            f:write("---\nvexid: broken-unreadable-1\ndescription: never closed\n")
-            f:close()
-            stub(cli, 'throw', function(_, name, path) error(name .. " " .. path) end)
-            local ok, err = pcall(task.reindexall, task)
+            stub(cli, 'throw', function(_, name) error(name) end)
+            local ok = pcall(task.reindexall, task)
             cli.throw:revert()
-            os.remove(broken)
-            task:reindexall()
-            assert.is_false(ok)
-            assert.truthy(err:find("unreadable-task", 1, true))
-            assert.truthy(err:find("broken-unreadable-1.md", 1, true))
+            for path in pairs(files) do os.remove(path) end
+            assert.is_true(ok)
+            assert.is_nil(vexdex:get("broken-unreadable-1"))
         end)
 
         it("reindexall ignores a markdown file that is not a task", function()

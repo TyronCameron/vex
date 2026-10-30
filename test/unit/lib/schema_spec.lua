@@ -412,6 +412,21 @@ describe("schema", function()
         assert.equal(os.time({year = 2026, month = 1, day = 1, hour = 0, isdst = false}), s:prevalidate("2026-01-01"))
     end)
 
+    it("`schema.datetime` reads ISO 8601 times, with or without seconds and a zone", function()
+        local s = schema.formatted { schema.datetime }
+        local local8 = os.time({year = 2026, month = 10, day = 1, hour = 8, isdst = false})
+        assert.equal(local8, s:prevalidate("2026-10-01T08:00"))
+        assert.equal(local8, s:prevalidate("2026-10-01T08:00:00"))
+        assert.equal(local8 + local8 - os.time(os.date("!*t", local8)), s:prevalidate("2026-10-01T08:00:00Z"))
+        assert.equal(s:prevalidate("2026-10-01T06:00:00Z"), s:prevalidate("2026-10-01T08:00:00+02:00"))
+        assert.equal(s:prevalidate("2026-10-01T06:00:00Z"), s:prevalidate("2026-10-01T06:00:00.123Z"))
+        assert.equal(s:prevalidate("2026-10-01T06:00:00Z"), s:prevalidate("2026-10-01T01:30:00-0430"))
+    end)
+
+    it("`schema.datetime` does not format an ISO time with an unknown zone", function()
+        assert.equal("2026-10-01T08:00:00 later", schema.datetime:unapply('format', "2026-10-01T08:00:00 later"))
+    end)
+
     it("`schema.datetime` interprets a phrase through containers, relative to now", function()
         local naturaltime = require 'lib.naturaltime'
         local s = schema.maybe { schema.formatted { schema.datetime } }
