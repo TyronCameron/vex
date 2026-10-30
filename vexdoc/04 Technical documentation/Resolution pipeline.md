@@ -12,10 +12,14 @@ How a task goes from `vex add` to a file on disk, and what else moves when it do
 
 While deriving, every link a task holds is recorded, and the index stores them as backlinks. They answer both directions: `forwardlinks` and `backlinks` ([[08 Links and backlinks]]).
 
+## Cascading
+
+Resolving a task also resolves every task linked to it or from it, and every task it stopped linking to, transitively. Each task is resolved once per command, so cycles end, and derived fields stay right when a neighbour changes. The tasks reached this way are written back. (A neighbour's `modified` changes with it.)
+
 ## Arranging files
 
-A task's file belongs where the `taskpath` plugin puts it, which with `paths.groupby` depends on its fields and its ancestors. After indexing, `TaskManager:arrange` moves the task's file there, then does the same for every task linked to it or from it, transitively, and for every task it stopped linking to. So a parent's change moves its children, and a finished dependency moves its dependents. Each task is arranged once per resolve, so cycles end. A move that is already in place does nothing, and emptied folders are removed.
+A task's file belongs where the `taskpath` plugin puts it, which with `paths.groupby` depends on its fields and its ancestors. After the cascade, `TaskManager:arrange` moves each resolved task's file there. So a parent's change moves its children, and a finished dependency moves its dependents. A move that is already in place does nothing, and emptied folders are removed.
 
 ## Removing
 
-`TaskManager:remove` strips the removed vexid from every linking task, then resolves and writes those tasks, so validation stays strict and nothing dangles. `TaskManager:delete` then removes the file and arranges the tasks it linked to.
+`TaskManager:remove` strips the removed vexid from every linking task, then resolves and writes those tasks, so validation stays strict and nothing dangles. `TaskManager:delete` then removes the file and resolves the tasks it linked to.

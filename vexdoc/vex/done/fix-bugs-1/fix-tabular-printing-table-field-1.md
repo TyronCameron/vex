@@ -3,7 +3,7 @@ vexid: fix-tabular-printing-table-field-1
 vextype: atom
 description: Fix tabular printing a table in the children field
 created: "2026-10-19 07:35:21"
-modified: "2026-10-19 09:22:56"
+modified: "2026-10-30 01:33:49"
 status: done
 ---
 

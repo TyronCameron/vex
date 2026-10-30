@@ -33,7 +33,7 @@ The second focus adds the task itself to the two above. `--step children` and `-
 
 Links are why one change can touch many files:
 
-- **Resolving a task** re-files every task linked to it or from it, transitively, so `paths.groupby` stays right: a parent's change moves its children, and a finished dependency moves its dependents ([[01 Configuring vex (config.lua)#Grouping task files into folders]]).
+- **Resolving a task** resolves every task linked to it or from it, transitively, so derived fields stay right, and re-files them: a parent's change moves its children, and a finished dependency moves its dependents ([[01 Configuring vex (config.lua)#Grouping task files into folders]]).
 - **Removing a task** strips its vexid from every task that linked to it, then resolves them, so no link is left dangling.
 
 An abstract's `status` also follows its children ([[06 Status and state machines]]).

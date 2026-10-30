@@ -3,7 +3,7 @@ vexid: show-column-blank-missing-values-1
 vextype: atom
 description: Show every column and blank missing values in the tabular view
 created: "2026-10-19 09:21:47"
-modified: "2026-10-19 09:22:56"
+modified: "2026-10-30 01:33:49"
 status: done
 ---
 

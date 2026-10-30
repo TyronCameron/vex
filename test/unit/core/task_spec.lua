@@ -2,6 +2,8 @@ local task = require 'core.task'
 local vexdex = require 'core.vexdex'
 local event = require 'lib.event'
 local func = require 'lib.func'
+local schema = require 'lib.schema'
+require 'core.taskdefinitions'
 
 local function create(properties)
     local vexid = task:add(properties)
@@ -279,6 +281,57 @@ describe("task", function()
         task.tasks = {}
         task:reindexall()
         assert.equal(7, vexdex:get(vexid).cost)
+    end)
+
+    describe("cascading resolution", function()
+
+        task:task 'tracker':extends 'atom' {
+            schema = schema.atleast {
+                openblockers = schema.derive {
+                    schema.maybe {schema.num},
+                    derive = function(self, instance, context) return #context.task.blockers end
+                }
+            }
+        }
+
+        local function finish(vexid)
+            task:set(vexid, {status = "done"})
+            task:resolve(vexid)
+            task:write(vexid)
+        end
+
+        it("re-derives the stored fields of the tasks linked to a resolved task", function()
+            local dependency = create({description = "cascade dependency task", vextype = 'atom'})
+            local tracker = create({description = "cascade tracking task", vextype = 'tracker', dependencies = {dependency}})
+            assert.equal(1, task.tasks[tracker].openblockers)
+            finish(dependency)
+            assert.equal(0, task.tasks[tracker].openblockers)
+            assert.equal(0, vexdex:get(tracker).openblockers)
+            assert.equal(0, task:readfrompath(task:getcurrentpath(tracker)).openblockers)
+        end)
+
+        it("also resolves the tasks a resolved task stopped linking to", function()
+            local first = create({description = "cascade unlinked first", vextype = 'atom'})
+            local second = create({description = "cascade unlinked second", vextype = 'atom', dependencies = {first}})
+            task:set(second, {dependencies = {}})
+            local resolved = {}
+            event:register('pre-task-resolve', 'cascade-spec', function(vexid) resolved[vexid] = true end)
+            task:resolve(second)
+            event:remove('pre-task-resolve', 'cascade-spec')
+            assert.same({[first] = true, [second] = true}, resolved)
+        end)
+
+        it("resolves each linked task once", function()
+            local first = create({description = "cascade chain first", vextype = 'atom'})
+            local second = create({description = "cascade chain second", vextype = 'atom', dependencies = {first}})
+            local third = create({description = "cascade chain third", vextype = 'atom', dependencies = {second}})
+            local resolved = {}
+            event:register('pre-task-resolve', 'cascade-spec', function(vexid) resolved[vexid] = (resolved[vexid] or 0) + 1 end)
+            task:resolve(second)
+            event:remove('pre-task-resolve', 'cascade-spec')
+            assert.same({[first] = 1, [second] = 1, [third] = 1}, resolved)
+        end)
+
     end)
 
     describe("events", function()

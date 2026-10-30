@@ -2,12 +2,9 @@ Tasks are plain text files, so git and vex work together with a little care.
 
 ## What to commit
 
-| Commit | Keep out of git |
-| --- | --- |
-| The task files in `taskfolder` | `.vex/vexdex`, the index. vex rebuilds it from the task files. |
-| `.vex/config.lua` and your extensions (`tasks`, `recipes`, `focuses`, `views`, `events`) | |
+Commit the task files in `taskfolder`, `.vex/config.lua` and your extensions (`tasks`, `recipes`, `focuses`, `views`, `events`).
 
-Add `.vex/vexdex/` to `.gitignore`. The saved focus lives there too, so it stays personal.
+Keep `.vex/vexdex/` out of git by adding it to `.gitignore`. It holds the index, which vex rebuilds from the task files, and your saved focus, which is personal.
 
 ## After a clone, pull or checkout
 

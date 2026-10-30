@@ -267,7 +267,7 @@ task:transient 'status' {
 task:transient 'blockers' {
     vextype = 'basetask',
     definition = function(t)
-        if not t.dependencies then return {} end
+        if not t.dependencies or #t.dependencies == 0 then return {} end
         local unfinished = {}
         for _, dependency in ipairs(focus.focus(t.dependencies):intersect(focus.focus('final'):complement()):get()) do
             unfinished[dependency.vexid] = true
@@ -302,7 +302,7 @@ task:transient 'backlinks' {
 task:transient 'forwardlinks' {
     vextype = 'basetask',
     definition = function(t)
-        return vexdex:linksfrom(t.vexid)
+        return task:forwardlinks(t)
     end
 }
 

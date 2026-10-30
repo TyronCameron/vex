@@ -12,5 +12,5 @@ children:
   - "[[cap-tabular-view-cells-terminal-1]]"
   - "[[fix-show-printing-list-fields-1]]"
 created: "2026-10-19 07:34:55"
-modified: "2026-10-30 00:54:41"
+modified: "2026-10-30 01:33:49"
 ---

@@ -499,9 +499,10 @@ local function links(task, fields)
     return linked
 end
 
-local function followed(task, fields)
-    if #fields == 0 then return vexdex:linksfrom(task.vexid) end
-    return links(task, fields)
+local function fieldsof(...)
+    local fields = {...}
+    if #fields == 0 then return {'forwardlinks'} end
+    return fields
 end
 
 local function byvexid()
@@ -514,7 +515,7 @@ local function get_children(fields)
     local tasks = byvexid()
     return function(task) 
         local children = {}
-        for _, child in ipairs(followed(task, fields)) do
+        for _, child in ipairs(links(task, fields)) do
             table.insert(children, tasks[child])
         end 
         return children
@@ -535,7 +536,7 @@ local function walk(tasks, linksof)
 end
 
 function Focus:tree(...)
-    local fields = {...}
+    local fields = fieldsof(...)
     return self:chain('tree', function(tasks) 
         return walk(tasks, get_children(fields))
     end, ...)
@@ -546,7 +547,7 @@ local function get_parents(fields)
     local alltasks = Focus.getalltasks()
     return function(task) 
         return func.ifilter(alltasks, function(parent)
-            for _, child in ipairs(followed(parent, fields)) do
+            for _, child in ipairs(links(parent, fields)) do
                 if child == task.vexid then return true end
             end
             return false
@@ -555,7 +556,7 @@ local function get_parents(fields)
 end
 
 function Focus:reversetree(...)
-    local fields = {...}
+    local fields = fieldsof(...)
     return self:chain('reversetree', function(tasks) 
         return walk(tasks, get_parents(fields))
     end, ...)
@@ -563,7 +564,7 @@ end
 
 -- step field...
 function Focus:step(...)
-    local fields = {...}
+    local fields = fieldsof(...)
     return self:chain('step', function(tasks)
         local children = get_children(fields)
         local stepped, seen = {}, {}

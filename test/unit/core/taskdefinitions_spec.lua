@@ -309,6 +309,12 @@ describe("taskdefinitions", function()
             assert.same({}, task.tasks[needed].forwardlinks)
         end)
 
+        it("lists every link a decision holds once as its forwardlinks", function()
+            local option = create({description = "forward option task"})
+            local decision = create({description = "forward decision task", vextype = 'decision', options = {option}, decision = option})
+            assert.same({option}, task.tasks[decision].forwardlinks)
+        end)
+
         it("gives the path of the task file", function()
             local vexid = create({description = "located task"})
             assert.equal(task:getcurrentpath(vexid), task.tasks[vexid].path)

@@ -178,6 +178,23 @@ function TaskManager:gettasks(focus)
     
 end
 
+-- the vexids a task links to, held in any field its type's schemas validate as a vexlink
+function TaskManager:forwardlinks(task)
+    local linked, seen = {}, {}
+    local tasktype = self.tasktypes[task.vextype]
+    while tasktype do
+        for _, vexid in ipairs(tasktype.schema:collect('vexlink', task)) do
+            if not seen[vexid] then
+                seen[vexid] = true
+                table.insert(linked, vexid)
+            end
+        end
+        tasktype = self.tasktypes[tasktype.parent]
+    end
+    table.sort(linked)
+    return linked
+end
+
 -- gets single task by id
 -- first attempts to get it from the index, but then tries reading it 
 function TaskManager:getsingle(vexid)
@@ -220,7 +237,8 @@ function TaskManager:remove(vexid)
     assert(vexid, "remove() requires an id or focus")
     event:trigger('pre-task-remove', vexid)
     if vexdex:get(vexid) then
-        focus.focus(vexid):step('backlinks'):each_task(function(linker)
+        local linkers = focus.focus(vexid):step('backlinks'):get()
+        for _, linker in ipairs(linkers) do
             for field, value in pairs(linker) do
                 if value == vexid then
                     linker[field] = nil
@@ -229,9 +247,10 @@ function TaskManager:remove(vexid)
                 end
             end
             self.tasks[linker.vexid] = linker
-            self:resolve(linker.vexid)
-            self:write(linker.vexid)
-        end)
+        end
+        local linkerids = func.imap(linkers, function(linker) return linker.vexid end)
+        self:resolveall(linkerids)
+        for _, linkerid in ipairs(linkerids) do self:write(linkerid) end
     end
     self.tasks[vexid] = nil
     event:trigger('post-task-remove', vexid)
@@ -322,11 +341,8 @@ function TaskManager:reindexall()
         return t and t.vexid
     end), function(vexid) return vexid end)
 
-    for _, vexid in ipairs(vexids) do
-        self:read(vexid)
-        self:resolve(vexid)
-        vexdex:unsafe_add(vexid, self.tasks[vexid])
-    end
+    for _, vexid in ipairs(vexids) do self:read(vexid) end
+    self:resolveall(vexids)
     vexdex:writeindex()
     event:trigger('post-task-reindexall')
     return self 
@@ -358,9 +374,11 @@ function TaskManager:index(vexid)
     vexdex:add(vexid, self.tasks[vexid])
 end
 
--- resolve
-function TaskManager:resolve(vexid)
+-- resolves a task, then every task linked to or from it that has not been resolved yet
+function TaskManager:resolvetask(vexid, resolved)
     if not vexid then cli:throw('missing-required-field', vexid, 'vexid') end 
+    if resolved[vexid] then return end
+    resolved[vexid] = true
     event:trigger('pre-task-resolve', vexid)
 
     local task = self:getsingle(vexid) or {}
@@ -389,18 +407,34 @@ function TaskManager:resolve(vexid)
         if not derive(parent, task, context) then cli:throw('resolution-failed-derivation', vexid) end 
     end 
 
-    local unlinked = vexdex:get(vexid) and focus.focus(vexid):step('forwardlinks'):get() or {}
+    local unlinked = vexdex:unlinked(vexid, context.links)
     self.tasks[vexid] = task
     vexdex:unsafe_link(vexid, context.links)
     vexdex:unsafe_add(vexid, task)
 
-    local arranged = {}
-    self:arrange(vexid, arranged)
+    focus.focus(vexid):step('forwardlinks', 'backlinks'):each(function(linked)
+        self:resolvetask(linked, resolved)
+    end)
     for _, linked in ipairs(unlinked) do
-        self:arrange(linked.vexid, arranged)
+        if vexdex:get(linked) then self:resolvetask(linked, resolved) end
     end
     vexdex:writeindex()
     event:trigger('post-task-resolve', vexid, task)
+end
+
+-- resolves the given tasks and everything linked to them, each once, writes the linked tasks and files them where they belong
+function TaskManager:resolveall(vexids)
+    local resolved, requested = {}, {}
+    for _, vexid in ipairs(vexids) do requested[vexid] = true end
+    for _, vexid in ipairs(vexids) do self:resolvetask(vexid, resolved) end
+    for vexid in pairs(resolved) do
+        if not requested[vexid] then self:write(vexid) end
+    end
+    self:arrange(resolved)
+end
+
+function TaskManager:resolve(vexid)
+    self:resolveall({vexid})
 end
 
 ---------------------------------------------------
@@ -538,28 +572,22 @@ function TaskManager:move(vexid)
     return vexid
 end
 
--- moves a task's file, and those of every task linked to it or from it, transitively, to where they should live
-function TaskManager:arrange(vexid, arranged)
-    if arranged[vexid] then return end
-    arranged[vexid] = true
-    self:move(vexid)
-    focus.focus(vexid):step('forwardlinks', 'backlinks'):each(function(linked)
-        self:arrange(linked, arranged)
-    end)
+-- moves the files of the given tasks to where they should live
+function TaskManager:arrange(vexids)
+    for vexid in pairs(vexids) do self:move(vexid) end
 end
 
 -- deletes a file from disk
 function TaskManager:delete(vexid)
     event:trigger('pre-task-delete', vexid)
-    local linked = focus.focus(vexid):step('forwardlinks'):get()
+    local linked = focus.focus(vexid):step('forwardlinks', 'backlinks'):get()
     local path = self:getcurrentpath(vexid)
     os.remove(path)
     vexdex:unsafe_remove(vexid)
     tidy(path)
-    local arranged = {}
-    for _, task in ipairs(linked) do
-        self:arrange(task.vexid, arranged)
-    end
+    local linkedids = func.imap(linked, function(task) return task.vexid end)
+    self:resolveall(linkedids)
+    for _, linkedid in ipairs(linkedids) do self:write(linkedid) end
     vexdex:writeindex()
     event:trigger('post-task-delete', vexid, path)
     return vexid

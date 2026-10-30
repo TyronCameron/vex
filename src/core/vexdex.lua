@@ -54,13 +54,14 @@ function VexDex:linksto(vexid)
     return sources
 end
 
-function VexDex:linksfrom(vexid)
-    local targets = {}
+function VexDex:unlinked(vexid, links)
+    local kept, dropped = {}, {}
+    for _, target in ipairs(links) do kept[target] = true end
     for target, sources in pairs(self.backlinks) do
-        if sources[vexid] then table.insert(targets, target) end
+        if sources[vexid] and not kept[target] then table.insert(dropped, target) end
     end
-    table.sort(targets)
-    return targets
+    table.sort(dropped)
+    return dropped
 end
 
 function VexDex:unsafe_link(vexid, links)
