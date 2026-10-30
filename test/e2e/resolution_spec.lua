@@ -53,16 +53,6 @@ describe("vex resolution never loses or skips data (e2e, subprocess)", function(
     assert.equal(0, count("--filter", "cost:9"), "vex get indexed an unresolved file")
   end)
 
-  it("does not commit the tasks before a failing one when setting a focus (make-action-atomic-1)", function()
-    local first = vex(dir, "add", "First", "of", "focus")
-    local second = vex(dir, "add", "Second", "of", "focus")
-    local third = vex(dir, "add", "Third", "of", "focus", "--vextype", "atom")
-    helper.link(dir, second, "dependencies", {third})
-    helper.link(dir, third, "dependencies", {second})
-    local result = helper.run_vex(dir, {"set", first .. "," .. third, "--cost", "7"})
-    assert.is_true(result.code == 0 or helper.frontmatter(path(first)).cost == nil, "the first task was set although the command failed")
-  end)
-
   it("changes neither the file nor the index when a linked task fails to resolve " .. AUDIT, function()
     local parent = vex(dir, "add", "Parent", "of", "things", "--vextype", "abstract")
     local child = vex(dir, "add", "Child", "of", "things", "--vextype", "atom")

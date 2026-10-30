@@ -3,7 +3,7 @@ vexid: make-options-children-1
 vextype: atom
 description: "Make options, children and dependencies mutually exclusive"
 created: "2026-10-29 08:09:36"
-modified: "2026-10-30 04:18:18"
+modified: "2026-10-30 05:34:47"
 status: done
 ---
 A task holds at most one of `children`, `options` and `dependencies`: all three are sets of vexids, and `options` should count as children for dependency purposes. Decisions never get dependencies.

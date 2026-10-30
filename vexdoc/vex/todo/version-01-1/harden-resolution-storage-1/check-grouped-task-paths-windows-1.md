@@ -3,7 +3,7 @@ vexid: check-grouped-task-paths-windows-1
 vextype: atom
 description: Check grouped task paths on Windows
 created: "2026-10-17 08:37:12"
-modified: "2026-10-30 04:18:18"
+modified: "2026-10-30 05:34:47"
 status: todo
 ---
 Grouped task paths (`paths.groupby`, see [[group-task-files-into-1]]) are only tested on Linux. On Windows, two things in `src/core/task.lua` are unverified:

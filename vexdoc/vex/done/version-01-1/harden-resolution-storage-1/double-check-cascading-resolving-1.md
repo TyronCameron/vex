@@ -3,7 +3,7 @@ vexid: double-check-cascading-resolving-1
 vextype: atom
 description: Double check cascading and resolving through cascading tasks is bulletproof
 created: "2026-10-19 07:55:01"
-modified: "2026-10-30 04:18:18"
+modified: "2026-10-30 05:34:47"
 status: done
 ---
 Audit of when tasks are written and resolved (`src/core/task.lua`, `src/core/vexdex.lua`, `src/core/verbs.lua`). Cascading itself (which tasks are reached, each once, moved to the right folder) held up in every case I tried. Findings, with their tests in `test/e2e/resolution_spec.lua` (tagged with this task):
