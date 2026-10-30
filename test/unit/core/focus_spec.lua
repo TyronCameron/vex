@@ -453,15 +453,15 @@ describe("Focus", function()
             assert.same({"option", "decision"}, vexids(g:reversetree('children', 'options'):get()))
         end)
 
-        it("tree and reversetree follow forwardlinks when given no field", function()
+        it("tree and reversetree follow forwardlinks like any other field", function()
             local hub = {vexid = "hub", forwardlinks = {"leaf", "other"}}
             local spoke = {vexid = "leaf", forwardlinks = {}}
             local far = {vexid = "other", forwardlinks = {}}
             Focus.getalltasks = function() return {hub, spoke, far} end
             local f = Focus.new("hub", function() return {hub} end)
-            assert.same({"hub", "leaf", "other"}, vexids(f:tree():get()))
+            assert.same({"hub", "leaf", "other"}, vexids(f:tree('forwardlinks'):get()))
             local g = Focus.new("leaf", function() return {spoke} end)
-            assert.same({"leaf", "hub"}, vexids(g:reversetree():get()))
+            assert.same({"leaf", "hub"}, vexids(g:reversetree('forwardlinks'):get()))
         end)
 
         it("reversetree tolerates tasks without the field", function()
@@ -483,11 +483,22 @@ describe("Focus", function()
             assert.same({"leaf", "other"}, vexids(f:step('children', 'dependencies'):get()))
         end)
 
-        it("step follows forwardlinks when given no field", function()
+        it("tree, reversetree and step need a field", function()
+            stub(cli, 'throw', function(self, name) error(name) end)
+            local f = Focus.new("root", function() return {root} end)
+            for _, operation in ipairs({'tree', 'reversetree', 'step'}) do
+                local ok, err = pcall(function() return f[operation](f) end)
+                assert.is_false(ok)
+                assert.truthy(err:find('usage', 1, true))
+            end
+            cli.throw:revert()
+        end)
+
+        it("step follows forwardlinks like any other field", function()
             local hub = {vexid = "hub", forwardlinks = {"other", "leaf"}}
             Focus.getalltasks = function() return {hub, leaf, other} end
             local f = Focus.new("hub", function() return {hub} end)
-            assert.same({"other", "leaf"}, vexids(f:step():get()))
+            assert.same({"other", "leaf"}, vexids(f:step('forwardlinks'):get()))
         end)
 
     end)

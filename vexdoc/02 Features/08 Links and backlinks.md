@@ -27,7 +27,7 @@ $ vex focus migrate-existing-invoices-1 --tree backlinks
 Focusing on 3 vexes
 ```
 
-The second focus adds the task itself to the two above. `--step children` and `--tree children` walk the abstract hierarchy the same way. With no field, `--step`, `--tree` and `--reversetree` follow every link.
+The second focus adds the task itself to the two above. `--step children` and `--tree children` walk the abstract hierarchy the same way.
 
 ## What follows from a change
 

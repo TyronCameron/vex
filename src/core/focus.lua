@@ -499,9 +499,9 @@ local function links(task, fields)
     return linked
 end
 
-local function fieldsof(...)
+local function fieldsof(operation, ...)
     local fields = {...}
-    if #fields == 0 then return {'forwardlinks'} end
+    if #fields == 0 then cli:throw('usage', 'You need to provide a field to ' .. operation .. ' along.') end
     return fields
 end
 
@@ -536,7 +536,7 @@ local function walk(tasks, linksof)
 end
 
 function Focus:tree(...)
-    local fields = fieldsof(...)
+    local fields = fieldsof('tree', ...)
     return self:chain('tree', function(tasks) 
         return walk(tasks, get_children(fields))
     end, ...)
@@ -556,7 +556,7 @@ local function get_parents(fields)
 end
 
 function Focus:reversetree(...)
-    local fields = fieldsof(...)
+    local fields = fieldsof('reversetree', ...)
     return self:chain('reversetree', function(tasks) 
         return walk(tasks, get_parents(fields))
     end, ...)
@@ -564,7 +564,7 @@ end
 
 -- step field...
 function Focus:step(...)
-    local fields = fieldsof(...)
+    local fields = fieldsof('step', ...)
     return self:chain('step', function(tasks)
         local children = get_children(fields)
         local stepped, seen = {}, {}

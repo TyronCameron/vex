@@ -124,7 +124,7 @@ Values are separated by `:`.
 | `--groupby field[:desc]:field...` | The tasks in groups that share those fields' values, ordered as `--orderby` would order them. |
 | `--rn` | Each task numbered from 1 within its group, in the field `rn`. |
 
-With no field, `--step`, `--tree` and `--reversetree` follow every link a task holds. `backlinks` and `forwardlinks` are transients (the tasks linking to a task, and the tasks it links to), so `--tree backlinks` collects everything that depends on a task, directly or not.
+`backlinks` and `forwardlinks` are transients (the tasks linking to a task, and the tasks it links to), so `--tree backlinks` collects everything that depends on a task, directly or not.
 
 ### Grouping and ordering
 
