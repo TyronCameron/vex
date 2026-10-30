@@ -7,7 +7,7 @@ Every task is validated against the schema of its `vextype` and of each type tha
 | `vexid` | text | Unique id and filename, generated from the description when the task is added. It can't be changed. |
 | `description` | text | Required. At least 2 words and more than 3 characters. |
 | `vextype` | text | The task type. Defaults to `task` and must be a registered type. |
-| `status` | state | `todo`, then `doing`, then `done`. vex rejects any other move. Defaults to `todo`. Abstracts have no stored `status`: vex works it out from their children each time it is read (`todo` when every child is in the `initial` phase, `done` when every child is in the `final` phase, `doing` otherwise). |
+| `status` | state | `todo`, then `done`. vex rejects any other move. Defaults to `todo`. Abstracts have no stored `status`: vex works it out from their children each time it is read (`todo` when every child is in the `initial` phase, `done` when every child is in the `final` phase, `doing` otherwise). |
 | `created` | datetime | Set when the task is added. |
 | `modified` | datetime | Updated whenever vex touches the task: on add, set and every resolve, a reindex included. |
 | `vexbody` | text | Optional. The markdown body below the frontmatter. |

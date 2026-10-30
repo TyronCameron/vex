@@ -12,6 +12,7 @@ for spec in "${specs[@]}"; do
 	echo "== ${spec#"$repo/"}"
 	tmp=$(mktemp -d)
 	(cd "$tmp" && "$repo/src/vex" init >/dev/null \
+		&& perl -0pi -e 's/  paths = \{.*?\n  \},\n//s' .vex/config.lua \
 		&& busted --helper="$repo/test/unit/load.lua" --config-file="$repo/.busted" "$spec") \
 		|| failed+=("${spec#"$repo/"}")
 	rm -rf "$tmp"

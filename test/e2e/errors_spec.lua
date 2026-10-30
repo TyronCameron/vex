@@ -70,12 +70,13 @@ describe("vex user-facing errors (e2e, subprocess)", function()
 
   it("rejects a skipped status transition and leaves the task unchanged", function()
     local vexid = vex(dir, "add", "Water", "the", "plants")
-    fails(dir, "ERROR: Cannot transition status from todo to done", "set", vexid, "--status", "done")
-    fails(dir, "at status", "set", vexid, "--status", "done")
-    local raw = helper.run_vex(dir, {"set", vexid, "--status", "done"}).stderr
+    vex(dir, "set", vexid, "--status", "done")
+    fails(dir, "ERROR: Cannot transition status from done to todo", "set", vexid, "--status", "todo")
+    fails(dir, "at status", "set", vexid, "--status", "todo")
+    local raw = helper.run_vex(dir, {"set", vexid, "--status", "todo"}).stderr
     assert.truthy(raw:find("\27]8;;file://", 1, true))
     assert.truthy(raw:find(vexid .. ".md\27\\", 1, true))
-    assert.equal("todo", helper.frontmatter(dir .. "/" .. vexid .. ".md").status)
+    assert.equal("done", helper.frontmatter(helper.task_file(dir, vexid)).status)
   end)
 
   it("links no file for a task that has none yet", function()

@@ -17,7 +17,7 @@ $ vex view tabular
 ┌─────────────────────────────┬──────────┬────────┐
 │ vexid                       │ vextype  │ status │
 ├─────────────────────────────┼──────────┼────────┤
-│ fix-flaky-webhook-retry-1   │ task     │ doing  │
+│ fix-flaky-webhook-retry-1   │ task     │ done   │
 │ ship-billing-rewrite-1      │ abstract │ todo   │
 │ migrate-existing-invoices-1 │ task     │ todo   │
 └─────────────────────────────┴──────────┴────────┘
@@ -36,8 +36,8 @@ $ vex view all tabular --groupby vextype:status --orderby vexid --select vextype
 │ │ status: todo                                      │
 │ │ │ ship-billing-rewrite-1      │ abstract │ todo   │
 │ vextype: task                                       │
-│ │ status: doing                                     │
-│ │ │ fix-flaky-webhook-retry-1   │ task     │ doing  │
+│ │ status: done                                      │
+│ │ │ fix-flaky-webhook-retry-1   │ task     │ done   │
 │ │ status: todo                                      │
 │ │ │ migrate-existing-invoices-1 │ task     │ todo   │
 └─────────────────────────────────┴──────────┴────────┘
@@ -62,7 +62,7 @@ One column per value of a field, `status` by default:
 ```console
 $ vex view all kanban --field status
 ┌───────────────────────────┬─────────────────────────────┐
-│ doing                     │ todo                        │
+│ done                      │ todo                        │
 ├───────────────────────────┼─────────────────────────────┤
 │ fix-flaky-webhook-retry-1 │ migrate-existing-invoices-1 │
 │                           │ ship-billing-rewrite-1      │
@@ -83,7 +83,7 @@ $ vex view all overview
 SCOPE
 
 ┌──────────┬───────┬────────┬───────┐
-│ vextype  │ doing │ todo   │ total │
+│ vextype  │ done  │ todo   │ total │
 ├──────────┼───────┼────────┼───────┤
 │ abstract │ 0.0%  │ 100.0% │ 1     │
 │ task     │ 50.0% │ 50.0%  │ 2     │

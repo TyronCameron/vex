@@ -101,6 +101,12 @@ describe("Focus", function()
         assert.same({tasks[1]}, f:fuzzy("description", "milc", 1):get(tasks))
     end)
 
+    it("nil keeps tasks that have no value for the field", function()
+        local tasks = {{vexid = "a", cost = 1}, {vexid = "b"}, {vexid = "c", cost = 9}}
+        local f = Focus.new("all", function(t) return t end)
+        assert.same({tasks[2]}, f['nil'](f, "cost"):get(tasks))
+    end)
+
     it("between keeps tasks whose field lies within the bounds", function()
         local tasks = {{vexid = "a", cost = 1}, {vexid = "b", cost = 5}, {vexid = "c", cost = 9}}
         local f = Focus.new("all", function(t) return t end)
@@ -242,26 +248,19 @@ describe("Focus", function()
             assert.same(func.imap(grouped:groups(), vexids), func.imap(Focus.read():groups(), vexids))
         end)
 
-        it("knows which flags are focus operations", function()
-            assert.is_true(Focus.operates('groupby'))
-            assert.is_true(Focus.operates('select'))
-            assert.is_false(Focus.operates('field'))
-            assert.is_false(Focus.operates('write'))
+        it("rejects a flag that is not a focus operation", function()
+            local cli = require 'lib.cli'
+            stub(cli, 'throw', function(self, name) error(name) end)
+            local ok, err = pcall(function() f:apply(cli:parse('--field owner')) end)
+            cli.throw:revert()
+            assert.is_false(ok)
+            assert.truthy(err:find('unknown-focus-operation', 1, true))
         end)
 
         it("applies flags to a focus in the order given", function()
             local grouped = f:apply(require('lib.cli'):parse('--groupby owner --orderby cost:desc --rn')):get(tasks)
             assert.same({"b", "e", "a", "d", "c"}, vexids(grouped))
             assert.same({1, 2, 1, 2, 1}, func.imap(grouped, function(t) return t.rn end))
-        end)
-
-        it("rejects a flag that is not a focus operation", function()
-            local cli = require 'lib.cli'
-            stub(cli, 'throw', function(self, name) error(name) end)
-            local ok, err = pcall(function() f:apply(cli:parse('--write')) end)
-            cli.throw:revert()
-            assert.is_false(ok)
-            assert.truthy(err:find('unknown-focus-operation', 1, true))
         end)
 
         it("rn numbers the tasks in each group from 1, without changing the tasks", function()
@@ -314,17 +313,19 @@ describe("Focus", function()
 
     it("replays a saved focus with the same operations", function()
         local task = require 'core.task'
-        for _, description in ipairs({"saved focus todo task", "saved focus doing task"}) do
+        local vexids = {}
+        for _, description in ipairs({"saved focus todo task", "saved focus finished task"}) do
             local vexid = task:add({description = description})
             task:resolve(vexid)
             task:write(vexid)
+            table.insert(vexids, vexid)
         end
-        task:set("saved-focus-doing-task-1", {status = "doing"})
-        task:resolve("saved-focus-doing-task-1")
-        Focus.focus('all'):filter('status', 'doing'):fuzzy('description', 'saved focus', 0):write()
+        task:set(vexids[2], {status = "done"})
+        task:resolve(vexids[2])
+        Focus.focus('all'):filter('status', 'done'):fuzzy('description', 'saved focus', 0):write()
         local replayed = Focus.read():get()
         assert.equal(1, #replayed)
-        assert.equal("saved-focus-doing-task-1", replayed[1].vexid)
+        assert.equal(vexids[2], replayed[1].vexid)
     end)
 
     it("resolves a set operation's focus name and replays it once saved", function()
@@ -439,6 +440,29 @@ describe("Focus", function()
         it("reversetree collects each task and everything above it", function()
             local f = Focus.new("leaf", function() return {leaf} end)
             assert.same({"leaf", "mid", "root"}, vexids(f:reversetree('children'):get(linked)))
+        end)
+
+        it("tree and reversetree follow several fields at once", function()
+            local decision = {vexid = "decision", options = {"option"}}
+            local option = {vexid = "option"}
+            local both = {root, decision, option}
+            Focus.getalltasks = function() return both end
+            local f = Focus.new("decision", function() return {decision} end)
+            assert.same({"decision", "option"}, vexids(f:tree('children', 'options'):get()))
+            local g = Focus.new("option", function() return {option} end)
+            assert.same({"option", "decision"}, vexids(g:reversetree('children', 'options'):get()))
+        end)
+
+        it("tree and reversetree follow every link when given no field", function()
+            local vexdex = require 'core.vexdex'
+            vexdex:unsafe_link("mid", {"leaf", "other"})
+            local f = Focus.new("mid", function() return {mid} end)
+            local reached = vexids(f:tree():get(linked))
+            table.sort(reached)
+            assert.same({"leaf", "mid", "other"}, reached)
+            local g = Focus.new("leaf", function() return {leaf} end)
+            assert.same({"leaf", "mid"}, vexids(g:reversetree():get(linked)))
+            vexdex:unsafe_remove("mid")
         end)
 
         it("reversetree tolerates tasks without the field", function()

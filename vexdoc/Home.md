@@ -43,7 +43,7 @@ Link the pieces together and move work along:
 
 ```console
 $ vex set ship-billing-rewrite-1 --children migrate-existing-invoices-1,fix-flaky-webhook-retry-1
-$ vex set fix-flaky-webhook-retry-1 --status doing
+$ vex set fix-flaky-webhook-retry-1 --status done
 ```
 
 Then review it without opening a file:
@@ -51,7 +51,7 @@ Then review it without opening a file:
 ```console
 $ vex view all kanban
 ┌───────────────────────────┬─────────────────────────────┐
-│ doing                     │ todo                        │
+│ done                      │ todo                        │
 ├───────────────────────────┼─────────────────────────────┤
 │ fix-flaky-webhook-retry-1 │ migrate-existing-invoices-1 │
 │                           │ ship-billing-rewrite-1      │

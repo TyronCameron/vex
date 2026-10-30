@@ -18,6 +18,7 @@ describe("init", function()
         assert.same({}, config.taskowners)
         assert.same({tasktype = 'task'}, config.default)
         assert.equal(1000, config.loglimit)
+        assert.same({groupby = {"status", "lineage"}}, config.paths)
         assert.is_nil(config.plugins)
         for _, folder in ipairs({"vexdex", "tasks", "recipes", "focuses", "views", "events", "tmp"}) do
             assert.truthy(io.open(dir .. "/.vex/" .. folder .. "/."), folder .. " was not created")

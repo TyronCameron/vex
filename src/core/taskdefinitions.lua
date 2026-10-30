@@ -100,9 +100,6 @@ local function status()
     return schema.statemachine {
         states = {
             todo = {
-                valid = {"doing"},
-            },
-            doing = {
                 valid = {"done"},
             },
             done = {
@@ -115,7 +112,7 @@ end
 
 local function dependencies()
     return schema.maybe {
-        schema.vec {
+        schema.unique {
             schema.all {
                 schema.formatted {schema.vexlink},
                 schema.constraint {acyclic},
@@ -163,7 +160,7 @@ task:task 'abstract':extends 'basetask' {
         options = schema['nil'],
         dependencies = schema['nil'],
         children = schema.default {
-            schema.vec {
+            schema.unique {
                 schema.all {
                     schema.formatted {schema.vexlink},
                     schema.constraint {notself},
@@ -281,8 +278,16 @@ task:transient 'blockers' {
 task:transient 'lineage' {
     vextype = 'basetask',
     definition = function(t)
-        local ancestors = focus.focus(t.vexid):reversetree('children'):get()
+        local ancestors = focus.focus(t.vexid):reversetree('children', 'options'):get()
         return func.reverse(func.imap(func.slice(ancestors, 2, 'end'), function(ancestor) return ancestor.vexid end))
+    end
+}
+
+task:transient 'parent' {
+    vextype = 'basetask',
+    definition = function(t)
+        local ancestors = focus.focus(t.vexid):reversetree('children', 'options'):get()
+        return ancestors[2] and ancestors[2].vexid
     end
 }
 
