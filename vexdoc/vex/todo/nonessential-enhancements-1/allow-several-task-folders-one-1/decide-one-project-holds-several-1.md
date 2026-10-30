@@ -3,7 +3,7 @@ vexid: decide-one-project-holds-several-1
 vextype: atom
 description: Decide how one project holds several task folders
 created: "2026-10-20 09:47:59"
-modified: "2026-10-20 09:47:59"
+modified: "2026-10-30 03:17:28"
 status: todo
 ---
 

@@ -38,12 +38,12 @@ function Task.new(task)
 end
 
 -- gets data from a task and returns it as a string for the command line
-function Task:tostring(fields)
+function Task:tostring(fields, colsep)
     return table.concat(func.imap(fields, function(field)
         local value = self[field]
         if value == nil then return "" end
         return type(value) == "table" and table.concat(value, ",") or tostring(value)
-    end), "\t")
+    end), colsep or "\t")
 end
 
 -- show 
@@ -253,9 +253,9 @@ function TaskManager:remove(vexid)
 end
 
 -- gets data from a task and returns it as a string for the command line
-function TaskManager:get(vexid, fields)
+function TaskManager:get(vexid, fields, colsep)
     event:trigger('pre-task-get', vexid, fields)
-    local result = self:format(vexid):tostring(fields)
+    local result = self:format(vexid):tostring(fields, colsep)
     event:trigger('post-task-get', vexid, fields, result)
     return result
 end

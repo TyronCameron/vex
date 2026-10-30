@@ -448,6 +448,26 @@ function Focus:orderby(...)
     end, ...)
 end
 
+local function count(operation, n)
+    local number = tonumber(n)
+    if not number or number < 1 or number % 1 ~= 0 then
+        cli:throw('usage', 'You need to provide a whole number above zero to ' .. operation .. '. We saw ' .. tostring(n) .. '.')
+    end
+    return number
+end
+
+-- first n keeps the first n tasks, in the order given
+function Focus:first(n)
+    local number = count('first', n)
+    return self:chain('first', function(tasks) return func.first(tasks, number) end, n)
+end
+
+-- last n keeps the last n tasks, in the order given
+function Focus:last(n)
+    local number = count('last', n)
+    return self:chain('last', function(tasks) return func.last(tasks, number) end, n)
+end
+
 local function bucket(tasks, orders)
     if #orders == 0 then return tasks end
     local o = orders[1]

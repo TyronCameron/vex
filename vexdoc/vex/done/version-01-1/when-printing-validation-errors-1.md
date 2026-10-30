@@ -3,7 +3,7 @@ vexid: when-printing-validation-errors-1
 vextype: atom
 description: "When printing validation errors, pretty print them"
 created: "2026-07-10 22:12:48"
-modified: "2026-10-27 21:51:30"
+modified: "2026-10-30 03:17:28"
 status: done
 ---
 

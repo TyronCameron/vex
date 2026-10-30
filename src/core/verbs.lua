@@ -24,6 +24,11 @@ local function join_lines(lines)
     return table.concat(lines, "\n")
 end
 
+-- a separator word: a bare comma arrives from the cli as a list, and \n, \t and \r are spelled out
+local function separator(word)
+    return func.unescape(type(word) == "table" and table.concat(word, ",") or word)
+end
+
 cli:verb "show" {
     function(args)
         local f = focus_pop_args(args)
@@ -149,15 +154,17 @@ cli:verb "get" {
             end
         end
         if #fields == 0 then fields = {'vexid'} end
+        local rowsep, colsep = unpack(func.imap(args:positional(), separator))
         local lines = {}
         f:each(function(vexid)
-            table.insert(lines, pretty.any(task:get(vexid, fields)))
+            table.insert(lines, task:get(vexid, fields, colsep))
         end)
-        return join_lines(lines)
+        if #lines == 0 then return nil end
+        return table.concat(lines, rowsep or "\n")
     end,
-    doc = "Presents the focus in a tangible data format. Can specify which fields by supplying them as flags, or as a comma list to --select",
-    args = "[focus] [--fields...]",
-    example = "vex get all --select due,vexid,description"
+    doc = "Presents the focus in a tangible data format. Can specify which fields by supplying them as flags, or as a comma list to --select. A row separator and a column separator after the focus replace the newline and tab, and an empty one joins with nothing: `vex get prev ,` gives a comma list of vexids to feed into a list field.",
+    args = "[focus] [row_sep] [col_sep] [--fields...]",
+    example = "vex set final-1 --dependencies $(vex get prev ,)"
 }
 
 cli:verb "set" {

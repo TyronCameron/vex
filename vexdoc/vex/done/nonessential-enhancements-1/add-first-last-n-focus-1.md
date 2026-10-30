@@ -3,8 +3,8 @@ vexid: add-first-last-n-focus-1
 vextype: atom
 description: Add first and last n focus operations
 created: "2026-10-29 22:31:16"
-modified: "2026-10-29 22:31:16"
-status: todo
+modified: "2026-10-30 03:17:28"
+status: done
 ---
 
 Add `--first n` and `--last n` focus operations to keep only the first or last `n` tasks:

@@ -3,7 +3,7 @@ vexid: filter-vex-suggest-word-1
 vextype: atom
 description: Filter vex suggest by the word being completed
 created: "2026-10-19 09:21:54"
-modified: "2026-10-19 09:21:54"
+modified: "2026-10-30 03:17:28"
 status: todo
 ---
 

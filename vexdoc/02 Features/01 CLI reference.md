@@ -16,7 +16,7 @@
 | `vex init` | Creates a `.vex` folder in the current folder. |
 | `vex add Description [--fields...]` | Creates and resolves a task, prints its vexid and focuses on it. |
 | `vex show [focus]` | Prints each task's frontmatter and body. |
-| `vex get [focus] [--fields...]` | Prints one tab-separated line per task. `--select a,b` names the fields as a list. Defaults to `vexid`. |
+| `vex get [focus] [row_sep] [col_sep] [--fields...]` | Prints one tab-separated line per task. `--select a,b` names the fields as a list. Defaults to `vexid`. A row separator and a column separator replace the newline and tab (see [[01 CLI reference#Feeding a focus into a list field]]). |
 | `vex set [focus] [--fields...]` | Sets fields on every task in the focus, then resolves them. |
 | `vex remove [focus]` | Deletes every task in the focus, removes links to them from other tasks, and clears the focus. |
 | `vex focus [focus] [--flags...]` | Builds and saves a focus. With no arguments, prints the saved focus. |
@@ -83,6 +83,27 @@ $ vex focus all --filter status:done
 $ vex focus --select status,description
 ```
 
+### Feeding a focus into a list field
+
+`vex get` prints a focus in whatever shape you ask for, so the shell can hand the saved focus to any list field. Put a row separator after the focus and `vex get prev ,` prints the vexids as one comma list. Combined with the shell's `$(...)`, that links a whole query result to a task:
+
+```console
+$ vex focus my-abstract-1 --tree children --filter vextype:atom
+$ vex set my-final-task-1 --dependencies $(vex get prev ,)
+```
+
+`--insert` and `--remove` work with it as they do with typed values, so `vex set my-final-task-1 --insert --dependencies $(vex get prev ,)` adds the focus to the dependencies already there. The vexids are a snapshot taken when the command runs: the task stays linked to those tasks, not to the focus. Give `set` its target explicitly, because `prev` would otherwise be both source and target.
+
+The first word after the focus is the row separator and the second is the column separator. They default to a newline and a tab. `\n`, `\t` and `\r` are read as the characters they name, and `""` joins with nothing:
+
+```console
+$ vex get prev ,
+$ vex get prev "\n" " | " --vexid --description
+$ vex get prev ""
+```
+
+A list field's own values are joined with commas inside a cell, so a comma column separator is ambiguous for those.
+
 ### Starting points
 
 | Focus | Tasks |
@@ -123,6 +144,15 @@ Values are separated by `:`.
 | `--orderby field[:desc]:field...` | The tasks sorted by each field in turn, ascending unless followed by `desc`. Ties keep their order, and missing values sort last. |
 | `--groupby field[:desc]:field...` | The tasks in groups that share those fields' values, ordered as `--orderby` would order them. |
 | `--rn` | Each task numbered from 1 within its group, in the field `rn`. |
+| `--first n` | Only the first `n` tasks, in the order so far (within each group, after `--groupby`). Use it after `--orderby`. |
+| `--last n` | Only the last `n` tasks, in the order so far. Does not reverse them. |
+
+`n` is a whole number above zero. A number larger than the focus keeps everything:
+
+```console
+$ vex focus all --orderby created:desc --first 10
+$ vex focus all --orderby created:desc --last 10
+```
 
 `backlinks` and `forwardlinks` are transients (the tasks linking to a task, and the tasks it links to), so `--tree backlinks` collects everything that depends on a task, directly or not.
 

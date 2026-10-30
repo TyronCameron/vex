@@ -3,8 +3,8 @@ vexid: allow-splatting-focus-other-1
 vextype: atom
 description: Allow splatting a focus into other operations
 created: "2026-10-29 22:31:16"
-modified: "2026-10-29 22:31:16"
-status: todo
+modified: "2026-10-30 03:17:28"
+status: done
 ---
 
 Let a saved focus feed its vexids into a list field of another command, so a query result can become links without typing the vexids:
@@ -29,3 +29,5 @@ Design and implications:
 - **Scope.** First version is `vex set` (anything through `TaskManager:set`). Splatting into focus operations (e.g. a `--filter` or `--union` value) is a follow-up; a saved focus would have to store the resolved vexids, since `Focus:write` overwrites `prev` and replaying would otherwise read a different focus.
 
 Verify: e2e test that the example sets the dependencies to the atoms under the abstract, plus the self link, empty, single-valued and multiple-target cases; a unit test for the modifier in `test/unit/core/task_spec.lua`; the new error registered in `errors_spec`; documented in [[01 CLI reference]].
+
+**Resolved without `--splat`.** `vex get` now takes a row and a column separator, so the shell does the splatting: `vex set my-final-task-1 --dependencies $(vex get prev ,)`. `--insert` and `--remove` compose because `set` just receives a comma list, and focus operations take the same substitution. Documented in [[01 CLI reference]] under "Feeding a focus into a list field"; covered by `test/e2e/focus_spec.lua`. This also closes [[allow-usage-focuses-list-type-1]].

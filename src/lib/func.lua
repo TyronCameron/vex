@@ -185,6 +185,13 @@ function func.last(tab, n)
 	return func.slice(tab, #tab - n + 1, #tab)
 end
 
+local escapes = {n = "\n", t = "\t", r = "\r", ["\\"] = "\\"}
+
+-- turns the escapes \n, \t, \r and \\ in text into the characters they name
+function func.unescape(text)
+	return (text:gsub("\\(.)", function(char) return escapes[char] end))
+end
+
 function func.rep(tab, n)
 	if not n then return function(x) return func.rep(x, tab) end end
 	local new_tab = {}

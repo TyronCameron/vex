@@ -114,6 +114,18 @@ function M.run_vex(cwd, args)
   return { stdout = stdout, stderr = stderr, code = exit_code }
 end
 
+-- Runs a shell script in `cwd` where `vex` is a function calling the real CLI, so a
+-- spec can use pipes and substitution like `vex set x --dependencies $(vex get prev ,)`.
+function M.shell(cwd, script)
+  local prelude = string.format("vex() { VEX_HOME=%s %s \"$@\"; }; ", M.shell_escape(M.vex_home), M.shell_escape(M.VEX_BIN))
+  local handle = assert(io.popen("cd " .. M.shell_escape(cwd) .. " && { " .. prelude .. script .. "\n} 2>&1; echo \"exit:$?\""))
+  local output = handle:read("*a")
+  handle:close()
+  local body, code = output:match("^(.*)exit:(%d+)%s*$")
+  if code ~= "0" then error("shell script failed:\n" .. script .. "\n" .. M.strip_ansi(output), 2) end
+  return M.trim(M.strip_ansi(body))
+end
+
 function M.vex(cwd, ...)
   local args = {...}
   local result = M.run_vex(cwd, args)
