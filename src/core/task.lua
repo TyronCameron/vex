@@ -377,12 +377,19 @@ function TaskManager:index(vexid)
     vexdex:unsafe_add(vexid, self.tasks[vexid])
 end
 
--- resolves one task and returns the vexids of the tasks linked to or from it, and of those it stopped linking to
+local function stored(task)
+    local fields = func.map(task, function(value) return value end)
+    fields.vexbody = nil
+    return fields
+end
+
+-- resolves one task and returns the vexids of the tasks linked to or from it, and of those it stopped linking to, and whether its stored fields changed
 function TaskManager:resolvesingle(vexid)
     if not vexid then cli:throw('missing-required-field', vexid, 'vexid') end 
     event:trigger('pre-task-resolve', vexid)
 
     local previous = vexdex:get(vexid) or {}
+    local before = stored(previous)
     local task = self:getsingle(vexid) or {}
     if not task.vextype then cli:throw('missing-required-field', task.vexid, 'vextype') end 
 
@@ -412,12 +419,13 @@ function TaskManager:resolvesingle(vexid)
     local unlinked = func.ifilter(previous.forwardlinks or {}, function(target)
         return not func.any(context.links, function(link) return link == target end)
     end)
+    local changed = not func.same(before, stored(task))
     self.tasks[vexid] = task
     vexdex:unsafe_link(vexid, context.links)
     vexdex:unsafe_add(vexid, task)
 
     event:trigger('post-task-resolve', vexid, task)
-    return func.imerge(unlinked, func.imerge(task.forwardlinks, task.backlinks))
+    return func.imerge(unlinked, func.imerge(task.forwardlinks, task.backlinks)), changed
 end
 
 -- resolves the given tasks and the tasks linked to them, each once, writes the linked tasks and moves every file, and those above and below it, to where it belongs
@@ -432,8 +440,7 @@ function TaskManager:resolveall(vexids)
     for _, vexid in ipairs(linked) do
         if not resolved[vexid] and vexdex:get(vexid) then
             resolved[vexid] = true
-            self:resolvesingle(vexid)
-            self:write(vexid)
+            if select(2, self:resolvesingle(vexid)) then self:write(vexid) end
         end
     end
     local moved = {}

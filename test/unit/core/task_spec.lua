@@ -344,6 +344,17 @@ describe("task", function()
             assert.is_nil(resolved[third])
         end)
 
+        it("leaves a linked task's file alone when resolving it changes none of its stored fields (skip-rewriting-unchanged-linked-1)", function()
+            local dependency = create({description = "unchanged dependency task", vextype = 'atom'})
+            local dependent = create({description = "unchanged dependent task", vextype = 'atom', dependencies = {dependency}})
+            local written = {}
+            event:register('pre-task-write', 'cascade-spec', function(vexid) written[vexid] = true end)
+            task:set(dependency, {due = os.time() + 86400})
+            task:resolve(dependency)
+            event:remove('pre-task-write', 'cascade-spec')
+            assert.is_nil(written[dependent])
+        end)
+
     end)
 
     describe("events", function()

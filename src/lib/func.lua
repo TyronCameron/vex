@@ -200,6 +200,17 @@ function func.rep(tab, n)
 	return new_tab
 end
 
+function func.same(a, b)
+	if type(a) ~= "table" or type(b) ~= "table" then return a == b end
+	for k, v in pairs(a) do
+		if not func.same(v, b[k]) then return false end
+	end
+	for k in pairs(b) do
+		if a[k] == nil then return false end
+	end
+	return true
+end
+
 function func.isempty(tab)
 	return #tab == 0 
 end
