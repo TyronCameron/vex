@@ -96,6 +96,7 @@ cli:verb "resolve" {
     function(args)
         if args[1] == 'all' then 
             task:reindexall()
+            return
         end 
         local f = focus_pop_args(args)
         task:resolveall(func.imap(f:get(), function(t) return t.vexid end))

@@ -21,6 +21,7 @@ function lfs.chdir(path)
 end
 
 function lfs.mkdir(path)
+    if os.rename(path, path) then return true end
     local cmd = is_windows and ('mkdir "' .. path .. '"') or ('mkdir -p "' .. path .. '"')
     return os.execute(cmd)
 end

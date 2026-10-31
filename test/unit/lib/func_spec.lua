@@ -232,6 +232,16 @@ describe("func", function()
         assert.equal(7, result[4])
     end)
 
+    -- ==================== same ====================
+
+    it("`func.same` compares nested tables by value", function()
+        assert.truthy(func.same({a = 1, b = {"x", "y"}}, {b = {"x", "y"}, a = 1}))
+        assert.falsy(func.same({a = 1, b = {"x"}}, {a = 1, b = {"x", "y"}}))
+        assert.falsy(func.same({a = 1}, {a = 1, b = 2}))
+        assert.truthy(func.same(3, 3))
+        assert.falsy(func.same({}, 3))
+    end)
+
     -- ==================== isempty ====================
 
     it("`func.isempty` returns true for an empty table", function()
