@@ -83,6 +83,12 @@ function func.keys(tab)
 	return keys 
 end
 
+function func.sortedkeys(tab)
+	local keys = func.keys(tab)
+	table.sort(keys)
+	return keys
+end
+
 function func.values(tab)
 	local values = {}
 	for _, value in pairs(tab) do

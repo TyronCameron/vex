@@ -56,4 +56,50 @@ function lfsext.walk(path, files)
     return files
 end
 
+local is_windows = package.config:sub(1,1) == "\\"
+
+local function quote(path)
+    return "'" .. path:gsub("'", "'\\''") .. "'"
+end
+
+local gnu
+local function isgnu()
+    if gnu == nil then
+        local status = os.execute("find --version >/dev/null 2>&1")
+        gnu = status == 0 or status == true
+    end
+    return gnu
+end
+
+local function listmtimes(command)
+    local mtimes = {}
+    local p = io.popen(command)
+    for line in p:lines() do
+        local mtime, path = line:match("^([^\t]+)\t(.+)$")
+        if mtime then mtimes[(path:gsub("\\", "/"))] = mtime end
+    end
+    p:close()
+    return mtimes
+end
+
+local function findmtimes(path, depth)
+    if is_windows then
+        return listmtimes('powershell -NoProfile -Command "' ..
+            (depth and "Get-Item '" .. path .. "'" or "Get-ChildItem '" .. path .. "' -Recurse -File | Where-Object { $_.FullName -notmatch '[\\\\/]\\.' }") ..
+            ' | ForEach-Object { \"$($_.LastWriteTimeUtc.Ticks)`t$($_.FullName)\" }"')
+    end
+    local select = depth and " -maxdepth 0 -type f" or " -mindepth 1 -name '.*' -prune -o -type f"
+    local action = isgnu() and " -printf '%T@\\t%p\\n'" or " -exec stat -f '%Fm%t%N' {} +"
+    return listmtimes("find " .. quote(path) .. select .. action .. " 2>/dev/null")
+end
+
+-- the modification time of every file below a folder, hidden ones aside, by path
+function lfsext.mtimes(path)
+    return findmtimes(path)
+end
+
+function lfsext.mtime(path)
+    return findmtimes(path, true)[path]
+end
+
 return lfsext

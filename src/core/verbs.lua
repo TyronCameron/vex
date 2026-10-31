@@ -9,11 +9,21 @@ local vexdex = require 'core.vexdex'
 local task = require 'core.task'
 require 'core.taskdefinitions'
 
+local function vexids(f)
+    return func.imap(f:get(), function(t) return t.vexid end)
+end
+
+-- resolves the tasks in a focus whose files changed since vex last saw them, before a verb reads them
+local function refreshed(f)
+    task:refresh(vexids(f))
+    return f
+end
+
 local function focus_pop_args(args)
     if not cli.isflag(args[1]) then
-        return focus.focus(table.remove(args, 1))
+        return refreshed(focus.focus(table.remove(args, 1)))
     end
-    return focus.focus()
+    return refreshed(focus.focus())
 end
 
 -- joins accumulated output lines into the verb's return value; nil (rather
@@ -94,14 +104,15 @@ cli:verb "view" {
 
 cli:verb "resolve" {
     function(args)
-        if args[1] == 'all' then 
-            task:reindexall()
-        end 
+        local force = func.any(args, function(word) return cli.isflag(word) and word[1] == 'force' end)
+        if args[1] == 'all' then
+            if force then task:reindexall() else task:refresh() end
+        end
         local f = focus_pop_args(args)
-        task:resolveall(func.imap(f:get(), function(t) return t.vexid end))
+        if force then task:resolveall(vexids(f)) end
     end,
-    doc = "Validates, updates and normalises fields and tasks",
-    args = "[focus]",
+    doc = "Validates, updates and normalises the tasks in the focus whose files changed since vex last saw them, and writes back what changes. `all` also takes in new task files and forgets deleted ones. --force resolves every task in the focus, and with `all` rebuilds the index from the files: use it after changing config or task types.",
+    args = "[focus] [--force]",
     example = "vex resolve all"
 }
 
@@ -111,7 +122,6 @@ cli:verb "add" {
         taskproperties.description = args:text()
         local vexid = task:add(taskproperties)
         task:resolve(vexid)
-        task:write(vexid)
         focus.focus(vexid):write()
         return vexid
     end,
@@ -170,7 +180,6 @@ cli:verb "set" {
         f:each(function(vexid)
             task:set(vexid, taskproperties, modifiers)
             task:resolve(vexid)
-            task:write(vexid)
         end)
     end,
     doc = "Allows you to set fields in the focus. Put --insert or --remove before a list field to add or remove values rather than overwrite it. Resolution is called on that `focus`",
@@ -195,7 +204,6 @@ cli:verb "recipe" {
         local f = recipe:add(recipename, taskproperties)
         local lines = {}
         f:each(function(vexid)
-            task:write(vexid)
             table.insert(lines, pretty.any(vexid))
         end)
         f:write()

@@ -31,10 +31,10 @@ Every user mistake fails with a named error, a message and a hint, and exits non
 
 **My focus is empty.** A focus is run again each time it is used, so it shrinks as tasks change ([[05 Getting into focus#It is a recipe, not a list]]). Print it with `vex focus`, then check each step. A `--filter` compares exactly, so `status:Done` matches nothing.
 
-**vex doesn't see a file I added or edited.** The index only knows what vex has resolved. Run `vex resolve all` (or `vex resolve <vexid>`).
+**vex doesn't see a file I added or edited.** A command picks up an edited file when the task is in its focus, but a filter runs over the index first. Run `vex resolve all` to take in every changed or new file.
 
 **`set` was rejected.** The message says which field and why; the file is left as it was. The usual causes: a status that goes backwards ([[06 Status and state machines]]), a `children` or `dependencies` entry that breaks the rules above, an `owner` missing from `taskowners`.
 
-**A file is in the wrong folder.** Run `vex resolve all`. With `paths.groupby`, vex owns the layout and moves files back.
+**A file is in the wrong folder.** Run `vex resolve all`, or `vex resolve all --force` after changing `paths.groupby`. With `paths.groupby`, vex owns the layout and moves files back.
 
 **Everything is wrong after a pull.** `vex resolve all` ([[07 Working with git and a team]]).

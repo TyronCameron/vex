@@ -15,8 +15,13 @@ local vexdex = require 'core.vexdex'
 local focus = require 'core.focus'
 local config = require 'core.config'
 local event = require 'lib.event'
+local hash = require 'lib.hash'
 
 local taskmanager
+
+local function taskroot()
+    return vexdex.path .. '/' .. config.taskfolder
+end
 
 ------------------------------------------------
 --- Tasks
@@ -247,9 +252,7 @@ function TaskManager:remove(vexid)
             end
             self.tasks[linker.vexid] = linker
         end
-        local linkerids = func.imap(linkers, function(linker) return linker.vexid end)
-        self:resolveall(linkerids)
-        for _, linkerid in ipairs(linkerids) do self:write(linkerid) end
+        self:resolveall(func.imap(linkers, function(linker) return linker.vexid end))
     end
     self.tasks[vexid] = nil
     event:trigger('post-task-remove', vexid)
@@ -300,7 +303,6 @@ function TaskManager:set(vexid, tab, modifiers)
             task[k] = v
         end
     end
-    task.modified = os.time()
     self.tasks[vexid] = Task.new(task)
     event:trigger('post-task-set', vexid, self.tasks[vexid])
     return self.tasks[vexid] 
@@ -335,8 +337,9 @@ function TaskManager:reindexall()
         vexdex:unsafe_remove(key)
     end
 
+    self.mtimes = lfsext.mtimes(taskroot())
     local vexids, paths = {}, {}
-    for _, path in ipairs(lfsext.walk(vexdex.path .. '/' .. config.taskfolder)) do
+    for _, path in ipairs(func.sortedkeys(self.mtimes)) do
         local task = self:readfrompath(path)
         if task then
             if paths[task.vexid] then cli:throw('duplicate-vexid', task.vexid, paths[task.vexid], path) end
@@ -413,6 +416,13 @@ function TaskManager:resolvesingle(vexid)
         return not func.any(context.links, function(link) return link == target end)
     end)
     self.tasks[vexid] = task
+    local fingerprint = self:fingerprint(vexid)
+    local stamped = (vexdex.files[vexid] or {}).fingerprint
+    if stamped and stamped ~= fingerprint then
+        task.modified = os.time()
+        fingerprint = self:fingerprint(vexid)
+    end
+    vexdex:unsafe_stamp(vexid, {fingerprint = fingerprint})
     vexdex:unsafe_link(vexid, context.links)
     vexdex:unsafe_add(vexid, task)
 
@@ -420,7 +430,7 @@ function TaskManager:resolvesingle(vexid)
     return func.imerge(unlinked, func.imerge(task.forwardlinks, task.backlinks))
 end
 
--- resolves the given tasks and everything linked to them, each once, writes the linked tasks and moves every file to where it belongs
+-- resolves the given tasks and everything linked to them, each once, writes each and moves every file to where it belongs
 function TaskManager:resolveall(vexids)
     local resolved, requested, pending = {}, {}, {}
     for _, vexid in ipairs(vexids) do
@@ -434,7 +444,7 @@ function TaskManager:resolveall(vexids)
         end
     end
     for vexid in pairs(resolved) do
-        if not requested[vexid] then self:write(vexid) end
+        self:write(vexid)
         self:move(vexid)
     end
 end
@@ -480,8 +490,25 @@ function TaskManager:unformat(task)
     return unformatted
 end
 
-local function taskroot()
-    return vexdex.path .. '/' .. config.taskfolder
+local function contents(path)
+    local f = io.open(path, "r")
+    if not f then return nil end
+    local content = f:read("*a")
+    f:close()
+    return content
+end
+
+-- the text of a task's file, leaving out the given fields
+function TaskManager:render(vexid, exclude)
+    local task = self:format(vexid)
+    local fields = frontmatter(task)
+    for _, field in ipairs(exclude or {}) do fields[field] = nil end
+    return taskformat.render(sortdata(fields), body(task))
+end
+
+-- a hash of what a task holds, leaving out the fields config.fingerprint.exclude names
+function TaskManager:fingerprint(vexid)
+    return hash.fnv1a(self:render(vexid, (config.fingerprint or {}).exclude))
 end
 
 local function relative(path)
@@ -549,10 +576,15 @@ function TaskManager:write(vexid)
     event:trigger('pre-task-write', vexid)
     local task = self:format(vexid)
     local path = self:getcurrentpath(vexid)
-    lfs.mkdir(dirname(path))
-    vexdex:atomic(path, function(path)
-        taskformat.write(path, sortdata(frontmatter(task)), body(task))
-    end)
+    if self:render(vexid) ~= contents(path) then
+        lfs.mkdir(dirname(path))
+        vexdex:atomic(path, function(path)
+            taskformat.write(path, sortdata(frontmatter(task)), body(task))
+        end)
+        self.mtimes = self.mtimes or {}
+        self.mtimes[path] = lfsext.mtime(path)
+    end
+    if self.mtimes and self.mtimes[path] then vexdex:unsafe_stamp(vexid, {mtime = self.mtimes[path]}) end
     vexdex:unsafe_locate(vexid, relative(path))
     self:index(vexid)
     event:trigger('post-task-write', vexid, path)
@@ -576,19 +608,84 @@ function TaskManager:move(vexid)
     return vexid
 end
 
+-- drops a task from the index, leaving its file alone, and resolves the tasks it was linked to or from
+function TaskManager:forget(vexid)
+    event:trigger('pre-task-forget', vexid)
+    local linked = focus.focus(vexid):step('forwardlinks', 'backlinks'):get()
+    vexdex:unsafe_remove(vexid)
+    self.tasks[vexid] = nil
+    self:resolveall(func.imap(linked, function(task) return task.vexid end))
+    event:trigger('post-task-forget', vexid)
+    return vexid
+end
+
 -- deletes a file from disk
 function TaskManager:delete(vexid)
     event:trigger('pre-task-delete', vexid)
-    local linked = focus.focus(vexid):step('forwardlinks', 'backlinks'):get()
     local path = self:getcurrentpath(vexid)
     os.remove(path)
-    vexdex:unsafe_remove(vexid)
     tidy(path)
-    local linkedids = func.imap(linked, function(task) return task.vexid end)
-    self:resolveall(linkedids)
-    for _, linkedid in ipairs(linkedids) do self:write(linkedid) end
+    self:forget(vexid)
     event:trigger('post-task-delete', vexid, path)
     return vexid
+end
+
+---------------------------------------------------
+-- Changes on disk
+---------------------------------------------------
+
+-- the tasks whose files changed since vex last saw them: edited, new, moved, unreadable or gone
+function TaskManager:updated()
+    self.mtimes = lfsext.mtimes(taskroot())
+    local located, held = {}, {}
+    for vexid in pairs(vexdex.index) do
+        local path = self:getcurrentpath(vexid)
+        located[path] = vexid
+        if self.mtimes[path] then held[vexid] = path end
+    end
+    local updated, seen = {}, {}
+    for _, path in ipairs(func.sortedkeys(self.mtimes)) do
+        local vexid = located[path]
+        if not (vexid and (vexdex.files[vexid] or {}).mtime == self.mtimes[path]) then
+            local task = self:readfrompath(path)
+            if task then
+                local other = seen[task.vexid] or held[task.vexid]
+                if other and other ~= path then cli:throw('duplicate-vexid', task.vexid, other, path) end
+                seen[task.vexid] = path
+                table.insert(updated, vexdex:get(task.vexid) or self.tasks[task.vexid])
+            elseif vexid then
+                table.insert(updated, vexdex:get(vexid))
+            end
+        end
+    end
+    for _, vexid in ipairs(func.sortedkeys(vexdex.index)) do
+        if not seen[vexid] and not held[vexid] then table.insert(updated, vexdex:get(vexid)) end
+    end
+    return updated
+end
+
+-- resolves the given tasks (every task when none are given) whose files changed since vex last saw them, and forgets those whose files are gone or unreadable
+function TaskManager:refresh(vexids)
+    event:trigger('pre-task-refresh', vexids)
+    local wanted
+    if vexids then
+        wanted = {}
+        for _, vexid in ipairs(vexids) do wanted[vexid] = true end
+    end
+    local changed = {}
+    for _, updated in ipairs(self:updated()) do
+        if not wanted or wanted[updated.vexid] then
+            if self:readfrompath(self:getcurrentpath(updated.vexid)) then
+                if not vexdex:get(updated.vexid) then self:index(updated.vexid) end
+                table.insert(changed, updated.vexid)
+            else
+                self:forget(updated.vexid)
+            end
+        end
+    end
+    self:resolveall(changed)
+    event:trigger('post-task-refresh', vexids, changed)
+    return changed
 end
 
 ---------------------------------------------------

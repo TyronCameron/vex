@@ -18,10 +18,10 @@ function VexDex.new(path)
     end
     local this = setmetatable({
         path = found,
-        modified = os.time(),
         index = {},
         backlinks = {},
         paths = {},
+        files = {},
         dirty = false
     }, VexDex)
     return this:ensureindex()
@@ -42,6 +42,7 @@ function VexDex:unsafe_remove(vexid)
     self.index[vexid] = nil
     self.backlinks[vexid] = nil
     self.paths[vexid] = nil
+    self.files[vexid] = nil
     self.dirty = true
     return self:unsafe_link(vexid, {})
 end
@@ -81,6 +82,17 @@ function VexDex:unsafe_locate(vexid, path)
     return self
 end
 
+-- records what vex last saw of a task's file: its fingerprint and its mtime
+function VexDex:unsafe_stamp(vexid, stamp)
+    local file = self.files[vexid] or {}
+    for key, value in pairs(stamp) do
+        if file[key] ~= value then self.dirty = true end
+        file[key] = value
+    end
+    self.files[vexid] = file
+    return self
+end
+
 function VexDex:get(vexid)
     return self.index[vexid]
 end
@@ -110,6 +122,10 @@ function VexDex:readindex()
         local paths = {binser.readFile(self:vexpath("vexdex/paths.bin"))}
         self.paths = paths[1][1]
     end
+    if lfs.attributes(self:vexpath("vexdex/files.bin"), "mode") == "file" then
+        local files = {binser.readFile(self:vexpath("vexdex/files.bin"))}
+        self.files = files[1][1]
+    end
     return self 
 end
 
@@ -120,7 +136,6 @@ local function data(task)
 end
 
 function VexDex:writeindex()
-    self.modified = os.time()
     self:atomic(self:vexpath("vexdex/index.bin"), function(path)
         binser.writeFile(path, func.map(self.index, data))
     end)
@@ -138,6 +153,12 @@ function VexDex:writeindex()
     end)
     self:atomic(self:vexpath("vexdex/paths.lua"), function(path)
         pretty.write(path, self.paths)
+    end)
+    self:atomic(self:vexpath("vexdex/files.bin"), function(path)
+        binser.writeFile(path, self.files)
+    end)
+    self:atomic(self:vexpath("vexdex/files.lua"), function(path)
+        pretty.write(path, self.files)
     end)
     self.dirty = false
     return self 

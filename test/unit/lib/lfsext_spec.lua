@@ -25,6 +25,21 @@ describe("lfsext", function()
         os.execute("rm -rf '" .. dir .. "'")
     end)
 
+    it("lists the mtime of every file below a folder, skipping hidden ones", function()
+        local dir = tmpdir()
+        os.execute("mkdir -p '" .. dir .. "/a' '" .. dir .. "/.hidden' && touch '" .. dir .. "/top.md' '" .. dir .. "/a/nested.md' '" .. dir .. "/.hidden/skip.md' '" .. dir .. "/.skip.md'")
+        local mtimes = lfsext.mtimes(dir)
+        local paths = {}
+        for path in pairs(mtimes) do table.insert(paths, path) end
+        table.sort(paths)
+        assert.same({dir .. "/a/nested.md", dir .. "/top.md"}, paths)
+        assert.equal(mtimes[dir .. "/top.md"], lfsext.mtime(dir .. "/top.md"))
+        os.execute("touch -d '2001-01-01 00:00:00' '" .. dir .. "/top.md'")
+        assert.not_equal(mtimes[dir .. "/top.md"], lfsext.mtime(dir .. "/top.md"))
+        assert.is_nil(lfsext.mtime(dir .. "/missing.md"))
+        os.execute("rm -rf '" .. dir .. "'")
+    end)
+
     describe("globaldir", function()
         local function env(vars)
             return function(name) return vars[name] end

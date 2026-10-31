@@ -57,8 +57,8 @@ end)
 Focus.register_focus("none", function() 
     return {} 
 end)
-Focus.register_focus("updated", function() 
-    return func.filter(Focus.getalltasks(), function(task) return task.modified > vexdex.modified end) 
+Focus.register_focus("updated", function()
+    return require('core.task'):updated()
 end)
 
 for _, phase in ipairs {'initial', 'interim', 'final'} do
@@ -213,7 +213,7 @@ end
 -- `none`
 -- `tag` for any task tag 
 -- `path` for any task path (if there is a slash)
--- `updated` for only tasks which have updated against the index. 
+-- `updated` for the tasks whose files changed since vex last saw them
 -- a list of the above unions them
 
 local namedfocus = {}

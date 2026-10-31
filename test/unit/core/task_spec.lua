@@ -283,6 +283,111 @@ describe("task", function()
         assert.equal(7, vexdex:get(vexid).cost)
     end)
 
+    describe("changes", function()
+
+        local OLD = 1577836800
+
+        local function backdated(properties)
+            local vexid = create(properties)
+            task:set(vexid, {modified = OLD})
+            task:resolve(vexid)
+            return vexid
+        end
+
+        local function contents(vexid)
+            local f = io.open(task:getcurrentpath(vexid))
+            local content = f:read("*a")
+            f:close()
+            return content
+        end
+
+        it("leaves modified alone when resolving a task changes nothing but modified", function()
+            local vexid = backdated({description = "unchanged backdated task"})
+            assert.equal(OLD, task.tasks[vexid].modified)
+            task:set(vexid, {cost = task.tasks[vexid].cost})
+            task:resolve(vexid)
+            assert.equal(OLD, task.tasks[vexid].modified)
+        end)
+
+        it("moves modified when resolving a task whose content changed", function()
+            local vexid = backdated({description = "changed backdated task"})
+            task:set(vexid, {cost = 3})
+            task:resolve(vexid)
+            assert.is_true(task.tasks[vexid].modified > OLD)
+        end)
+
+        it("writes a resolved task back to its file", function()
+            local vexid = backdated({description = "written backdated task"})
+            task:set(vexid, {cost = 4})
+            task:resolve(vexid)
+            assert.equal(4, task:readfrompath(task:getcurrentpath(vexid)).cost)
+        end)
+
+        it("does not rewrite a file whose bytes would not change", function()
+            local vexid = backdated({description = "untouched backdated task"})
+            local writes = 0
+            local atomic = vexdex.atomic
+            vexdex.atomic = function(...) writes = writes + 1 return atomic(...) end
+            task:write(vexid)
+            vexdex.atomic = atomic
+            assert.equal(0, writes)
+            assert.truthy(contents(vexid):find("modified: \"2020%-01%-01"))
+        end)
+
+        it("leaves out the fields config excludes from a task's fingerprint", function()
+            local vexid = backdated({description = "fingerprinted backdated task"})
+            local before = task:fingerprint(vexid)
+            task.tasks[vexid].modified = OLD + 60
+            assert.equal(before, task:fingerprint(vexid))
+            task.tasks[vexid].cost = 7
+            assert.not_equal(before, task:fingerprint(vexid))
+        end)
+
+    end)
+
+    describe("refresh", function()
+
+        local function edit(vexid, from, to)
+            local path = task:getcurrentpath(vexid)
+            local f = io.open(path)
+            local content = f:read("*a")
+            f:close()
+            f = io.open(path, "w")
+            f:write((content:gsub(from, to)))
+            f:close()
+        end
+
+        it("lists the tasks whose files changed since vex last saw them", function()
+            local edited = create({description = "refresh listed edited task"})
+            local kept = create({description = "refresh listed kept task"})
+            edit(edited, "\nstatus: todo\n", "\nstatus: todo\ncost: 3\n")
+            local updated = func.imap(task:updated(), function(t) return t.vexid end)
+            assert.truthy(func.any(updated, function(vexid) return vexid == edited end))
+            assert.is_false(func.any(updated, function(vexid) return vexid == kept end))
+        end)
+
+        it("resolves a hand-edited task into the index", function()
+            local vexid = create({description = "refresh resolved edited task"})
+            edit(vexid, "\nstatus: todo\n", "\nstatus: todo\ncost: 3\n")
+            task.tasks[vexid] = nil
+            task:refresh({vexid})
+            assert.equal(3, vexdex:get(vexid).cost)
+            assert.same({}, func.ifilter(task:updated(), function(t) return t.vexid == vexid end))
+        end)
+
+        it("forgets a task whose file is unreadable, leaving the file", function()
+            local vexid = create({description = "refresh forgotten broken task"})
+            local path = task:getcurrentpath(vexid)
+            edit(vexid, "^%-%-%-\n", "")
+            task.tasks[vexid] = nil
+            task:refresh({vexid})
+            assert.is_nil(vexdex:get(vexid))
+            assert.truthy(io.open(path))
+            os.remove(path)
+        end)
+
+    end)
+
     describe("cascading resolution", function()
 
         task:task 'tracker':extends 'atom' {
@@ -408,6 +513,22 @@ describe("task", function()
             assert.same({vexid}, fired['post-task-remove'][1])
             assert.same({vexid}, fired['pre-task-delete'][1])
             assert.same({vexid, path}, fired['post-task-delete'][1])
+        end)
+
+        it("fires pre- and post-task-refresh with the vexids asked for and those resolved, and task-forget for a task whose file is gone", function()
+            local edited = create({description = "evented refreshed task"})
+            local gone = create({description = "evented forgotten task"})
+            local path = task:getcurrentpath(edited)
+            local content = io.open(path):read("*a")
+            local f = io.open(path, "w")
+            f:write((content:gsub("\nstatus: todo\n", "\nstatus: todo\ncost: 2\n")))
+            f:close()
+            os.remove(task:getcurrentpath(gone))
+            task:refresh({edited, gone})
+            assert.same({{edited, gone}}, fired['pre-task-refresh'][1])
+            assert.same({{edited, gone}, {edited}}, fired['post-task-refresh'][1])
+            assert.same({gone}, fired['pre-task-forget'][1])
+            assert.same({gone}, fired['post-task-forget'][1])
         end)
 
         it("fires pre- and post-task-reindexall, and task-read for each file read", function()

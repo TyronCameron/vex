@@ -30,10 +30,12 @@ Every event below fires as `pre-` and `post-`.
 | `task-resolve` | resolving a task | vexid | vexid, task |
 | `task-remove` | unlinking a removed task | vexid | vexid |
 | `task-delete` | deleting a task's file | vexid | vexid, path |
+| `task-forget` | dropping a task from the index, after its file is deleted, gone or unreadable | vexid | vexid |
+| `task-refresh` | resolving the tasks whose files changed on disk, before a verb reads its focus | vexids (nil for every task) | vexids, vexids resolved |
 | `task-read` | reading a task file | path | path, task (nil if unreadable) |
 | `task-write` | writing a task file | vexid | vexid, path |
 | `task-move` | moving a task file into place | vexid | vexid, from, to |
-| `task-reindexall` | `vex resolve all`'s rebuild | | |
+| `task-reindexall` | `vex resolve all --force`'s rebuild | | |
 | `task-get` | `vex get` on one task | vexid, fields | vexid, fields, output |
 | `task-show` | `vex show` on one task | vexid | vexid, output |
 | `focus-write` | saving the focus | focus | focus |
