@@ -37,9 +37,10 @@ Each of those tasks is now a markdown file you can open, edit, link in Obsidian 
 ## Features
 
 - **Tasks as files.** Markdown with YAML frontmatter, validated against a schema and indexed for speed.
-- **Focuses.** Saved, composable queries: filter, fuzzy-match, compare dates written as phrases (`--interpret --between due:now:"next tuesday"`), walk children and dependencies, group, order and number.
+- **Focuses.** Saved, composable queries: filter, fuzzy-match, compare dates written as phrases (`--between due:now:"next tuesday"`), walk children and dependencies, group, order and number.
 - **Views.** Tables, CSV, JSON, kanban boards, project statistics and a dependency view of any task.
 - **Opinionated task types.** Abstracts group work, explorations mark open questions, decisions choose a path and atoms get done.
+- **Pipeable.** Views print plain text, so `vex view all csv | duckdb -c "select status, count(*) cnt from read_csv('/dev/stdin') group by status"` just works, as do `json` with `jq` and `ics` into any calendar.
 - **Extensible from your project.** Add task types, computed fields, recipes, focuses, views and event hooks with a Lua file in `.vex`, no build step required.
 - **Runs on a potato.** A single LuaJIT program.
 

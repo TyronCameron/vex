@@ -295,16 +295,16 @@ function Focus:select(...)
     end, ...)
 end 
 
-local function normalised(task, field, value, iso)
+local function normalised(task, field, value)
     local fieldschema = value and require('core.task'):schemaof(task.vextype, field)
     if not fieldschema then return value end
-    if iso then
-        local ok, result = pcall(fieldschema.unapply, fieldschema, iso, value)
-        if not ok then cli:throw('uninterpretable', field, result) end
-        value = result
-    end
     local ok, result = pcall(fieldschema.prevalidate, fieldschema, value, {})
     if ok and result ~= nil then value = result end
+    if type(value) ~= type(task[field]) then
+        local interpreted, phrase = pcall(fieldschema.unapply, fieldschema, 'interpret', value)
+        if not interpreted then cli:throw('uninterpretable', field, phrase) end
+        value = phrase
+    end
     if type(value) ~= type(task[field]) then
         cli:throw('usage', 'Cannot compare `' .. field .. '` with `' .. tostring(value) .. '`.')
     end
@@ -316,10 +316,9 @@ function Focus:filter(field, value)
     if value == nil then 
         cli:throw('usage', 'You need to provide a field and value to filter on. We saw field = ' .. tostring(field) .. ' and value ' .. tostring(value)) 
     end 
-    local iso = self.iso
     return self:chain('filter', function(tasks)
         return func.ifilter(tasks, function(task)
-            return task[field] ~= nil and task[field] == normalised(task, field, value, iso)
+            return task[field] ~= nil and task[field] == normalised(task, field, value)
         end)
     end, field, value)
 end 
@@ -383,12 +382,11 @@ end
 
 -- between field:begin:end, where an empty begin or end leaves that side open
 function Focus:between(field, start, finish)
-    local iso = self.iso
     return self:chain('between', function(tasks) 
         return func.ifilter(tasks, function(task) 
             local value = task[field]
             if value == nil then return false end
-            local lower, upper = normalised(task, field, start ~= '' and start, iso), normalised(task, field, finish ~= '' and finish, iso)
+            local lower, upper = normalised(task, field, start ~= '' and start), normalised(task, field, finish ~= '' and finish)
             return (not lower or lower <= value) and (not upper or value <= upper)
         end)
     end, field, start, finish)
@@ -601,19 +599,6 @@ function Focus:step(...)
 end
 
 -----------------------------------------
--- Modifiers
------------------------------------------
-
--- interpret reads the next operation's values as phrases through each field's interpret iso, e.g. `--interpret --between due:now:"next tuesday"`
-function Focus:interpret()
-    local interpreted = setmetatable({}, getmetatable(self))
-    for key, value in pairs(self) do interpreted[key] = value end
-    interpreted.operations = func.imerge(self.operations, {{ operation = 'interpret', args = {} }})
-    interpreted.iso = 'interpret'
-    return interpreted
-end 
-
------------------------------------------
 -- Universal 
 -----------------------------------------
 
@@ -743,8 +728,8 @@ end
 --     :between("due", "2025-01-01", "2026-01-01")
 --     :fuzzy("vexid", "hello")
 --     :or():fuzzy("vexid", "hello")
---     :or():interpret():filter("due", "tomorrow")
---     :or():interpret():between("due", "tomorrow", "monday")
+--     :or():filter("due", "tomorrow")
+--     :or():between("due", "tomorrow", "monday")
 --     :reversetree("parent")
 --     :notin():namedfocus("hello-world-1", "hellow-world-2")
 

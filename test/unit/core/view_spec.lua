@@ -103,6 +103,44 @@ describe("view", function()
         end
     end)
 
+    it("writes dates and lists readably in the csv view, quoting what needs it", function()
+        local quoted = create({description = 'viewed "quoted", comma task', due = "2026-08-01 09:00:00"})
+        local result = view:display('csv', focus.focus(quoted), {})
+        assert.truthy(result:find('"viewed ""quoted"", comma task"', 1, true))
+        assert.truthy(result:find('2026-08-01 09:00:00', 1, true))
+        assert.truthy(view:display('csv', focus.focus(parent), {}):find('[[' .. child .. ']]', 1, true))
+    end)
+
+    it("writes a timed event for a datetime in the ics view, defaulting to due", function()
+        local result = view:display('ics', focus.focus(child), {})
+        assert.truthy(result:find('UID:' .. child .. '@vex\r\n', 1, true))
+        assert.truthy(result:find('SUMMARY:viewed child task\r\n', 1, true))
+        assert.truthy(result:find('DTSTART:%d+T%d+Z\r\n'))
+        assert.truthy(result:find('RELATED-TO;RELTYPE=PARENT:' .. parent .. '@vex', 1, true))
+    end)
+
+    it("writes an all-day event for midnight and skips tasks without the field", function()
+        local midnight = create({description = "viewed midnight task", due = "2026-08-01 00:00:00"})
+        local result = view:display('ics', focus.focus({midnight, parent}), {})
+        assert.truthy(result:find('DTSTART;VALUE=DATE:20260801\r\n', 1, true))
+        assert.truthy(result:find('DTEND;VALUE=DATE:20260802\r\n', 1, true))
+        assert.is_nil(result:find(parent, 1, true))
+    end)
+
+    it("takes the date field from --by", function()
+        local result = view:display('ics', focus.focus(parent), {by = 'created'})
+        assert.truthy(result:find('UID:' .. parent .. '@vex', 1, true))
+    end)
+
+    it("rejects a field that is not a date", function()
+        local cli = require 'lib.cli'
+        stub(cli, 'throw', function(self, name) error(name) end)
+        local ok, err = pcall(view.display, view, 'ics', focus.focus(child), {by = 'description'})
+        cli.throw:revert()
+        assert.is_false(ok)
+        assert.truthy(err:find('not-a-date-field', 1, true))
+    end)
+
     it("fires pre- and post-view-display with the view, focus and flags, then the result", function()
         local fired = {}
         for _, name in ipairs {'pre-view-display', 'post-view-display'} do

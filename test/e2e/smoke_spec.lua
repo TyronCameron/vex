@@ -39,6 +39,8 @@ local views = {
   {"view", "all", "tabular"},
   {"view", "all", "tabular", "--groupby", "vextype:status", "--orderby", "vexid:desc"},
   {"view", "all", "json"},
+  {"view", "all", "ics"},
+  {"view", "all", "ics", "--by", "created"},
   {"view", "all", "kanban"},
   {"view", "all", "overview"},
   {"view", CHILD, "singular"},
@@ -46,6 +48,7 @@ local views = {
   {"view", DEPENDENT, "singular"},
   {"view", DECISION, "singular"},
   {"view", "none", "csv"},
+  {"view", "none", "ics"},
   {"view", "none", "kanban"},
 }
 
@@ -80,7 +83,7 @@ local focuses = {
   {"focus", "all", "--onlyin", "all"},
   {"focus", "./" .. CHILD .. ".md", count = 1},
   {"focus", "./"},
-  {"focus", "all", "--interpret", "--between", "due:yesterday:next year"},
+  {"focus", "all", "--between", "due:yesterday:next year"},
   {"focus", "all", "--groupby", "owner", "--orderby", "due:desc:cost", "--rn"},
   {"focus", "all", "--orderby", "created:desc", "--first", "2", count = 2},
   {"focus", "all", "--orderby", "created:desc", "--last", "2", count = 2},

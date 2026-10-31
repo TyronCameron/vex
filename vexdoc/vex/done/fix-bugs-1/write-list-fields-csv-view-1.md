@@ -3,8 +3,8 @@ vexid: write-list-fields-csv-view-1
 vextype: atom
 description: Write list fields readably in the csv view
 created: "2026-10-19 09:21:47"
-modified: "2026-10-30 01:33:49"
-status: todo
+modified: "2026-10-30 22:40:04"
+status: done
 ---
 
 The `csv` view writes list fields (`children`, `options`, `dependencies`) as `table: 0x...`. [[04 Views]] promises the same data as the tabular view, quoted where needed, for spreadsheets, `duckdb` or scripts.

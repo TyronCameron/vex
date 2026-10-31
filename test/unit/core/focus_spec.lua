@@ -130,7 +130,7 @@ describe("Focus", function()
         assert.equal("between cheap task", result[1].description)
     end)
 
-    describe("interpret", function()
+    describe("time phrases", function()
 
         local task = require 'core.task'
         local naturaltime = require 'lib.naturaltime'
@@ -149,32 +149,27 @@ describe("Focus", function()
             return func.imap(f:get(), function(t) return t.vexid end)
         end
 
-        it("reads the next between's bounds as phrases relative to now", function()
-            assert.same({soon}, vexids(Focus.focus('all'):interpret():between('due', 'now', 'next year')))
+        it("reads between's bounds as phrases relative to now", function()
+            assert.same({soon}, vexids(Focus.focus('all'):between('due', 'now', 'next year')))
         end)
 
-        it("reads the next filter's value as a phrase", function()
-            assert.same({soon}, vexids(Focus.focus('all'):interpret():filter('due', 'tomorrow')))
+        it("reads filter's value as a phrase", function()
+            assert.same({soon}, vexids(Focus.focus('all'):filter('due', 'tomorrow')))
         end)
 
         it("leaves an open bound open", function()
-            assert.same({later}, vexids(Focus.focus('all'):interpret():between('due', 'next year', '')))
-        end)
-
-        it("applies to the next operation only", function()
-            local f = Focus.focus('all'):interpret():filter('vextype', 'task')
-            assert.is_nil(f.iso)
+            assert.same({later}, vexids(Focus.focus('all'):between('due', 'next year', '')))
         end)
 
         it("replays from the saved focus", function()
-            Focus.focus('all'):interpret():between('due', 'now', 'next year'):write()
+            Focus.focus('all'):between('due', 'now', 'next year'):write()
             assert.same({soon}, vexids(Focus.read()))
         end)
 
         it("rejects a phrase it cannot interpret", function()
             local cli = require 'lib.cli'
             stub(cli, 'throw', function(self, name) error(name) end)
-            local ok, err = pcall(function() Focus.focus('all'):interpret():filter('due', 'tomorrow blorp'):get() end)
+            local ok, err = pcall(function() Focus.focus('all'):filter('due', 'tomorrow blorp'):get() end)
             cli.throw:revert()
             assert.is_false(ok)
             assert.truthy(err:find('uninterpretable', 1, true))
@@ -320,9 +315,9 @@ describe("Focus", function()
             assert.same({"e", "d", "c", "b", "a"}, vexids(f:groupby('owner'):union(none):orderby('vexid', 'desc'):get(tasks)))
         end)
 
-        it("interprets the next operation within each group", function()
+        it("reads values within each group", function()
             local dated = {{vexid = "x", owner = "bob", cost = 2}, {vexid = "y", owner = "alice", cost = 2}, {vexid = "z", owner = "alice", cost = 5}}
-            assert.same({{"y"}, {"x"}}, func.imap(f:groupby('owner'):interpret():between('cost', '', 3):groups(dated), vexids))
+            assert.same({{"y"}, {"x"}}, func.imap(f:groupby('owner'):between('cost', '', 3):groups(dated), vexids))
         end)
 
         it("numbers saved tasks, keeping their transients, and replays from the saved focus", function()

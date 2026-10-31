@@ -11,6 +11,7 @@ children:
   - "[[write-list-fields-csv-view-1]]"
   - "[[cap-tabular-view-cells-terminal-1]]"
   - "[[fix-show-printing-list-fields-1]]"
+  - "[[fix-descriptions-quotes-gaining-1]]"
 created: "2026-10-19 07:34:55"
-modified: "2026-10-30 01:33:49"
+modified: "2026-10-30 22:40:04"
 ---

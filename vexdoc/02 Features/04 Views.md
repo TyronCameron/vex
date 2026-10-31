@@ -45,11 +45,44 @@ $ vex view all tabular --groupby vextype:status --orderby vexid --select vextype
 
 ## `csv`
 
-The same data as comma-separated values, quoted where needed, for spreadsheets, `duckdb` or scripts. Like the other views it leaves out the body, which lives only in the task file:
+The same data as comma-separated values, for spreadsheets, `duckdb` or scripts. Like the other views it leaves out the body, which lives only in the task file. Dates are written as in the task file (`2026-10-31 08:00:00`) and a list such as `children` is one cell of comma-separated values. A cell holding a comma, a double quote, a line break or leading or trailing spaces is wrapped in double quotes, with each quote inside doubled, so any CSV reader gets the fields back as they are:
 
 ```console
 $ vex view all csv > tasks.csv
 ```
+
+### Piping vex into other tools
+
+Everything vex prints is plain text on standard output, so it pipes into whatever you already use. For instance, count the tasks in each status with `duckdb`:
+
+```console
+$ vex view all csv | duckdb -c "select status, count(*) cnt from read_csv('/dev/stdin') group by status order by status"
+```
+
+The `json` view works the same way with `jq`:
+
+```console
+$ vex view all json | jq -r '.[] | select(.status == "todo") | .vexid'
+```
+
+## `ics`
+
+The tasks as an iCalendar file that any calendar app can import. Each task holding a value in the date field becomes one event, and tasks without one are skipped. The field is `due` unless you pick another `date` or `datetime` field with `--by`, custom task types' fields included; any other field fails with `not-a-date-field`:
+
+```console
+$ vex view all ics > tasks.ics
+$ vex view all ics --by created > created.ics
+```
+
+An event holds:
+
+- `UID` as `<vexid>@vex`, so importing the file again updates the events instead of duplicating them.
+- `SUMMARY`, the task's description.
+- `DTSTART` in UTC. A value at midnight becomes an all-day event with a `DTEND` of the next day.
+- `CREATED`, `LAST-MODIFIED` and `DTSTAMP`.
+- `CATEGORIES`, the task's type and owner.
+- `RELATED-TO` the parent task, when it has one.
+- `DESCRIPTION`, a `field: value` line for every other field the task stores. The body is left out.
 
 ## `json`
 

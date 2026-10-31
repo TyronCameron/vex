@@ -9,7 +9,8 @@ Every user mistake fails with a named error, a message and a hint, and exits non
 | `no-focus` | A command needed the saved focus and there is none, or it can't be replayed. | `vex focus <name>` or `vex add` to set one. |
 | `unknown-focus` | The focus is not a named focus, a vexid in the index or a path. | Check the spelling. If the task exists on disk, `vex resolve all`. |
 | `unknown-focus-operation` | A flag that isn't a focus operation, such as `--colour`. | See [[05 Getting into focus]]. |
-| `uninterpretable` | A time phrase in a focus (`--interpret --between due:someday:now`) that vex can't read. A bad `--due` on `add` or `set` is a normalisation failure instead. | Use a phrase from [[01 CLI reference#Interpreting times]]. |
+| `not-a-date-field` | `vex view <focus> ics --by <field>` where the field isn't a `date` or `datetime`. | Pick one, such as `due` or `created`. |
+| `uninterpretable` | A time phrase in a focus (`--between due:someday:now`) that vex can't read. A bad `--due` on `add` or `set` is a normalisation failure instead. | Use a phrase from [[01 CLI reference#Interpreting times]]. |
 | `unknown-vextype` | `--vextype` names a type that isn't registered. | Use `task`, `abstract`, `decision`, `exploration`, `atom` or one from `.vex/tasks`. |
 | `unknown-view`, `unknown-recipe` | No such view or recipe. | `vex view` and `vex recipe` list them. |
 | `unknown-modifier` | `--insert` or `--remove` before something that isn't a list field. | `vex set x --insert --children a,b`. |
