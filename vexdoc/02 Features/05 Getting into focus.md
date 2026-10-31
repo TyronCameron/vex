@@ -34,7 +34,7 @@ A focus starts from one of these:
 | --- | --- |
 | `all` | Every task. |
 | `none` | No tasks. |
-| `updated` | Tasks whose files changed since vex last saw them: edited by hand, pulled, new, moved, unreadable or gone. `vex resolve updated` takes them in. |
+| `updated` | Indexed tasks whose files changed since vex last saw them: edited by hand, pulled, moved, unreadable or gone. `vex resolve updated` takes them in; new task files only reach the index through `vex resolve all`. |
 | `initial` | Tasks in their type's first status: `todo`, and abstracts whose children are all untouched. |
 | `interim` | Tasks in between: abstracts with some children done. |
 | `final` | Tasks with no way out of their status: `done`, and abstracts whose children are all done. |

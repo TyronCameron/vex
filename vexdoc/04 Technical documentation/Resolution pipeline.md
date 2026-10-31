@@ -10,13 +10,13 @@ Every resolve writes what it resolved, so a value you typed by hand (`due: tomor
 
 ## Fingerprints and `modified`
 
-A task's fingerprint is a hash of its file as vex would write it, leaving out the fields listed in `fingerprint.exclude` in `config.lua` (`modified` by default). The vexdex keeps the fingerprint vex last saw for each task. When resolving gives a different fingerprint, the task's content changed, by a `set`, a hand edit, a value normalised or a field derived from a neighbour, and `modified` is set to now. Otherwise `modified` keeps its value, so a `set` that changes nothing, a resolve of an unchanged task and a rebuilt index never move it.
+Whenever the vexdex indexes a task, it keeps a fingerprint of it (`VexDex:fingerprint`): a hash of every field and the body, leaving out the fields listed in `fingerprint.exclude` in `config.lua` (`modified` by default). At the end of resolving, if the resolved task's fingerprint differs from the one kept (`VexDex:changed`), the task's content changed, by a `set`, a hand edit, a value normalised or a field derived from a neighbour, and `modified` is set to now. Otherwise `modified` keeps its value, so a `set` that changes nothing, a resolve of an unchanged task and a rebuilt index never move it.
 
 ## Changes on disk
 
-The vexdex also keeps the modification time vex last saw for each task file. A file whose time differs is `updated`: edited by hand, pulled, checked out, new to vex, moved, unreadable or gone (`TaskManager:updated`). Before `show`, `get`, `set`, `view`, `remove` and `resolve` read their focus, vex resolves the tasks in it that are `updated` (`TaskManager:refresh`), so a hand edit is picked up the next time you look at the task. A file that was only touched resolves to the same fingerprint and is left as it is.
+The vexdex also keeps the modification time vex last saw for each task file, and lists every file under `taskfolder` with its time in one go (`VexDex:updated`). An indexed task whose file's time differs is `updated`: edited by hand, pulled, checked out, moved, unreadable or gone. Before `show`, `get`, `set`, `view`, `remove` and `resolve` read their focus, vex resolves the tasks in it that are `updated`, so a hand edit is picked up the next time you look at the task. A file that was only touched resolves to the same fingerprint and is left as it is. Resolving a task whose file is gone or no longer readable drops it from the index, leaving any file alone, and resolves the tasks it was linked to.
 
-`vex resolve all` resolves every `updated` file, takes in new task files and forgets tasks whose files are gone or no longer readable, leaving the files themselves alone. `vex resolve all --force` instead rebuilds the index from every file on disk (`TaskManager:reindexall`) and resolves each: use it when something other than a task file changed what resolution gives, such as `paths.groupby` or a task type.
+`vex resolve all` (`TaskManager:reindexall`) resolves every `updated` task and reads in the files the vexdex doesn't know: new task files, and files moved by hand. `vex resolve all --force` first clears the index, so every file is read and resolved: use it when something other than a task file changed what resolution gives, such as `paths.groupby` or a task type.
 
 The index is saved once, when the command finishes successfully ([[The index]]). A failure at any point, including a task further along a cascade, leaves the saved index as it was.
 
@@ -34,4 +34,4 @@ A task's file belongs where the `taskpath` plugin puts it, which with `paths.gro
 
 ## Removing
 
-`TaskManager:remove` strips the removed vexid from every linking task, then resolves and writes those tasks, so validation stays strict and nothing dangles. `TaskManager:delete` then removes the file and forgets the task (`TaskManager:forget`): it drops it from the index and resolves the tasks it linked to.
+`TaskManager:remove` strips the removed vexid from every linking task, then resolves and writes those tasks, so validation stays strict and nothing dangles. `TaskManager:delete` then removes the file, drops the task from the index and resolves the tasks it linked to.

@@ -15,13 +15,8 @@ local vexdex = require 'core.vexdex'
 local focus = require 'core.focus'
 local config = require 'core.config'
 local event = require 'lib.event'
-local hash = require 'lib.hash'
 
 local taskmanager
-
-local function taskroot()
-    return vexdex.path .. '/' .. config.taskfolder
-end
 
 ------------------------------------------------
 --- Tasks
@@ -330,28 +325,28 @@ end
 -- - tag duplication checks
 -- should always add to index at the end of a resolve, possibly already removing the task
 
--- rebuild the entire vexdex by iterating through the filesystem
-function TaskManager:reindexall()
-    event:trigger('pre-task-reindexall')
-    for key in pairs(vexdex.index) do
-        vexdex:unsafe_remove(key)
+-- takes in the task files that changed on disk since vex last saw them, or with force every task file, and resolves them
+function TaskManager:reindexall(force)
+    event:trigger('pre-task-reindexall', force)
+    if force then
+        for key in pairs(vexdex.index) do vexdex:unsafe_remove(key) end
     end
-
-    self.mtimes = lfsext.mtimes(taskroot())
-    local vexids, paths = {}, {}
-    for _, path in ipairs(func.sortedkeys(self.mtimes)) do
+    local recorded = func.map(vexdex.paths, function(path) return path end)
+    local vexids, unknown = vexdex:updated()
+    local found = {}
+    for _, path in ipairs(unknown) do
         local task = self:readfrompath(path)
         if task then
-            if paths[task.vexid] then cli:throw('duplicate-vexid', task.vexid, paths[task.vexid], path) end
-            paths[task.vexid] = path
+            local other = found[task.vexid] or (recorded[task.vexid] and vexdex:taskroot() .. '/' .. recorded[task.vexid])
+            if other and lfs.attributes(other, 'mode') == 'file' then cli:throw('duplicate-vexid', task.vexid, other, path) end
+            found[task.vexid] = path
+            if not vexdex:get(task.vexid) then self:index(task.vexid) end
             table.insert(vexids, task.vexid)
         end
     end
-
-    for _, vexid in ipairs(vexids) do self:index(vexid) end
     self:resolveall(vexids)
-    event:trigger('post-task-reindexall')
-    return self 
+    event:trigger('post-task-reindexall', force)
+    return self
 end
 
 local function taskfile(context)
@@ -386,7 +381,14 @@ function TaskManager:resolvesingle(vexid)
     event:trigger('pre-task-resolve', vexid)
 
     local previous = vexdex:get(vexid) or {}
-    local task = self:getsingle(vexid) or {}
+    local task = self:getsingle(vexid)
+    if not task and vexdex:get(vexid) then
+        local linked = func.imerge(previous.forwardlinks, previous.backlinks)
+        vexdex:unsafe_remove(vexid)
+        event:trigger('post-task-resolve', vexid, nil)
+        return linked
+    end
+    task = task or {}
     if not task.vextype then cli:throw('missing-required-field', task.vexid, 'vextype') end 
 
     local vextype = self.tasktypes[task.vextype]
@@ -415,14 +417,8 @@ function TaskManager:resolvesingle(vexid)
     local unlinked = func.ifilter(previous.forwardlinks or {}, function(target)
         return not func.any(context.links, function(link) return link == target end)
     end)
+    if vexdex:changed(vexid, task) then task.modified = os.time() end
     self.tasks[vexid] = task
-    local fingerprint = self:fingerprint(vexid)
-    local stamped = (vexdex.files[vexid] or {}).fingerprint
-    if stamped and stamped ~= fingerprint then
-        task.modified = os.time()
-        fingerprint = self:fingerprint(vexid)
-    end
-    vexdex:unsafe_stamp(vexid, {fingerprint = fingerprint})
     vexdex:unsafe_link(vexid, context.links)
     vexdex:unsafe_add(vexid, task)
 
@@ -430,7 +426,7 @@ function TaskManager:resolvesingle(vexid)
     return func.imerge(unlinked, func.imerge(task.forwardlinks, task.backlinks))
 end
 
--- resolves the given tasks and everything linked to them, each once, writes each and moves every file to where it belongs
+-- resolves the given tasks and everything linked to them, each once, writes each and moves every file to where it belongs; a task whose file is gone or unreadable leaves the index
 function TaskManager:resolveall(vexids)
     local resolved, requested, pending = {}, {}, {}
     for _, vexid in ipairs(vexids) do
@@ -444,8 +440,10 @@ function TaskManager:resolveall(vexids)
         end
     end
     for vexid in pairs(resolved) do
-        self:write(vexid)
-        self:move(vexid)
+        if vexdex:get(vexid) then
+            self:write(vexid)
+            self:move(vexid)
+        end
     end
 end
 
@@ -498,21 +496,8 @@ local function contents(path)
     return content
 end
 
--- the text of a task's file, leaving out the given fields
-function TaskManager:render(vexid, exclude)
-    local task = self:format(vexid)
-    local fields = frontmatter(task)
-    for _, field in ipairs(exclude or {}) do fields[field] = nil end
-    return taskformat.render(sortdata(fields), body(task))
-end
-
--- a hash of what a task holds, leaving out the fields config.fingerprint.exclude names
-function TaskManager:fingerprint(vexid)
-    return hash.fnv1a(self:render(vexid, (config.fingerprint or {}).exclude))
-end
-
 local function relative(path)
-    local root = taskroot() .. '/'
+    local root = vexdex:taskroot() .. '/'
     if path:sub(1, #root) == root then return path:sub(#root + 1) end
 end
 
@@ -522,27 +507,27 @@ end
 
 local function tidy(path)
     local dir = dirname(path)
-    while #dir > #taskroot() and os.remove(dir) do
+    while #dir > #vexdex:taskroot() and os.remove(dir) do
         dir = dirname(dir)
     end
 end
 
 -- get the path that a task should live at
 function TaskManager:getabspath(vexid)
-    return taskroot() .. '/' .. self:getrelpath(vexid)
+    return vexdex:taskroot() .. '/' .. self:getrelpath(vexid)
 end
 
 -- get the path that a task's file currently lives at
 function TaskManager:getcurrentpath(vexid)
     local relpath = vexdex.paths[vexid]
     if not relpath then return self:getabspath(vexid) end
-    return taskroot() .. '/' .. relpath
+    return vexdex:taskroot() .. '/' .. relpath
 end
 
 -- finds a task's file anywhere in the taskfolder by its filename
 function TaskManager:find(vexid)
     local filename = self:getrelpath(vexid):match("[^/]*$")
-    return func.ifilter(lfsext.walk(taskroot()), function(path) return path:match("[^/]*$") == filename end)[1]
+    return func.ifilter(lfsext.walk(vexdex:taskroot()), function(path) return path:match("[^/]*$") == filename end)[1]
 end
 
 function TaskManager:getrelpath(vexid)
@@ -576,15 +561,13 @@ function TaskManager:write(vexid)
     event:trigger('pre-task-write', vexid)
     local task = self:format(vexid)
     local path = self:getcurrentpath(vexid)
-    if self:render(vexid) ~= contents(path) then
+    if taskformat.render(sortdata(frontmatter(task)), body(task)) ~= contents(path) then
         lfs.mkdir(dirname(path))
         vexdex:atomic(path, function(path)
             taskformat.write(path, sortdata(frontmatter(task)), body(task))
         end)
-        self.mtimes = self.mtimes or {}
-        self.mtimes[path] = lfsext.mtime(path)
     end
-    if self.mtimes and self.mtimes[path] then vexdex:unsafe_stamp(vexid, {mtime = self.mtimes[path]}) end
+    vexdex:unsafe_stamp(vexid, path)
     vexdex:unsafe_locate(vexid, relative(path))
     self:index(vexid)
     event:trigger('post-task-write', vexid, path)
@@ -595,7 +578,7 @@ end
 function TaskManager:move(vexid)
     event:trigger('pre-task-move', vexid)
     local relpath = self:getrelpath(vexid)
-    local from, to = self:getcurrentpath(vexid), taskroot() .. '/' .. relpath
+    local from, to = self:getcurrentpath(vexid), vexdex:taskroot() .. '/' .. relpath
     if from ~= to and lfs.attributes(from, "mode") ~= "file" then from = self:find(vexid) end
     if from and from ~= to then
         lfs.mkdir(dirname(to))
@@ -608,84 +591,17 @@ function TaskManager:move(vexid)
     return vexid
 end
 
--- drops a task from the index, leaving its file alone, and resolves the tasks it was linked to or from
-function TaskManager:forget(vexid)
-    event:trigger('pre-task-forget', vexid)
-    local linked = focus.focus(vexid):step('forwardlinks', 'backlinks'):get()
-    vexdex:unsafe_remove(vexid)
-    self.tasks[vexid] = nil
-    self:resolveall(func.imap(linked, function(task) return task.vexid end))
-    event:trigger('post-task-forget', vexid)
-    return vexid
-end
-
 -- deletes a file from disk
 function TaskManager:delete(vexid)
     event:trigger('pre-task-delete', vexid)
+    local linked = focus.focus(vexid):step('forwardlinks', 'backlinks'):get()
     local path = self:getcurrentpath(vexid)
     os.remove(path)
+    vexdex:unsafe_remove(vexid)
     tidy(path)
-    self:forget(vexid)
+    self:resolveall(func.imap(linked, function(task) return task.vexid end))
     event:trigger('post-task-delete', vexid, path)
     return vexid
-end
-
----------------------------------------------------
--- Changes on disk
----------------------------------------------------
-
--- the tasks whose files changed since vex last saw them: edited, new, moved, unreadable or gone
-function TaskManager:updated()
-    self.mtimes = lfsext.mtimes(taskroot())
-    local located, held = {}, {}
-    for vexid in pairs(vexdex.index) do
-        local path = self:getcurrentpath(vexid)
-        located[path] = vexid
-        if self.mtimes[path] then held[vexid] = path end
-    end
-    local updated, seen = {}, {}
-    for _, path in ipairs(func.sortedkeys(self.mtimes)) do
-        local vexid = located[path]
-        if not (vexid and (vexdex.files[vexid] or {}).mtime == self.mtimes[path]) then
-            local task = self:readfrompath(path)
-            if task then
-                local other = seen[task.vexid] or held[task.vexid]
-                if other and other ~= path then cli:throw('duplicate-vexid', task.vexid, other, path) end
-                seen[task.vexid] = path
-                table.insert(updated, vexdex:get(task.vexid) or self.tasks[task.vexid])
-            elseif vexid then
-                table.insert(updated, vexdex:get(vexid))
-            end
-        end
-    end
-    for _, vexid in ipairs(func.sortedkeys(vexdex.index)) do
-        if not seen[vexid] and not held[vexid] then table.insert(updated, vexdex:get(vexid)) end
-    end
-    return updated
-end
-
--- resolves the given tasks (every task when none are given) whose files changed since vex last saw them, and forgets those whose files are gone or unreadable
-function TaskManager:refresh(vexids)
-    event:trigger('pre-task-refresh', vexids)
-    local wanted
-    if vexids then
-        wanted = {}
-        for _, vexid in ipairs(vexids) do wanted[vexid] = true end
-    end
-    local changed = {}
-    for _, updated in ipairs(self:updated()) do
-        if not wanted or wanted[updated.vexid] then
-            if self:readfrompath(self:getcurrentpath(updated.vexid)) then
-                if not vexdex:get(updated.vexid) then self:index(updated.vexid) end
-                table.insert(changed, updated.vexid)
-            else
-                self:forget(updated.vexid)
-            end
-        end
-    end
-    self:resolveall(changed)
-    event:trigger('post-task-refresh', vexids, changed)
-    return changed
 end
 
 ---------------------------------------------------

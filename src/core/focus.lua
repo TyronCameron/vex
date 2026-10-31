@@ -58,7 +58,7 @@ Focus.register_focus("none", function()
     return {} 
 end)
 Focus.register_focus("updated", function()
-    return require('core.task'):updated()
+    return func.imap((vexdex:updated()), function(vexid) return vexdex.index[vexid] end)
 end)
 
 for _, phase in ipairs {'initial', 'interim', 'final'} do

@@ -13,17 +13,10 @@ local function vexids(f)
     return func.imap(f:get(), function(t) return t.vexid end)
 end
 
--- resolves the tasks in a focus whose files changed since vex last saw them, before a verb reads them
-local function refreshed(f)
-    task:refresh(vexids(f))
-    return f
-end
-
 local function focus_pop_args(args)
-    if not cli.isflag(args[1]) then
-        return refreshed(focus.focus(table.remove(args, 1)))
-    end
-    return refreshed(focus.focus())
+    local f = cli.isflag(args[1]) and focus.focus() or focus.focus(table.remove(args, 1))
+    task:resolveall(vexids(f:intersect(focus.focus('updated'))))
+    return f
 end
 
 -- joins accumulated output lines into the verb's return value; nil (rather
@@ -106,12 +99,13 @@ cli:verb "resolve" {
     function(args)
         local force = func.any(args, function(word) return cli.isflag(word) and word[1] == 'force' end)
         if args[1] == 'all' then
-            if force then task:reindexall() else task:refresh() end
+            task:reindexall(force)
+        else
+            local f = focus_pop_args(args)
+            if force then task:resolveall(vexids(f)) end
         end
-        local f = focus_pop_args(args)
-        if force then task:resolveall(vexids(f)) end
     end,
-    doc = "Validates, updates and normalises the tasks in the focus whose files changed since vex last saw them, and writes back what changes. `all` also takes in new task files and forgets deleted ones. --force resolves every task in the focus, and with `all` rebuilds the index from the files: use it after changing config or task types.",
+    doc = "Validates, updates and normalises the tasks in the focus whose files changed since vex last saw them, and writes back what changes. `all` also takes in new task files and drops deleted ones. --force resolves every task in the focus, and with `all` rebuilds the index from the files: use it after changing config or task types.",
     args = "[focus] [--force]",
     example = "vex resolve all"
 }

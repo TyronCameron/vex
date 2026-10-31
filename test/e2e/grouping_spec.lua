@@ -168,7 +168,7 @@ describe("vex grouped task paths (e2e, subprocess)", function()
     os.remove(dir .. "/.vex/vexdex/paths.bin")
     groupby "{'status'}"
     assert.truthy(vex(dir, "show", vexid):find(vexid, 1, true))
-    vex(dir, "resolve", "all")
+    vex(dir, "resolve", "all", "--force")
     assert.is_true(exists("todo/" .. vexid .. ".md"))
   end)
 
