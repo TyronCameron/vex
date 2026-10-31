@@ -22,3 +22,22 @@ jobs:
 
       - name: Run tests
         run: just test
+
+  bench:
+    name: Benchmark (densely linked tasks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install LuaJIT and just
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y luajit just
+
+      - name: Ensure vex binary is executable
+        run: chmod +x src/vex
+
+      - name: Run benchmark
+        run: just bench

@@ -16,6 +16,7 @@ just test                        # unit + e2e + lint; reports every failing suit
 just test-unit [spec...]         # unit tests (all, or the given spec files)
 just test-e2e [spec...]          # e2e tests (all, or the given spec files)
 just lint                        # luacheck (globals, undefined names, broken loops) + mirror check
+just bench                       # time a densely linked project (VEX_BENCH_TASKS tasks, default 300)
 just install [--uninstall]       # install this clone the way a release installs (PREFIX, default ~/.local)
 just package <version> [outdir]  # build vex-<version>.tar.gz/.zip + SHA256SUMS into dist/
 just docs [hugo flags]           # build the docs site from vexdoc/ into site/public (needs hugo extended, go and obsidian-export)
@@ -37,6 +38,7 @@ The tests exist to give fast, trustworthy feedback on any change. Every behaviou
   - `storage_spec.lua` guards the files on disk: resolving is idempotent, hand edits are picked up, the index can be rebuilt.
   - `errors_spec.lua` checks that each user mistake gets its named error.
   - `dogfood_spec.lua` resolves a copy of this repo's own backlog, so schema changes that would break real task files fail.
+- **Benchmark** (`test/bench/run.lua`, `just bench`) builds a project through `vex add` (atoms in 10 dependency layers around a hub atom, under 10 levels of abstracts), then times creation, `vex resolve all`, a `vex set` on the hub, `vex add` and `vex view all csv`. It is black-box like the e2e tests, asserts nothing beyond each command succeeding, and runs as its own CI job on every PR, writing its table to the job summary. `VEX_BENCH_TASKS` sets the size.
 
 Rules:
 
