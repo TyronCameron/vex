@@ -41,18 +41,27 @@ function lfsext.globalpath(name, getenv)
     return path and lfs.attributes(path, 'mode') and path
 end
 
-function lfsext.walk(path, files)
-    files = files or {}
+local function walkdir(path, files)
     for file in lfs.dir(path) do
         if file ~= "." and file ~= ".." then
             local full = path .. "/" .. file
             if lfs.attributes(full, "mode") == "directory" then
-                lfsext.walk(full, files)
+                walkdir(full, files)
             else
                 table.insert(files, full)
             end
         end
     end
+    return files
+end
+
+function lfsext.walk(path)
+    if package.config:sub(1, 1) == '\\' then return walkdir(path, {}) end
+    local files = {}
+    local handle = io.popen('find "' .. path .. '" ! -type d 2>/dev/null')
+    for file in handle:lines() do table.insert(files, file) end
+    handle:close()
+    table.sort(files)
     return files
 end
 
