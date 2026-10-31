@@ -1,4 +1,5 @@
 local lfsext = require 'lib.lfsext'
+local lfs = require 'lib.lfs'
 
 local function tmpdir()
     local handle = io.popen("mktemp -d")
@@ -22,6 +23,14 @@ describe("lfsext", function()
         local files = lfsext.walk(dir)
         table.sort(files)
         assert.same({dir .. "/a/nested.md", dir .. "/top.md"}, files)
+        os.execute("rm -rf '" .. dir .. "'")
+    end)
+
+    it("makes a folder with every missing folder above it, and accepts one that exists", function()
+        local dir = tmpdir()
+        assert.truthy(lfsext.mkdirs(dir .. "/a/b/c"))
+        assert.equal("directory", lfs.attributes(dir .. "/a/b/c", "mode"))
+        assert.truthy(lfsext.mkdirs(dir .. "/a/b"))
         os.execute("rm -rf '" .. dir .. "'")
     end)
 

@@ -550,7 +550,7 @@ function TaskManager:write(vexid)
     event:trigger('pre-task-write', vexid)
     local task = self:format(vexid)
     local path = self:getcurrentpath(vexid)
-    lfs.mkdir(dirname(path))
+    lfsext.mkdirs(dirname(path))
     vexdex:atomic(path, function(path)
         taskformat.write(path, sortdata(frontmatter(task)), body(task))
     end)
@@ -567,7 +567,7 @@ function TaskManager:move(vexid)
     local from, to = self:getcurrentpath(vexid), taskroot() .. '/' .. relpath
     if from ~= to and lfs.attributes(from, "mode") ~= "file" then from = self:find(vexid) end
     if from and from ~= to then
-        lfs.mkdir(dirname(to))
+        lfsext.mkdirs(dirname(to))
         local ok, err = os.rename(from, to)
         if not ok then cli:throw('move-failed', vexid, from, to, err) end
         tidy(from)
