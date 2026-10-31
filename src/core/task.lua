@@ -420,31 +420,22 @@ function TaskManager:resolvesingle(vexid)
     return func.imerge(unlinked, func.imerge(task.forwardlinks, task.backlinks))
 end
 
--- resolves the given tasks and the tasks linked to them, each once, writes the linked tasks and moves every file, and those above and below it, to where it belongs
+-- resolves the given tasks and everything linked to them, each once, writes the linked tasks and moves every file to where it belongs
 function TaskManager:resolveall(vexids)
-    local resolved, linked = {}, {}
+    local resolved, requested, pending = {}, {}, {}
     for _, vexid in ipairs(vexids) do
-        if not resolved[vexid] then
+        requested[vexid] = true
+        table.insert(pending, vexid)
+    end
+    for _, vexid in ipairs(pending) do
+        if not resolved[vexid] and (requested[vexid] or vexdex:get(vexid)) then
             resolved[vexid] = true
-            for _, link in ipairs(self:resolvesingle(vexid)) do table.insert(linked, link) end
+            for _, linked in ipairs(self:resolvesingle(vexid)) do table.insert(pending, linked) end
         end
     end
-    for _, vexid in ipairs(linked) do
-        if not resolved[vexid] and vexdex:get(vexid) then
-            resolved[vexid] = true
-            self:resolvesingle(vexid)
-            self:write(vexid)
-        end
-    end
-    local moved = {}
     for vexid in pairs(resolved) do
-        local lineage = focus.focus(vexid):tree('children', 'options'):union(focus.focus(vexid):reversetree('children', 'options'))
-        for _, t in ipairs(lineage:get()) do
-            if not moved[t.vexid] then
-                moved[t.vexid] = true
-                self:move(t.vexid)
-            end
-        end
+        if not requested[vexid] then self:write(vexid) end
+        self:move(vexid)
     end
 end
 
