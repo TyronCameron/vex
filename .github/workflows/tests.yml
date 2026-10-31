@@ -23,21 +23,64 @@ jobs:
       - name: Run tests
         run: just test
 
-  bench:
-    name: Benchmark (densely linked tasks)
+  benchmark:
+    name: Benchmark
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      pull-requests: write
+    defaults:
+      run:
+        shell: bash
+    env:
+      VEX_HOME: /nonexistent/vex-home
+      VEX_BENCHMARK_TASKS: 300
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Install LuaJIT and just
+      - name: Install LuaJIT
         run: |
           sudo apt-get update
-          sudo apt-get install -y luajit just
+          sudo apt-get install -y luajit
 
-      - name: Ensure vex binary is executable
-        run: chmod +x src/vex
+      - name: Check out the base branch with this pull request's benchmark
+        run: |
+          git worktree add ../base "origin/${{ github.base_ref }}"
+          rm -rf ../base/test/benchmark
+          cp -R test/benchmark ../base/test/benchmark
+          cp test/e2e/helper.lua ../base/test/e2e/helper.lua
 
-      - name: Run benchmark
-        run: just bench
+      - name: Benchmark the base branch
+        run: cd ../base && luajit test/benchmark/run.lua | tee "$RUNNER_TEMP/base.txt"
+
+      - name: Benchmark this pull request
+        run: luajit test/benchmark/run.lua | tee "$RUNNER_TEMP/pr.txt"
+
+      - name: Compare
+        run: |
+          {
+            echo "### Benchmark: ${VEX_BENCHMARK_TASKS} densely linked tasks"
+            echo
+            echo "| step | ${{ github.base_ref }} (s) | this PR (s) | change |"
+            echo "| --- | ---: | ---: | ---: |"
+            awk -F'|' '
+              function trim(s) { gsub(/^ +| +$/, "", s); return s }
+              /^\|/ && trim($3) ~ /^[0-9.]+$/ {
+                step = trim($2); seconds = trim($3)
+                if (FNR == NR) { base[step] = seconds; next }
+                change = base[step] > 0 ? sprintf("%+.0f%%", (seconds - base[step]) / base[step] * 100) : ""
+                printf "| %s | %s | %s | %s |\n", step, base[step], seconds, change
+              }' "$RUNNER_TEMP/base.txt" "$RUNNER_TEMP/pr.txt"
+          } > "$RUNNER_TEMP/benchmark.md"
+          cat "$RUNNER_TEMP/benchmark.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment on the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr comment "${{ github.event.pull_request.number }}" --edit-last --body-file "$RUNNER_TEMP/benchmark.md" \
+            || gh pr comment "${{ github.event.pull_request.number }}" --body-file "$RUNNER_TEMP/benchmark.md"
