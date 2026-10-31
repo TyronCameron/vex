@@ -332,6 +332,18 @@ describe("task", function()
             assert.same({[first] = 1, [second] = 1, [third] = 1}, resolved)
         end)
 
+        it("resolves only the tasks linked to the resolved one, not the tasks linked to those (resolve-one-hop-linked-tasks-1)", function()
+            local first = create({description = "one hop first", vextype = 'atom'})
+            local second = create({description = "one hop second", vextype = 'atom', dependencies = {first}})
+            local third = create({description = "one hop third", vextype = 'atom', dependencies = {second}})
+            local resolved = {}
+            event:register('pre-task-resolve', 'cascade-spec', function(vexid) resolved[vexid] = true end)
+            task:resolve(first)
+            event:remove('pre-task-resolve', 'cascade-spec')
+            assert.same({[first] = true, [second] = true}, resolved)
+            assert.is_nil(resolved[third])
+        end)
+
     end)
 
     describe("events", function()
