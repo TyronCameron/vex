@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Technical documentation on vex</title><link>https://tyroncameron.github.io/vex/docs/04-technical-documentation/</link><description>Recent content in Technical documentation on vex</description><generator>Hugo</generator><language>en-GB</language><atom:link href="https://tyroncameron.github.io/vex/docs/04-technical-documentation/index.xml" rel="self" type="application/rss+xml"/><item><title>Contributing</title><link>https://tyroncameron.github.io/vex/docs/04-technical-documentation/contributing/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://tyroncameron.github.io/vex/docs/04-technical-documentation/contributing/</guid><description>&lt;p&gt;vex is a single LuaJIT program with no build step. This page covers working on it; &lt;a data-bs-delay="{&amp;#34;hide&amp;#34;:300,&amp;#34;show&amp;#34;:550}" data-bs-html="true" data-bs-title="&lt;a href='https://tyroncameron.github.io/vex/docs/04-technical-documentation/plugin-architecture/'&gt;&lt;p&gt;TECHNICAL DOCUMENTATION&lt;/p&gt;&lt;strong&gt;Plugin architecture&lt;/strong&gt;&lt;br&gt;Every swappable part of vex, including id generation, file layout, the task file format and sort order, goes through one mechanism: `src/lib/plugin.lua`.&lt;/a&gt;" data-bs-toggle="tooltip" href="https://tyroncameron.github.io/vex/docs/04-technical-documentation/plugin-architecture/"&gt;Plugin architecture&lt;/a&gt; and &lt;a data-bs-delay="{&amp;#34;hide&amp;#34;:300,&amp;#34;show&amp;#34;:550}" data-bs-html="true" data-bs-title="&lt;a href='https://tyroncameron.github.io/vex/docs/04-technical-documentation/resolution-pipeline/'&gt;&lt;p&gt;TECHNICAL DOCUMENTATION&lt;/p&gt;&lt;strong&gt;Resolution pipeline&lt;/strong&gt;&lt;br&gt;How a task goes from `vex add` to a file on disk, and what else moves when it does.&lt;/a&gt;" data-bs-toggle="tooltip" href="https://tyroncameron.github.io/vex/docs/04-technical-documentation/resolution-pipeline/"&gt;Resolution pipeline&lt;/a&gt; explain how it fits together.&lt;/p&gt;</description></item><item><title>Plugin architecture</title><link>https://tyroncameron.github.io/vex/docs/04-technical-documentation/plugin-architecture/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://tyroncameron.github.io/vex/docs/04-technical-documentation/plugin-architecture/</guid><description>&lt;p&gt;Every swappable part of vex, including id generation, file layout, the task file format and sort order, goes through one mechanism: &lt;code&gt;src/lib/plugin.lua&lt;/code&gt;.&lt;/p&gt;
+&lt;h2 id="enums-named-slots-with-one-active-member"&gt;Enums: named slots with one active member &lt;a href="#enums-named-slots-with-one-active-member" class="anchor" aria-hidden="true"&gt;&lt;i class="material-icons align-middle"&gt;link&lt;/i&gt;&lt;/a&gt;&lt;/h2&gt;&lt;p&gt;&lt;code&gt;Plugin:addenum(name, members, active)&lt;/code&gt; registers a slot: a name, the implementations that can fill it, and the one that is active. &lt;code&gt;src/vex.lua&lt;/code&gt; registers six:&lt;/p&gt;
+
+
+
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+
+ 
+
+ &lt;div class="prism-codeblock "&gt;
+ &lt;pre id="85d8a01" class="language-lua "&gt;
+ &lt;code&gt;plugin:addenum(&amp;#34;tagger&amp;#34;, {&amp;#34;canonicalvexid&amp;#34;})
+plugin:addenum(&amp;#34;taskpath&amp;#34;, {&amp;#34;grouppath&amp;#34;})
+plugin:addenum(&amp;#34;taskformat&amp;#34;, {&amp;#34;obsidian&amp;#34;})
+plugin:addenum(&amp;#34;sortdata&amp;#34;, {&amp;#34;canonicalsort&amp;#34;})
+plugin:addenum(&amp;#34;frontmatter&amp;#34;, {&amp;#34;canonicalfrontmatter&amp;#34;})
+plugin:addenum(&amp;#34;body&amp;#34;, {&amp;#34;canonicalbody&amp;#34;})&lt;/code&gt;
+ &lt;/pre&gt;
+ &lt;/div&gt;
+&lt;p&gt;&lt;code&gt;Plugin:select(name, member)&lt;/code&gt; switches the active member. The rest of vex depends only on the slot. Markdown with YAML frontmatter is simply what the &lt;code&gt;obsidian&lt;/code&gt; member of &lt;code&gt;taskformat&lt;/code&gt; writes; another member could store the same fields as JSON or database rows, and schemas, focuses and views would work unchanged.&lt;/p&gt;</description></item><item><title>Resolution pipeline</title><link>https://tyroncameron.github.io/vex/docs/04-technical-documentation/resolution-pipeline/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://tyroncameron.github.io/vex/docs/04-technical-documentation/resolution-pipeline/</guid><description>&lt;p&gt;How a task goes from &lt;code&gt;vex add&lt;/code&gt; to a file on disk, and what else moves when it does. The code is &lt;code&gt;TaskManager&lt;/code&gt; in &lt;code&gt;src/core/task.lua&lt;/code&gt;.&lt;/p&gt;
+&lt;h2 id="add-resolve-write"&gt;add, resolve, write &lt;a href="#add-resolve-write" class="anchor" aria-hidden="true"&gt;&lt;i class="material-icons align-middle"&gt;link&lt;/i&gt;&lt;/a&gt;&lt;/h2&gt;&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;&lt;code&gt;TaskManager:add&lt;/code&gt;&lt;/strong&gt; makes a vexid with the &lt;code&gt;tagger&lt;/code&gt; plugin and holds the new task in memory only.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;&lt;code&gt;TaskManager:resolve&lt;/code&gt;&lt;/strong&gt; runs the schema of the task&amp;rsquo;s type and of each type it extends, from the root down. Each schema runs three steps: normalise (fill defaults, convert values), validate, and derive (compute fields, record links). A failure throws a named &lt;code&gt;resolution-failed-*&lt;/code&gt; error and nothing is written. Resolution then indexes the task in memory and moves files into place (below).&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;&lt;code&gt;TaskManager:write&lt;/code&gt;&lt;/strong&gt; formats the task back to its readable form (a timestamp becomes &lt;code&gt;YYYY-MM-DD HH:MM:SS&lt;/code&gt;, a vexid becomes &lt;code&gt;[[vexid]]&lt;/code&gt;), writes it through the &lt;code&gt;taskformat&lt;/code&gt; plugin to a temporary file and renames it into place (&lt;a data-bs-delay="{&amp;#34;hide&amp;#34;:300,&amp;#34;show&amp;#34;:550}" data-bs-html="true" data-bs-title="&lt;a href='https://tyroncameron.github.io/vex/docs/04-technical-documentation/vexdex/the-index/'&gt;&lt;p&gt;VEXDEX&lt;/p&gt;</description></item></channel></rss>

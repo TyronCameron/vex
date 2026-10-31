@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Vexdex on vex</title><link>https://tyroncameron.github.io/vex/docs/04-technical-documentation/vexdex/</link><description>Recent content in Vexdex on vex</description><generator>Hugo</generator><language>en-GB</language><atom:link href="https://tyroncameron.github.io/vex/docs/04-technical-documentation/vexdex/index.xml" rel="self" type="application/rss+xml"/><item><title>Events and hooks</title><link>https://tyroncameron.github.io/vex/docs/04-technical-documentation/vexdex/events-and-hooks/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://tyroncameron.github.io/vex/docs/04-technical-documentation/vexdex/events-and-hooks/</guid><description>&lt;p&gt;Events go through one event manager, &lt;code&gt;src/lib/event.lua&lt;/code&gt;. They fire at two levels:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Verbs.&lt;/strong&gt; &lt;code&gt;lib.cli&lt;/code&gt; fires &lt;code&gt;pre-verb-&amp;lt;verb&amp;gt;&lt;/code&gt; before every command runs and &lt;code&gt;post-verb-&amp;lt;verb&amp;gt;&lt;/code&gt; after it finishes.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Actions.&lt;/strong&gt; The task, focus, view and recipe managers fire &lt;code&gt;pre-&lt;/code&gt; and &lt;code&gt;post-&lt;/code&gt; events around each public action, such as &lt;code&gt;pre-task-resolve&lt;/code&gt; or &lt;code&gt;post-focus-write&lt;/code&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;At the end of loading, vex runs every &lt;code&gt;.lua&lt;/code&gt; file in &lt;code&gt;.vex/events&lt;/code&gt;, sorted by path, and each file registers its handlers. Handlers run in the order they were registered. A handler that raises an error stops the command with a &lt;code&gt;hook-failed&lt;/code&gt; error naming the hook and the event. See &lt;a data-bs-delay="{&amp;#34;hide&amp;#34;:300,&amp;#34;show&amp;#34;:550}" data-bs-html="true" data-bs-title="&lt;a href='https://tyroncameron.github.io/vex/docs/03-configuration/06-configuring-event-hooks/'&gt;&lt;p&gt;CONFIGURATION&lt;/p&gt;</description></item><item><title>The index</title><link>https://tyroncameron.github.io/vex/docs/04-technical-documentation/vexdex/the-index/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://tyroncameron.github.io/vex/docs/04-technical-documentation/vexdex/the-index/</guid><description>&lt;p&gt;The vexdex (&lt;code&gt;src/core/vexdex.lua&lt;/code&gt;) is vex&amp;rsquo;s index: a map from each vexid to its task data, kept in &lt;code&gt;.vex/vexdex&lt;/code&gt; so that commands don&amp;rsquo;t read every task file on every run. It is derived entirely from the task files, so keep it out of git and rebuild it with &lt;code&gt;vex resolve all&lt;/code&gt;.&lt;/p&gt;
+&lt;h2 id="on-disk"&gt;On disk &lt;a href="#on-disk" class="anchor" aria-hidden="true"&gt;&lt;i class="material-icons align-middle"&gt;link&lt;/i&gt;&lt;/a&gt;&lt;/h2&gt;
+
+
+
+
+
+
+&lt;table class="table table-hover"&gt;
+ &lt;thead&gt;
+ &lt;tr&gt;
+ &lt;th&gt;File&lt;/th&gt;
+ &lt;th&gt;Holds&lt;/th&gt;
+ &lt;/tr&gt;
+ &lt;/thead&gt;
+ &lt;tbody&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;index.bin&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;Every task&amp;rsquo;s fields except the body, unformatted: timestamps as numbers, links as bare vexids. The body lives only in the task file, and a query on &lt;code&gt;vexbody&lt;/code&gt; (or the overview&amp;rsquo;s body count) reads it from there.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;backlinks.bin&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;For every task, the tasks that link to it.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;paths.bin&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;Where each task file is, relative to &lt;code&gt;taskfolder&lt;/code&gt;.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;tr&gt;
+ &lt;td&gt;&lt;code&gt;focus.bin&lt;/code&gt;&lt;/td&gt;
+ &lt;td&gt;The saved focus, as the list of operations that rebuild it.&lt;/td&gt;
+ &lt;/tr&gt;
+ &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;Each &lt;code&gt;.bin&lt;/code&gt; file is written with &lt;code&gt;binser&lt;/code&gt; and is what vex reads. Next to it, a &lt;code&gt;.lua&lt;/code&gt; file holds the same data in readable form. vex never reads the &lt;code&gt;.lua&lt;/code&gt; files; they exist so you can inspect the index.&lt;/p&gt;</description></item></channel></rss>

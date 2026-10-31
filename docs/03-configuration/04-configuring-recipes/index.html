@@ -1,0 +1,717 @@
+<!doctype html><html lang=en-GB><head><meta charset=utf-8><title>Configuring recipes | vex</title><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="Each `.lua` file in `.vex/recipes` can register recipes. A recipe is an `add` function that receives the task manager and the properties from the command line, and adds tasks:"><meta name=keywords content="Documentation,Hugo,Hugo Theme,Bootstrap"><meta name=author content="Colin Wilson - Lotus Labs"><meta name=email content="support@aigis.uk"><meta name=website content="https://lotusdocs.dev"><meta name=Version content="v0.1.0"><link rel=icon href=https://tyroncameron.github.io/vex/favicon.ico sizes=any><link rel=icon type=image/svg+xml href=https://tyroncameron.github.io/vex/favicon.svg><link rel=apple-touch-icon sizes=180x180 href=https://tyroncameron.github.io/vex/apple-touch-icon.png><link rel=icon type=image/png sizes=32x32 href=https://tyroncameron.github.io/vex/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=https://tyroncameron.github.io/vex/favicon-16x16.png><link rel=manifest crossorigin=use-credentials href=https://tyroncameron.github.io/vex/site.webmanifest><meta property="og:title" content="Configuring recipes"><meta property="og:description" content="Each `.lua` file in `.vex/recipes` can register recipes. A recipe is an `add` function that receives the task manager and the properties from the command line, and adds tasks:"><meta property="og:type" content="article"><meta property="og:url" content="https://tyroncameron.github.io/vex/docs/03-configuration/04-configuring-recipes/"><meta property="og:image" content="https://tyroncameron.github.io/vex/opengraph/card-base-2_hu_2cba9e2ccc0cc1c.png"><meta property="article:section" content="docs"><meta name=twitter:card content="summary_large_image"><meta name=twitter:image content="https://tyroncameron.github.io/vex/opengraph/card-base-2_hu_2cba9e2ccc0cc1c.png"><meta name=twitter:title content="Configuring recipes"><meta name=twitter:description content="Each `.lua` file in `.vex/recipes` can register recipes. A recipe is an `add` function that receives the task manager and the properties from the command line, and adds tasks:"><link rel=alternate type=application/atom+xml title="Atom feed for vex" href=/index.xml><script>(()=>{localStorage.getItem("theme")===null&&localStorage.setItem("theme","dark"),localStorage.getItem("theme")==="dark"&&document.documentElement.setAttribute("data-dark-mode","")})()</script><script type=text/javascript src=https://tyroncameron.github.io/vex/docs/js/flexsearch.bundle.min.f5159d5a2151ffbb653996ec17eaff7da4e04c286bd879fc41839d36a5586f3f20eaead0b6089de48f9adc669cdee771.js integrity=sha384-9RWdWiFR/7tlOZbsF+r/faTgTChr2Hn8QYOdNqVYbz8g6urQtgid5I+a3Gac3udx crossorigin=anonymous></script><link rel=preconnect href=https://fonts.gstatic.com/><link rel=preconnect href=https://fonts.gstatic.com/ crossorigin><link href="https://fonts.googleapis.com/css?family=Inter:300,400,600,700|Fira+Code:500,700&display=block" rel=stylesheet><link rel=stylesheet href=/vex/docs/scss/style.min.d7142f093ed99cf2d87d78146aac144231cbf55a5ddbaaa5e048b7614c171edfba67e574056498c29abc1deb9833b5da.css integrity=sha384-1xQvCT7ZnPLYfXgUaqwUQjHL9Vpd26ql4Ei3YUwXHt+6Z+V0BWSYwpq8HeuYM7Xa crossorigin=anonymous></head><body><div class=content><div class="page-wrapper toggled"><nav id=sidebar class=sidebar-wrapper><div class=sidebar-brand><a href=/vex/ aria-label=HomePage alt=HomePage><svg viewBox="10 55 230 130"><text x="125" y="160" text-anchor="middle" font-family="'Fira Code', ui-monospace, monospace" font-size="120" font-weight="700" fill="#22d3ee">vex</text></svg></a></div><div class=sidebar-content style="height:calc(100% - 131px)"><ul class=sidebar-menu><li><a class=sidebar-root-link href=https://tyroncameron.github.io/vex/docs/introduction/><i class="material-icons me-2">home</i>
+Introduction</a></li><li class=sidebar-dropdown><button class=btn>
+<i class="material-icons me-2">rocket_launch</i>
+Getting started</button><div class=sidebar-submenu><ul><li><a class=sidebar-nested-link href=https://tyroncameron.github.io/vex/docs/01-getting-started/01-installing-vex/>Installing vex</a></li><li><a class=sidebar-nested-link href=https://tyroncameron.github.io/vex/docs/01-getting-started/02-creating-your-first-task-using-vex/>Creating your first task using vex</a></li><li><a class=sidebar-nested-link href=https://tyroncameron.github.io/vex/docs/01-getting-started/03-using-a-recipe-to-create-a-sequence-of-tasks/>Using a recipe to create a sequence of tasks</a></li></ul></div></li><li class=sidebar-dropdown><button class=btn>
+<i class="material-icons me-2">terminal</i>
+Features</button><div class=sidebar-submenu><ul><li><a class=sidebar-nested-link href=https://tyroncameron.github.io/vex/docs/02-features/01-cli-reference/>CLI reference</a></li><li><a class=sidebar-nested-link href=https://tyroncameron.github.io/vex/docs/02-features/02-frontmatter-schema/>Frontmatter schema</a></li><li><a class=sidebar-nested-link href=https://tyroncameron.github.io/vex/docs/02-features/03-task-types-and-vexations/>Task types (and vexations)</a></li><li><a class=sidebar-nested-link href=https://tyroncameron.github.io/vex/docs/02-features/04-views/>Views</a></li><li><a class=sidebar-nested-link href=https://tyroncameron.github.io/vex/docs/02-features/05-getting-into-focus/>Getting into focus</a></li><li><a class=sidebar-nested-link href=https://tyroncameron.github.io/vex/docs/02-features/06-status-and-state-machines/>Status and state machines</a></li><li><a class=sidebar-nested-link href=https://tyroncameron.github.io/vex/docs/02-features/07-working-with-git-and-a-team/>Working with git and a team</a></li><li><a class=sidebar-nested-link href=https://tyroncameron.github.io/vex/docs/02-features/08-links-and-backlinks/>Links and backlinks</a></li><li><a class=sidebar-nested-link href=https://tyroncameron.github.io/vex/docs/02-features/09-errors-and-troubleshooting/>Errors and troubleshooting</a></li></ul></div></li><li class="sidebar-dropdown current active"><button class=btn>
+<i class="material-icons me-2">tune</i>
+Configuration</button><div class="sidebar-submenu d-block"><ul><li><a class=sidebar-nested-link href=https://tyroncameron.github.io/vex/docs/03-configuration/01-configuring-vex-config.lua/>Configuring vex (config.lua)</a></li><li><a class=sidebar-nested-link href=https://tyroncameron.github.io/vex/docs/03-configuration/02-configuring-views/>Configuring views</a></li><li><a class=sidebar-nested-link href=https://tyroncameron.github.io/vex/docs/03-configuration/03-configuring-task-types/>Configuring task types</a></li><li class=current><a class=sidebar-nested-link href=https://tyroncameron.github.io/vex/docs/03-configuration/04-configuring-recipes/>Configuring recipes</a></li><li><a class=sidebar-nested-link href=https://tyroncameron.github.io/vex/docs/03-configuration/05-configuring-focuses/>Configuring focuses</a></li><li><a class=sidebar-nested-link href=https://tyroncameron.github.io/vex/docs/03-configuration/06-configuring-event-hooks/>Configuring event hooks</a></li></ul></div></li><li class=sidebar-dropdown><button class=btn>
+<i class="material-icons me-2">engineering</i>
+Technical documentation</button><div class=sidebar-submenu><ul><li><a class=sidebar-nested-link href=https://tyroncameron.github.io/vex/docs/04-technical-documentation/contributing/>Contributing</a></li><li><a class=sidebar-nested-link href=https://tyroncameron.github.io/vex/docs/04-technical-documentation/plugin-architecture/>Plugin architecture</a></li><li><a class=sidebar-nested-link href=https://tyroncameron.github.io/vex/docs/04-technical-documentation/resolution-pipeline/>Resolution pipeline</a></li><li class="sidebar-dropdown nested"><button class=btn>
+Vexdex</button><div class=sidebar-submenu><ul><li><a class=sidebar-nested-link href=https://tyroncameron.github.io/vex/docs/04-technical-documentation/vexdex/events-and-hooks/>Events and hooks</a></li><li><a class=sidebar-nested-link href=https://tyroncameron.github.io/vex/docs/04-technical-documentation/vexdex/the-index/>The index</a></li></ul></div></li></ul></div></li><li><a class=sidebar-root-link href=https://tyroncameron.github.io/vex/docs/vex/><i class="material-icons me-2">history_edu</i>
+Design journal</a></li></ul></div><ul class="sidebar-footer list-unstyled mb-0"></ul></nav><main class="page-content bg-transparent"><div id=top-header class="top-header d-print-none"><div class="header-bar d-flex justify-content-between"><div class="d-flex align-items-center"><a href=/vex/ class="logo-icon me-3" aria-label=HomePage alt=HomePage><div class=small><svg viewBox="10 55 230 130"><text x="125" y="160" text-anchor="middle" font-family="'Fira Code', ui-monospace, monospace" font-size="120" font-weight="700" fill="#22d3ee">vex</text></svg></div><div class=big><svg viewBox="10 55 230 130"><text x="125" y="160" text-anchor="middle" font-family="'Fira Code', ui-monospace, monospace" font-size="120" font-weight="700" fill="#22d3ee">vex</text></svg></div></a><button id=close-sidebar class="btn btn-icon btn-soft">
+<span class="material-icons size-20 menu-icon align-middle">menu</span>
+</button>
+<button id=flexsearch-button class="ms-3 btn btn-soft" data-bs-toggle=collapse data-bs-target=#FlexSearchCollapse aria-expanded=false aria-controls=FlexSearchCollapse>
+<span class="material-icons size-20 menu-icon align-middle">search</span>
+<span class="flexsearch-button-placeholder ms-1 me-2 d-none d-sm-block">Search</span><div class="d-none d-sm-block"><span class=flexsearch-button-keys><kbd class=flexsearch-button-cmd-key><svg width="44" height="15"><path d="M2.118 11.5A1.519 1.519.0 011 11.042 1.583 1.583.0 011 8.815a1.519 1.519.0 011.113-.458h.715V6.643h-.71A1.519 1.519.0 011 6.185 1.519 1.519.0 01.547 5.071 1.519 1.519.0 011 3.958 1.519 1.519.0 012.118 3.5a1.519 1.519.0 011.114.458A1.519 1.519.0 013.69 5.071v.715H5.4V5.071A1.564 1.564.0 016.976 3.5 1.564 1.564.0 018.547 5.071 1.564 1.564.0 016.976 6.643H6.261V8.357h.715a1.575 1.575.0 011.113 2.685 1.583 1.583.0 01-2.227.0A1.519 1.519.0 015.4 9.929V9.214H3.69v.715a1.519 1.519.0 01-.458 1.113A1.519 1.519.0 012.118 11.5zm0-.857a.714.714.0 00.715-.714V9.214H2.118a.715.715.0 100 1.429zm4.858.0a.715.715.0 100-1.429H6.261v.715a.714.714.0 00.715.714zM3.69 8.357H5.4V6.643H3.69zM2.118 5.786h.715V5.071a.714.714.0 00-.715-.714.715.715.0 00-.5 1.22A.686.686.0 002.118 5.786zm4.143.0h.715a.715.715.0 00.5-1.22.715.715.0 00-1.22.5z" fill="currentColor"/><path d="M12.4 11.475H11.344l3.879-7.95h1.056z" fill="currentColor"/><path d="M25.073 5.384l-.864.576a2.121 2.121.0 00-1.786-.923 2.207 2.207.0 00-2.266 2.326 2.206 2.206.0 002.266 2.325 2.1 2.1.0 001.782-.918l.84.617a3.108 3.108.0 01-2.622 1.293 3.217 3.217.0 01-3.349-3.317 3.217 3.217.0 013.349-3.317A3.046 3.046.0 0125.073 5.384z" fill="currentColor"/><path d="M30.993 5.142h-2.07v5.419H27.891V5.142h-2.07V4.164h5.172z" fill="currentColor"/><path d="M34.67 4.164c1.471.0 2.266.658 2.266 1.851.0 1.087-.832 1.809-2.134 1.855l2.107 2.691h-1.28L33.591 7.87H33.07v2.691H32.038v-6.4zm-1.6.969v1.8h1.572c.832.0 1.22-.3 1.22-.918s-.411-.882-1.22-.882z" fill="currentColor"/><path d="M42.883 10.561H38.31v-6.4h1.033V9.583h3.54z" fill="currentColor"/></svg>
+</kbd><kbd class=flexsearch-button-key><svg width="15" height="15"><path d="M5.926 12.279H4.41L9.073 2.721H10.59z" fill="currentColor"/></svg></kbd></span></div></button></div><div class="d-flex align-items-center"><ul class="list-unstyled mb-0"><li class="list-inline-item mb-0"><a href=https://github.com/TyronCameron/vex alt=github rel="noopener noreferrer" target=_blank><div class="btn btn-icon btn-default border-0"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><title>GitHub</title><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37.0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44.0 0020 4.77 5.07 5.07.0 0019.91 1S18.73.65 16 2.48a13.38 13.38.0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07.0 005 4.77 5.44 5.44.0 003.5 8.55c0 5.42 3.3 6.61 6.44 7A3.37 3.37.0 009 18.13V22"/></svg></div></a></li></ul><button id=mode class="btn btn-icon btn-default ms-2" type=button aria-label="Toggle user interface mode">
+<span class=toggle-dark><svg height="30" width="30" viewBox="0 0 48 48" fill="currentColor"><title>Enable dark mode</title><path d="M24 42q-7.5.0-12.75-5.25T6 24t5.25-12.75T24 6q.4.0.85.025.45.025 1.15.075-1.8 1.6-2.8 3.95t-1 4.95q0 4.5 3.15 7.65Q28.5 25.8 33 25.8q2.6.0 4.95-.925T41.9 22.3q.05.6.075.975Q42 23.65 42 24q0 7.5-5.25 12.75T24 42zm0-3q5.45.0 9.5-3.375t5.05-7.925q-1.25.55-2.675.825Q34.45 28.8 33 28.8q-5.75.0-9.775-4.025T19.2 15q0-1.2.25-2.575t.9-3.125q-4.9 1.35-8.125 5.475Q9 18.9 9 24q0 6.25 4.375 10.625T24 39zm-.2-14.85z"/></svg>
+</span><span class=toggle-light><svg height="30" width="30" viewBox="0 0 48 48" fill="currentColor"><title>Enable light mode</title><path d="M24 31q2.9.0 4.95-2.05T31 24t-2.05-4.95T24 17t-4.95 2.05T17 24t2.05 4.95T24 31zm0 3q-4.15.0-7.075-2.925T14 24t2.925-7.075T24 14t7.075 2.925T34 24t-2.925 7.075T24 34zM3.5 25.5q-.65.0-1.075-.425Q2 24.65 2 24t.425-1.075Q2.85 22.5 3.5 22.5h5q.65.0 1.075.425Q10 23.35 10 24t-.425 1.075T8.5 25.5zm36 0q-.65.0-1.075-.425Q38 24.65 38 24t.425-1.075T39.5 22.5h5q.65.0 1.075.425Q46 23.35 46 24t-.425 1.075-1.075.425zM24 10q-.65.0-1.075-.425Q22.5 9.15 22.5 8.5v-5q0-.65.425-1.075Q23.35 2 24 2t1.075.425T25.5 3.5v5q0 .65-.425 1.075Q24.65 10 24 10zm0 36q-.65.0-1.075-.425T22.5 44.5v-5q0-.65.425-1.075Q23.35 38 24 38t1.075.425.425 1.075v5q0 .65-.425 1.075Q24.65 46 24 46zM12 14.1l-2.85-2.8q-.45-.45-.425-1.075.025-.625.425-1.075.45-.45 1.075-.45t1.075.45L14.1 12q.4.45.4 1.05.0.6-.4 1-.4.45-1.025.45T12 14.1zm24.7 24.75L33.9 36q-.4-.45-.4-1.075t.45-1.025q.4-.45 1-.45t1.05.45l2.85 2.8q.45.45.425 1.075-.025.625-.425 1.075-.45.45-1.075.45t-1.075-.45zM33.9 14.1q-.45-.45-.45-1.05.0-.6.45-1.05l2.8-2.85q.45-.45 1.075-.425.625.025 1.075.425.45.45.45 1.075t-.45 1.075L36 14.1q-.4.4-1.025.4t-1.075-.4zM9.15 38.85q-.45-.45-.45-1.075t.45-1.075L12 33.9q.45-.45 1.05-.45.6.0 1.05.45.45.45.45 1.05.0.6-.45 1.05l-2.8 2.85q-.45.45-1.075.425-.625-.025-1.075-.425zM24 24z"/></svg></span></button></div></div><div class=collapse id=FlexSearchCollapse><div class=flexsearch-container><div class=flexsearch-keymap><li><kbd class=flexsearch-button-cmd-key><svg width="15" height="15" aria-label="Arrow down" role="img"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2"><path d="M7.5 3.5v8m3-3-3 3-3-3"/></g></svg></kbd>
+<kbd class=flexsearch-button-cmd-key><svg width="15" height="15" aria-label="Arrow up" role="img"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2"><path d="M7.5 11.5v-8m3 3-3-3-3 3"/></g></svg></kbd>
+<span class=flexsearch-key-label>to navigate</span></li><li><kbd class=flexsearch-button-cmd-key><svg width="15" height="15" aria-label="Enter key" role="img"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2"><path d="M12 3.53088v3c0 1-1 2-2 2H4m3 3-3-3 3-3"/></g></svg></kbd>
+<span class=flexsearch-key-label>to select</span></li><li><kbd class=flexsearch-button-cmd-key><svg width="15" height="15" aria-label="Escape key" role="img"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2"><path d="M13.6167 8.936c-.1065.3583-.6883.962-1.4875.962-.7993.0-1.653-.9165-1.653-2.1258v-.5678c0-1.2548.7896-2.1016 1.653-2.1016s1.3601.4778 1.4875 1.0724M9 6c-.1352-.4735-.7506-.9219-1.46-.8972-.7092.0246-1.344.57-1.344 1.2166s.4198.8812 1.3445.9805C8.465 7.3992 8.968 7.9337 9 8.5s-.454 1.398-1.4595 1.398C6.6593 9.898 6 9 5.963 8.4851m-1.4748.5368c-.2635.5941-.8099.876-1.5443.876s-1.7073-.6248-1.7073-2.204v-.4603c0-1.0416.721-2.131 1.7073-2.131.9864.0 1.6425 1.031 1.5443 2.2492h-2.956"/></g></svg></kbd>
+<span class=flexsearch-key-label>to close</span></li></div><form class="flexsearch position-relative flex-grow-1 ms-2 me-2"><div class="d-flex flex-row"><input id=flexsearch class=form-control type=search placeholder=Search aria-label=Search autocomplete=off>
+<button id=hideFlexsearch type=button class="ms-2 btn btn-soft">
+cancel</button></div><div id=suggestions class="shadow rounded-1 d-none"></div></form></div></div></div><div class=container-fluid><div class=layout-spacing><div class="d-md-flex justify-content-between align-items-center"><nav aria-label=breadcrumb class="d-inline-block pb-2 mt-1 mt-sm-0"><ul id=breadcrumbs class="breadcrumb bg-transparent mb-0" itemscope itemtype=https://schema.org/BreadcrumbList><li class="breadcrumb-item text-capitalize active" aria-current=page itemprop=itemListElement itemscope itemtype=https://schema.org/ListItem><a itemprop=item href=/vex/docs/><i class="material-icons size-20 align-text-bottom" itemprop=name>Home</i>
+</a><meta itemprop=position content='1'></li><li class="breadcrumb-item text-capitalize" itemprop=itemListElement itemscope itemtype=https://schema.org/ListItem><a itemprop=item href=/vex/docs/03-configuration/><span itemprop=name>Configuration</span>
+</a><meta itemprop=position content='2'></li><li class="breadcrumb-item text-capitalize active" itemprop=itemListElement itemscope itemtype=https://schema.org/ListItem><span itemprop=name>Configuring recipes</span>
+<meta itemprop=position content='3'></li></ul></nav></div><div class="row flex-xl-nowrap"><div class="docs-toc col-xl-3 d-xl-block"><toc><div class="fw-bold text-uppercase mb-2">On this page</div><nav id=toc><ul><li><a href=#writing-a-file>Writing a file</a></li></ul></nav></toc></div><div class="docs-toc-mobile d-print-none d-xl-none"><button id=toc-dropdown-btn class="btn-secondary dropdown-toggle" type=button data-bs-toggle=dropdown data-bs-offset=0,0 aria-expanded=false>
+Table of Contents</button><nav id=toc-mobile><ul class=dropdown-menu><li><a href=#writing-a-file>Writing a file</a></li></ul></nav></div><div class="docs-content col-12 col-xl-9 mt-0"><div class="mb-0 d-flex"><i class="material-icons title-icon me-2">article</i><h1 class="content-title mb-0">Configuring recipes</h1></div><div id=content class=main-content data-bs-spy=scroll data-bs-root-margin="0px 0px -65%" data-bs-target=#toc-mobile><div data-prismjs-copy data-prismjs-copy-success data-prismjs-copy-error><p>Each <code>.lua</code> file in <code>.vex/recipes</code> can register recipes. A recipe is an <code>add</code> function that receives the task manager and the properties from the command line, and adds tasks:</p><div class=prism-codeblock><pre id=b294d08 class=language-lua>
+  <code>recipe:recipe &#39;chore&#39; {
+    add = function(task, taskproperties)
+        taskproperties.vextype = &#39;atom&#39;
+        return {task:add(taskproperties)}
+    end
+}</code>
+  </pre></div><div class="prism-codeblock vex-console"><button type=button class=vex-console-copy title="Copy commands" aria-label="Copy commands" onclick='navigator.clipboard.writeText(Array.from(this.parentElement.querySelectorAll(".vex-command"),e=>e.textContent).join(`
+`)),this.firstElementChild.textContent="check",setTimeout(()=>this.firstElementChild.textContent="content_copy",1500)'><span class=material-icons>content_copy</span></button><pre><code><span class=vex-command><span class=vex-program>vex</span> recipe chore Take out the bins</span></code></pre></div><p><code>taskproperties</code> holds the description and every flag. <code>add</code> returns the list of vexids it added. A recipe can add as many tasks as it likes and link them through their fields; vex resolves and writes each returned task in the order of the list, then focuses on all of them:</p><div class=prism-codeblock><pre id=d4fa9de class=language-lua>
+  <code>recipe:recipe &#39;release&#39; {
+    add = function(task, taskproperties)
+        local name = taskproperties.description
+        local stages = {}
+        for _, stage in ipairs({&#39;Spike&#39;, &#39;Build&#39;, &#39;Test&#39;}) do
+            table.insert(stages, task:add({description = stage .. &#39; &#39; .. name, vextype = &#39;atom&#39;}))
+        end
+        local release = task:add({description = name, vextype = &#39;abstract&#39;, children = stages})
+        return {release, unpack(stages)}
+    end
+}</code>
+  </pre></div><p>The built-in <code>abstract</code> recipe is defined the same way.</p><h2 id=writing-a-file>Writing a file <a href=#writing-a-file class=anchor aria-hidden=true><i class="material-icons align-middle">link</i></a></h2><p>Each example on this page is a complete file: save it as a <code>.lua</code> file in <code>.vex/recipes</code> and vex loads it on the next command, with nothing else required. Every file runs with these already in scope, alongside Lua&rsquo;s standard globals: <code>task</code> (the task manager), <code>recipe</code> (the recipe manager), <code>focus</code> (the <code>Focus</code> class), <code>view</code> (the view manager) and <code>schema</code> (the schema library).</p></div></div><div><hr class=doc-hr><div id=doc-nav class=d-print-none><div class="row flex-xl-nowrap"><div class="col-sm-6 pt-2 doc-next"><a href=/vex/docs/01-getting-started/03-using-a-recipe-to-create-a-sequence-of-tasks/><div class="card h-100 my-1"><div class="card-body py-2"><p class="card-title fs-5 fw-semibold lh-base mb-0"><i class="material-icons align-middle">navigate_before</i> Using a recipe to create a sequence of tasks</p><p class="card-text ms-2">A recipe is a named shortcut that creates one or more tasks …</p></div></div></a></div><div class="col-sm-6 pt-2 doc-prev"><a class=ms-auto href=/vex/docs/02-features/04-views/><div class="card h-100 my-1 text-end"><div class="card-body py-2"><p class="card-title fs-5 fw-semibold lh-base mb-0">Views <i class="material-icons align-middle">navigate_next</i></p><p class="card-text me-2">A view renders the tasks in a focus:</p></div></div></a></div></div></div></div></div></div></div></div><footer class="shadow py-3 d-print-none"><div class=container-fluid><div class="row align-items-center"><div class=col><div class="text-sm-start text-center mx-md-2"><p class=mb-0>© 2026 Tyron Cameron. vex is open source under the <a href=https://github.com/TyronCameron/vex/blob/main/LICENSE>MIT licence</a>.</p></div></div></div></div></footer></main></div></div><button onclick=topFunction() id=back-to-top aria-label="Back to Top Button" class="back-to-top fs-5"><svg width="24" height="24"><path d="M12 10.224l-6.3 6.3-1.38-1.372L12 7.472l7.68 7.68-1.38 1.376z" style="fill:#fff"/></svg></button>
+<script>(()=>{var e=document.getElementById("mode");e!==null&&(window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change",e=>{e.matches?(localStorage.setItem("theme","dark"),document.documentElement.setAttribute("data-dark-mode","")):(localStorage.setItem("theme","light"),document.documentElement.removeAttribute("data-dark-mode"))}),e.addEventListener("click",()=>{document.documentElement.toggleAttribute("data-dark-mode"),localStorage.setItem("theme",document.documentElement.hasAttribute("data-dark-mode")?"dark":"light")}),localStorage.getItem("theme")==="dark"?document.documentElement.setAttribute("data-dark-mode",""):document.documentElement.removeAttribute("data-dark-mode"))})()</script><script src=/vex/docs/js/bootstrap.9830259bc28edf5a45a3c7aa85d782bb2b8ac9a68e8ff3e14e4ad92a0aaf7882b8c20ea2ba1c4fc65f4415a3046aca9a.js integrity=sha384-mDAlm8KO31pFo8eqhdeCuyuKyaaOj/PhTkrZKgqveIK4wg6iuhxPxl9EFaMEasqa defer></script><script type=text/javascript src=https://tyroncameron.github.io/vex/docs/js/bundle.min.5b6c899f4b7d4125511a3afaf26e0e86658b6a21757d5ed809ae3cdd5302438f2bc41d6ac232ac3cdc7bdf8ab9e43d59.js integrity=sha384-W2yJn0t9QSVRGjr68m4OhmWLaiF1fV7YCa483VMCQ48rxB1qwjKsPNx734q55D1Z crossorigin=anonymous defer></script><script type=module>
+    var suggestions = document.getElementById('suggestions');
+    var search = document.getElementById('flexsearch');
+
+    const flexsearchContainer = document.getElementById('FlexSearchCollapse');
+
+    const hideFlexsearchBtn = document.getElementById('hideFlexsearch');
+
+    const configObject = { toggle: false }
+    const flexsearchContainerCollapse = new Collapse(flexsearchContainer, configObject) 
+
+    if (search !== null) {
+        document.addEventListener('keydown', inputFocus);
+        flexsearchContainer.addEventListener('shown.bs.collapse', function () {
+            search.focus();
+        });
+        
+        var topHeader = document.getElementById("top-header");
+        document.addEventListener('click', function(elem) {
+            if (!flexsearchContainer.contains(elem.target) && !topHeader.contains(elem.target))
+                flexsearchContainerCollapse.hide();
+        });
+    }
+
+    hideFlexsearchBtn.addEventListener('click', () =>{
+        flexsearchContainerCollapse.hide()
+    })
+
+    function inputFocus(e) {
+        if (e.ctrlKey && e.key === '/') {
+            e.preventDefault();
+            flexsearchContainerCollapse.toggle();
+        }
+        if (e.key === 'Escape' ) {
+            search.blur();
+            
+            flexsearchContainerCollapse.hide();
+        }
+    };
+
+    document.addEventListener('click', function(event) {
+
+    var isClickInsideElement = suggestions.contains(event.target);
+
+    if (!isClickInsideElement) {
+        suggestions.classList.add('d-none');
+    }
+
+    });
+
+    
+
+
+    document.addEventListener('keydown',suggestionFocus);
+
+    function suggestionFocus(e) {
+    const suggestionsHidden = suggestions.classList.contains('d-none');
+    if (suggestionsHidden) return;
+
+    const focusableSuggestions= [...suggestions.querySelectorAll('a')];
+    if (focusableSuggestions.length === 0) return;
+
+    const index = focusableSuggestions.indexOf(document.activeElement);
+
+    if (e.key === "ArrowUp") {
+        e.preventDefault();
+        const nextIndex = index > 0 ? index - 1 : 0;
+        focusableSuggestions[nextIndex].focus();
+    }
+    else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        const nextIndex= index + 1 < focusableSuggestions.length ? index + 1 : index;
+        focusableSuggestions[nextIndex].focus();
+    }
+
+    }
+
+    
+
+
+    (function(){
+
+    var index = new FlexSearch.Document({
+        
+        tokenize: "forward",
+        minlength:  0 ,
+        cache:  100 ,
+        optimize:  true ,
+        document: {
+        id: 'id',
+        store: [
+            "href", "title", "description"
+        ],
+        index: ["title", "description", "content"]
+        }
+    });
+
+
+    
+
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+
+    
+
+    index.add(
+            {
+                id:  0 ,
+                href: "\/vex\/docs\/introduction\/",
+                title: "Introduction",
+                description: "vex is the embeddable, local-first, markdown-based task system.",
+                content: " info Status vex v0.0.0, in development.\nvex is the embeddable, local-first, markdown-based task system. Every task is a plain-text markdown file with YAML frontmatter, and every project keeps its own .vex folder, much like a .git folder. There is no server, no daemon and no account.\nBecause a task is a text file, anything that reads and writes text can work with it: your editor, a shell script, or an AI coding agent.\nFind your way around link Getting started "
+            }
+        );
+    index.add(
+            {
+                id:  1 ,
+                href: "\/vex\/docs\/02-features\/01-cli-reference\/",
+                title: "CLI reference",
+                description: "`vex \u003ccommand\u003e [arguments] [--flags]`",
+                content: "Conventions linkvex [arguments] [--flags]\nEvery word up to the first --flag is positional. add and recipe join them into the description. [focus] is optional everywhere. Without it, a command uses your saved focus (prev). See "
+            }
+        );
+    index.add(
+            {
+                id:  2 ,
+                href: "\/vex\/docs\/03-configuration\/01-configuring-vex-config.lua\/",
+                title: "Configuring vex (config.lua)",
+                description: "`.vex/config.lua` returns a Lua table and is read on every command. `vex init` writes this one:",
+                content: ".vex/config.lua returns a Lua table and is read on every command. vex init writes this one:\nreturn { taskfolder = '.', default = { tasktype = 'task' }, taskowners = {}, loglimit = 1000, paths = { groupby = {'status', 'lineage'} } } This repository’s own config sets taskfolder = \"vexdoc/vex\": its backlog is the vex folder of this wiki.\nSettings link Setting Effect taskfolder The folder, relative to the project root, that holds the task files. taskowners The names owner may take. With no task owners, tasks can’t have an owner. default.tasktype The vextype of a task added without one. paths.groupby Nests task files in folders by their fields (see below). loglimit How many lines the verb and event logs in .vex/vexdex keep (see "
+            }
+        );
+    index.add(
+            {
+                id:  3 ,
+                href: "\/vex\/docs\/01-getting-started\/",
+                title: "Getting started",
+                description: "Install vex, create your first tasks and build whole structures with recipes.",
+                content: ""
+            }
+        );
+    index.add(
+            {
+                id:  4 ,
+                href: "\/vex\/docs\/01-getting-started\/01-installing-vex\/",
+                title: "Installing vex",
+                description: "vex is a single LuaJIT program with no services to run.",
+                content: "vex is a single LuaJIT program with no services to run. Installing it means putting the vex command on your path and, optionally, enabling shell completion.\nRequirements link LuaJIT. Installing a release linkEvery release is a .tar.gz and a .zip holding the Lua sources and an installer. On Linux and macOS:\ncontent_copy curl -fsSL https://raw.githubusercontent.com/TyronCameron/vex/main/install.sh | sh vex version That downloads the latest release and puts it under ~/.local (lib/vex holds the program, bin/vex is the command). Set PREFIX to install elsewhere and VEX_VERSION to pick a release:\ncontent_copy curl -fsSL https://raw.githubusercontent.com/TyronCameron/vex/main/install.sh | PREFIX=/usr/local VEX_VERSION=0.0.1 sh Or unpack a release yourself and run its installer; running it again upgrades vex:\ncontent_copy tar -xzf vex-0.0.1.tar.gz sh vex-0.0.1/install.sh sh vex-0.0.1/install.sh --uninstall If ~/.local/bin is not on your PATH, the installer says so.\nOn Windows, unzip a release and run the installer from PowerShell. It copies vex to %LOCALAPPDATA%\\vex and adds that folder to your user PATH:\ncontent_copy .\\install.ps1 .\\install.ps1 -Uninstall Your tasks, .vex folders and global folder (see "
+            }
+        );
+    index.add(
+            {
+                id:  5 ,
+                href: "\/vex\/docs\/03-configuration\/02-configuring-views\/",
+                title: "Configuring views",
+                description: "Each `.lua` file in `.vex/views` can register views. A view is a `display` function that takes the focus and the command's flags and returns the text to print:",
+                content: "Each .lua file in .vex/views can register views. A view is a display function that takes the focus and the command’s flags and returns the text to print:\nview:view 'count' { display = function(focus, flags) return #focus:get() .. ' tasks' end } content_copy vex view all count focus:get() returns the focus’s tasks. Read any field from them, transients included. Flags arrive as a table: vex view all count --field status gives flags.field == 'status'.\nA view only presents tasks: choose which tasks with a focus, and keep the view to formatting them. Views load after task types, recipes and focuses, and a view with the name of a built-in replaces it.\nWriting a file linkEach example on this page is a complete file: save it as a .lua file in .vex/views and vex loads it on the next command, with nothing else required. Every file runs with these already in scope, alongside Lua’s standard globals: task (the task manager), recipe (the recipe manager), focus (the Focus class), view (the view manager) and schema (the schema library).\n"
+            }
+        );
+    index.add(
+            {
+                id:  6 ,
+                href: "\/vex\/docs\/01-getting-started\/02-creating-your-first-task-using-vex\/",
+                title: "Creating your first task using vex",
+                description: "This page walks through the core loop: `init`, `add`, `show`, `set`, `get`, `focus`, `resolve` and `remove`.",
+                content: "This page walks through the core loop: init, add, show, set, get, focus, resolve and remove.\n1. Initialise a project link content_copy cd my-project vex init Task files go in the folder named by taskfolder in .vex/config.lua. By default that’s the project root (see "
+            }
+        );
+    index.add(
+            {
+                id:  7 ,
+                href: "\/vex\/docs\/02-features\/",
+                title: "Features",
+                description: "Every command, field, task type and view.",
+                content: ""
+            }
+        );
+    index.add(
+            {
+                id:  8 ,
+                href: "\/vex\/docs\/02-features\/02-frontmatter-schema\/",
+                title: "Frontmatter schema",
+                description: "Every task is validated against the schema of its `vextype` and of each type that type extends (see Task types (and vexations)).",
+                content: "Every task is validated against the schema of its vextype and of each type that type extends (see "
+            }
+        );
+    index.add(
+            {
+                id:  9 ,
+                href: "\/vex\/docs\/03-configuration\/",
+                title: "Configuration",
+                description: "Configure a project, and extend vex from its .vex folder.",
+                content: ""
+            }
+        );
+    index.add(
+            {
+                id:  10 ,
+                href: "\/vex\/docs\/03-configuration\/03-configuring-task-types\/",
+                title: "Configuring task types",
+                description: "Each `.lua` file in `.vex/tasks` can register task types and transients.",
+                content: "Each .lua file in .vex/tasks can register task types and transients.\nTask types linkA type extends an existing one and adds a schema. Its tasks must pass its own schema and every ancestor’s:\ntask:task 'bug':extends 'atom' { schema = schema.atleast { severity = schema.any {'low', 'high'}, reported = schema.maybe {schema.formatted {schema.datetime}}, } } content_copy vex add Crash on start --vextype bug --severity high A schema validates, normalises, derives and converts a task’s fields each time it is resolved. Build yours from these blocks, among others:\nSchema Accepts schema.atleast {...} A table with at least these fields. Other fields pass through. schema.maybe {s} Nothing, or a value matching s. schema.default {s, default = fn} A value matching s, using fn() when there is none. schema.vec {s} A list of values matching s. schema.any {...}, schema.all {...}, schema.none {...} Any, all or none of the given schemas or constants. schema.formatted {s} A value matching s, read from and written as its readable form, such as a datetime. schema.str, schema.num, schema.int, schema.bool Plain values. schema.datetime, schema.date Timestamps. schema.vexlink The vexid of an existing task, written [[vexid]]. schema.constraint {fn} A value for which fn(value, context) returns true. Transients linkA transient is a field computed whenever it is read and never stored. It is registered for a type and inherited by the types that extend it:\ntask:transient 'shouting' { vextype = 'task', definition = function(t) return t.description:upper() end } content_copy vex focus all --select shouting A definition can read other fields and transients, and query other tasks through focus.\nWriting a file linkEach example on this page is a complete file: save it as a .lua file in .vex/tasks and vex loads it on the next command, with nothing else required. Every file runs with these already in scope, alongside Lua’s standard globals: task (the task manager), recipe (the recipe manager), focus (the Focus class), view (the view manager) and schema (the schema library).\n"
+            }
+        );
+    index.add(
+            {
+                id:  11 ,
+                href: "\/vex\/docs\/02-features\/03-task-types-and-vexations\/",
+                title: "Task types (and vexations)",
+                description: "Every task has a `vextype`.",
+                content: "Every task has a vextype. The base type is task. The vexations plugin adds four types on top of it, each answering a different question about the work. Every type keeps all of task’s fields (see "
+            }
+        );
+    index.add(
+            {
+                id:  12 ,
+                href: "\/vex\/docs\/01-getting-started\/03-using-a-recipe-to-create-a-sequence-of-tasks\/",
+                title: "Using a recipe to create a sequence of tasks",
+                description: "A recipe is a named shortcut that creates one or more tasks with fields already filled in.",
+                content: "A recipe is a named shortcut that creates one or more tasks with fields already filled in. Use one whenever you set up the same kind of work repeatedly.\nListing recipes link content_copy vex recipe Available recipes: abstract With no name, vex recipe lists the recipes available. vex ships abstract, which creates a task of type abstract: a parent that groups other tasks.\nUsing a recipe link content_copy vex recipe abstract Ship the v0.2 release ship-v0-2-release-1 As with add, every word up to the first --flag is the description, and flags set fields. vex creates, resolves and writes every task the recipe adds, prints their vexids, and focuses on them.\nWriting your own linkA recipe is a Lua file in .vex/recipes. This one creates a release with three linked stages:\nrecipe:recipe 'release' { add = function(task, taskproperties) local name = taskproperties.description local stages = {} for _, stage in ipairs({'Spike', 'Build', 'Test'}) do table.insert(stages, task:add({description = stage .. ' ' .. name, vextype = 'atom'})) end local release = task:add({description = name, vextype = 'abstract', children = stages}) return {release, unpack(stages)} end } content_copy vex recipe release the payments API payments-api-1 spike-payments-api-1 build-payments-api-1 test-payments-api-1 See "
+            }
+        );
+    index.add(
+            {
+                id:  13 ,
+                href: "\/vex\/docs\/03-configuration\/04-configuring-recipes\/",
+                title: "Configuring recipes",
+                description: "Each `.lua` file in `.vex/recipes` can register recipes. A recipe is an `add` function that receives the task manager and the properties from the command line, and adds tasks:",
+                content: "Each .lua file in .vex/recipes can register recipes. A recipe is an add function that receives the task manager and the properties from the command line, and adds tasks:\nrecipe:recipe 'chore' { add = function(task, taskproperties) taskproperties.vextype = 'atom' return {task:add(taskproperties)} end } content_copy vex recipe chore Take out the bins taskproperties holds the description and every flag. add returns the list of vexids it added. A recipe can add as many tasks as it likes and link them through their fields; vex resolves and writes each returned task in the order of the list, then focuses on all of them:\nrecipe:recipe 'release' { add = function(task, taskproperties) local name = taskproperties.description local stages = {} for _, stage in ipairs({'Spike', 'Build', 'Test'}) do table.insert(stages, task:add({description = stage .. ' ' .. name, vextype = 'atom'})) end local release = task:add({description = name, vextype = 'abstract', children = stages}) return {release, unpack(stages)} end } The built-in abstract recipe is defined the same way.\nWriting a file linkEach example on this page is a complete file: save it as a .lua file in .vex/recipes and vex loads it on the next command, with nothing else required. Every file runs with these already in scope, alongside Lua’s standard globals: task (the task manager), recipe (the recipe manager), focus (the Focus class), view (the view manager) and schema (the schema library).\n"
+            }
+        );
+    index.add(
+            {
+                id:  14 ,
+                href: "\/vex\/docs\/04-technical-documentation\/",
+                title: "Technical documentation",
+                description: "How plugins, the index and events work under the hood.",
+                content: ""
+            }
+        );
+    index.add(
+            {
+                id:  15 ,
+                href: "\/vex\/docs\/02-features\/04-views\/",
+                title: "Views",
+                description: "A view renders the tasks in a focus:",
+                content: "A view renders the tasks in a focus:\nvex view [focus] [view] With no arguments, vex view lists the views. With one argument, it is the view, rendering the saved focus. Views show the fields each task stores. A focus built with --select shows only the selected fields, transients included.\ntabular linkA table of every field except the body, formatted for reading. A list shows as its comma-separated values, and a field a task doesn’t have is left blank. To fit a terminal, every cell and header is cut to 40 characters, ending in ...; a list is cut between its values.\ncontent_copy vex focus all --select vextype,status Focusing on 3 vexes vex view tabular ┌─────────────────────────────┬──────────┬────────┐ │ vexid │ vextype │ status │ ├─────────────────────────────┼──────────┼────────┤ │ fix-flaky-webhook-retry-1 │ task │ done │ │ ship-billing-rewrite-1 │ abstract │ todo │ │ migrate-existing-invoices-1 │ task │ todo │ └─────────────────────────────┴──────────┴────────┘ It takes any focus flags (--select, --filter, --orderby, --groupby and the rest, see "
+            }
+        );
+    index.add(
+            {
+                id:  16 ,
+                href: "\/vex\/docs\/03-configuration\/05-configuring-focuses\/",
+                title: "Configuring focuses",
+                description: "Each `.lua` file in `.vex/focuses` can register named focuses. A named focus is a function that returns a list of tasks, usually built from other focuses:",
+                content: "Each .lua file in .vex/focuses can register named focuses. A named focus is a function that returns a list of tasks, usually built from other focuses:\nfocus.register_focus('mine', function() return focus.focus('all'):filter('owner', 'alice'):filter('status', 'done'):get() end) content_copy vex focus mine --select due vex view mine kanban A named focus works wherever a focus does (see "
+            }
+        );
+    index.add(
+            {
+                id:  17 ,
+                href: "\/vex\/docs\/02-features\/05-getting-into-focus\/",
+                title: "Getting into focus",
+                description: "A focus is a saved query over your tasks.",
+                content: "A focus is a saved query over your tasks. vex focus builds one and most other commands act on it. "
+            }
+        );
+    index.add(
+            {
+                id:  18 ,
+                href: "\/vex\/docs\/03-configuration\/06-configuring-event-hooks\/",
+                title: "Configuring event hooks",
+                description: "Each `.lua` file in `.vex/events` can register hooks. Every event comes in a pair: `pre-\u003cevent\u003e` fires before the action and `post-\u003cevent\u003e` after it. For example, `pre-verb-set` fires before the `vex set` command runs, and `post-task-resolve` fires after a task resolves. A hook receives the event's args (see the table below):",
+                content: "Each .lua file in .vex/events can register hooks. Every event comes in a pair: pre- fires before the action and post- after it. For example, pre-verb-set fires before the vex set command runs, and post-task-resolve fires after a task resolves. A hook receives the event’s args (see the table below):\nevent:on 'post-task-resolve' (function(vexid, t) if t.due and t.due \u003c os.time() and t.phase ~= 'final' then print(vexid .. ' is overdue') end end) A hook that raises an error stops the command. vex prints which hook failed, on which event, and why, for example Event hook 'needs-owner' failed on 'pre-verb-set': .... A pre- hook can therefore enforce project rules before anything changes, for example requiring every task to have an owner:\nevent:register('pre-task-set', 'needs-owner', function(vexid, properties) assert(properties.owner or task:getsingle(vexid).owner, vexid .. ' needs an owner') end) event:on '' (fn) registers an anonymous hook; errors name it by file and line. event:register(event, handle, fn) names it: registering the same handle again replaces it, and event:remove(event, handle) drops it. A hook on * receives every event, with the event’s name as its first arg. Hooks run in the order they were registered, which is the order their files load, sorted by path.\nEvents linkEvery event below fires as pre- and post-.\nEvent Fires around pre- args post- args verb- any command, e.g. verb-add args args, output task-add creating a task in memory properties vexid, task task-set setting fields vexid, properties, modifiers vexid, task task-resolve resolving a task vexid vexid, task task-remove unlinking a removed task vexid vexid task-delete deleting a task’s file vexid vexid, path task-read reading a task file path path, task (nil if unreadable) task-write writing a task file vexid vexid, path task-move moving a task file into place vexid vexid, from, to task-reindexall vex resolve all’s rebuild task-get vex get on one task vexid, fields vexid, fields, output task-show vex show on one task vexid vexid, output focus-write saving the focus focus focus view-display rendering a view view, focus, flags view, focus, flags, output recipe-add running a recipe recipe, properties recipe, focus A verb’s args are its parsed arguments. args.raw is the command line as typed after vex, e.g. set make-coffee-1 --status done.\nSee "
+            }
+        );
+    index.add(
+            {
+                id:  19 ,
+                href: "\/vex\/docs\/02-features\/06-status-and-state-machines\/",
+                title: "Status and state machines",
+                description: "A task's `status` is `todo` or `done`, and only `todo` can move to `done`:",
+                content: "A task’s status is todo or done, and only todo can move to done:\ncontent_copy vex set tidy-readme-1 --status done vex set tidy-readme-1 --status todo ERROR: Cannot transition status from done to todo ... Setting a task to its current status is fine, and doing is not a status: vex set --status doing fails with Cannot transition status from todo to doing.\nAbstracts linkAn abstract stores no status. It is worked out from its children each time it is read, so you never set it:\nChildren status All todo (or none) todo All done done Some of each doing To close an abstract, finish its children ("
+            }
+        );
+    index.add(
+            {
+                id:  20 ,
+                href: "\/vex\/docs\/02-features\/07-working-with-git-and-a-team\/",
+                title: "Working with git and a team",
+                description: "Tasks are plain text files, so git and vex work together with a little care.",
+                content: "Tasks are plain text files, so git and vex work together with a little care.\nWhat to commit linkCommit the task files in taskfolder, .vex/config.lua and your extensions (tasks, recipes, focuses, views, events).\nKeep .vex/vexdex/ out of git by adding it to .gitignore. It holds the index, which vex rebuilds from the task files, and your saved focus, which is personal.\nAfter a clone, pull or checkout linkThe index is stale until you rebuild it:\ncontent_copy vex resolve all This rereads every task file, so it also picks up files other people added, edited or deleted, and fails if any task is invalid. A task file moved by hand is still found by its filename.\nMerge conflicts linkA task is a markdown file, so conflicts are ordinary text conflicts. Edit the file to remove the markers, keeping the right values, and run vex resolve all: it names any task that is still invalid.\nChecking before you commit linkMake vex resolve all a pre-commit hook so that invalid tasks never reach the repository:\ncontent_copy cat .git/hooks/pre-commit #!/bin/sh vex resolve all Sharing a backlog linkowner must be one of taskowners in .vex/config.lua, so commit that file and everyone assigns the same names. Each person keeps their own saved focus, so vex focus all --filter owner:alice is a personal view of a shared backlog.\n"
+            }
+        );
+    index.add(
+            {
+                id:  21 ,
+                href: "\/vex\/docs\/02-features\/08-links-and-backlinks\/",
+                title: "Links and backlinks",
+                description: "A task links to another by holding its vexid in `children`, `options`, `decision` or `dependencies`.",
+                content: "A task links to another by holding its vexid in children, options, decision or dependencies. In the task file a link is written [[vexid]], so Obsidian draws the graph. vex checks every link when it resolves: the target must exist, a child has one parent, and dependencies can’t form a cycle.\nLinks as fields linkTwo transients answer “what does this task link to?” and “what links to it?”. They are never stored, and work wherever a field does:\nTransient Value forwardlinks The vexids of the tasks this task links to, through any field. backlinks The vexids of the tasks that link to this task, through any field. content_copy vex get migrate-existing-invoices-1 --forwardlinks --backlinks ship-billing-rewrite-1,write-cutover-runbook-1 The task links to nothing, and is linked from its parent and from a task that depends on it. backlinks come from the index, so they are as fresh as the last vex resolve.\nWalking links link--step moves one hop and --tree follows links until they run out ("
+            }
+        );
+    index.add(
+            {
+                id:  22 ,
+                href: "\/vex\/docs\/02-features\/09-errors-and-troubleshooting\/",
+                title: "Errors and troubleshooting",
+                description: "Every user mistake fails with a named error, a message and a hint, and exits non-zero.",
+                content: "Every user mistake fails with a named error, a message and a hint, and exits non-zero. Internal error is the exception: that is a bug in vex, so please report it.\nErrors link Error Cause Fix not-vexed No .vex folder in the current folder or above it. vex init, or cd into your project. already-vexed vex init where a .vex already exists. Nothing to do. no-focus A command needed the saved focus and there is none, or it can’t be replayed. vex focus or vex add to set one. unknown-focus The focus is not a named focus, a vexid in the index or a path. Check the spelling. If the task exists on disk, vex resolve all. unknown-focus-operation A flag that isn’t a focus operation, such as --colour. See "
+            }
+        );
+    index.add(
+            {
+                id:  23 ,
+                href: "\/vex\/docs\/04-technical-documentation\/contributing\/",
+                title: "Contributing",
+                description: "vex is a single LuaJIT program with no build step.",
+                content: "vex is a single LuaJIT program with no build step. This page covers working on it; "
+            }
+        );
+    index.add(
+            {
+                id:  24 ,
+                href: "\/vex\/docs\/vex\/",
+                title: "Design journal",
+                description: "The original design notes behind vex, including ideas not built yet.",
+                content: "Philosophy linkSimple way to create and manage tasks, embeddable in any project, and local first.\nTasks are just folders and markdown files.\nFocus on using the task management system to reduce uncertainty, make decisions, and create maximum efficiency sets of actionable items.\nPhilosophy is to be minimalist, creating first a CLI tool which could be expanded into other tools.\nAll written in luajit so it runs on a potato.\nIt is an opinionated tool, which can have bearing about how to think about about tasks, not just store them\nTask types linkThese types of tasks are opinionated and should be under a plugin called vexations\nFour types of tasks. Users can create their own task types which are subtypes of the above, or subtypes of the master task type. Every task is a file.\n1. Exploration linkA task to create the structures necessary for task decision and execution.\nprimarily about resolving an uncertain landscape into a certain landscape explorations are not loaded, they are the default state of any abstract until they are marked as explored. the act of writing something down is a commitment to knowledge actually not sure about this… Shouldn’t they get a full task like the others so you can add content and outline? in fact I think they should get files for 2 reasons. 1. It lets us use outline view in obsidian to explore. 2. The argument against having them (being “how can unknown be known” is the same as “zero can’t be a number” These tasks ultimately have to answer:\nWhat do I need to know? How can we accomplish the abstract?\nEvery abstract creates an exploration task by default.\nExploration tasks may also be useful in researching before writing documentation or committing to a path.\nThe boundary is that we no longer create an exploration task when we know what to do within the entire scope of works (not what to do next).\n2. Abstract linkA parent task which can group child tasks together. Holds no/little information by itself.\nprimarily about creating a shell with structure which can be expanded on and decomposed later. abstracts are created with the default add functionality, and are created very fast… Just jotted down they are a .md file in and of themselves when explored: if children, stay abstract. If no children, become a decision or atom or exploration. A warning will appear if an abstract ever has a body. It needs to be just YAML.\nAn abstract just needs to ask:\nWhat?\nNot how. Not why. When is a grey area for me. Would be good to pop on a date for quick tasks, but dependencies and that sort of thing need to go to children. Feels like a date might be better suited to an atom.\n3. Decision linkA task to resolve a decision, once the information has been laid out. Decisions can alter the landscape of tasks.\nprimarily about resolving alignment and decision making. it is an if statement because it chooses which branch or perhaps it can be a more abstract choice can collapse past of the tree structure nothing wrong with the word “decision” either. A decision answers:\nWhich path to take?\nExploration tasks which find multiple solutions to the problem need a decision task. Naming conventions are decision tasks. Approval is a decision task. They absolutely can be dependent on other tasks.\nDecision feel like they’re the way to capture:\nOptional tasks (decide whether to continue) decision trees (if raining, bring umbrella) ors instead of ands for dependencies In fact, decisions should choose between tasks (task a, task b, task c). Decisions therefore are the only place which encode reachability. Note that they allow ORs in one sense but not another. You could achieve your goal by following path A or path B. A decision is for that.\nI wrote this which I think I agree with:\nI’m starting to think that maybe a decision task is a “folder” of tasks (sum type) which a choice. So we have:\natom: spoon coffee -\u003e decision {add-sugar, skip} -\u003e atom: add hot water -\u003e (add-sugar -\u003e) add-milk\n4. Atom linkAfully executable action which is fully known, can be done by one person only.\nprimarily about getting stuff down structure in dependencies between atoms atoms, decisions, and explorations are chained together into dependency graphs (DAGs). There are the following shapes only:\na then b (dependent) a with b (independent) (i.e. unspecified) a then b after c (collider) a after b then c (branch) Abstracts and the other task types are related through a parent-child tree structure\nA user can then create their own task types which inherit from these task types, and which perhaps have specific fields or information.\nFile structure linkEvery task is a .md file with YAML frontmatter.\nIn the config file in .vex users will be able to specify the root folder for all the files.\nEverything needs a vex: ID property which internally represents the identity of the item.\nWe expect no body for an abstract, and vex will continuously warn a user to put that information in an exploration by default.\nWe expect parents for leaf nodes and those parents are always abstracts. We expect a DAG structure for leaf nodes and those are never abstracts (unless we want a shorthand for “all” which I think we shouldn’t have…).\nThe user can choose how they like their files being arranged on disk by choosing the folders. They can do something like this:\nGroup by: status Group by: owner Or combos other available options: Parent Created date Priority Due date So on and so forth. Vex needs to know how to move files around anyway, and I think it will do so with a temp folder created in .vex and then moved to the root folder.\nStatuses linkTasks have 2 statuses: todo (not started) and done. Abstracts also have doing (some children started).\nUsers can create new statuses for their tasks, which are subtypes of the above.\nWatch mode / plugin linkInstead of adding in tasks via CLI, it may sometimes be better to link information directly in files. Can add something like this to a file.\n#vex Description\nWhen vex is invoked it will then link through the ID in this spot so it can keep track of the path.\nIt will become #abstract/ABC-123path\nThis means that:\nexploration tasks can be done in an outliner you can add in task references to any source file (e.g. code) anywhere, including abstracts In addition you could do:\n#abstract same as vex. #atom instead of abstract to promote it #explore to load an exploration task #decision to load a decision task Those tasks would link back to the exact spot in code. In addition, changing names or any other details would auto resolve in code as well as in tasks.\nSub indentation either becomes:\nsub abstract tasks or detail under the atom / explore / decision Consider: #vex/atom … = vex atom …\nAllow flags. So identical to CLI language.\nvalidation linkVex will validate tasks and warn users by default\nConfig folder linkIn the .vex config folder it is envisioned that we have:\nconfig.lua for global config templates - for task type templates, which allows you to create individual tasks straight away (e.g. atoms) or entire folders of tasks (including decision options in them). This creates workflows. plugins - code which can be used to extend functionality hooks - on_resolve = function(task) … end tmp - for temp folder restructures views Config.lua allows for:\ninheriting config, templates, plugins, etc. from parent or global config setting root folder where the tasks themselves are actually stored folder structure types (choosing paths) task name structure (default = tag) file format warnings on/off Plugins linkEach plugin is a folder, with an init file. Default behaviour shouldnt be a plugin, but there should be a key place to replace core behaviour.\nE.g. in core.lua, cannot tag = require ’tag' But rather should plugin = require ‘plugin’ config = require ‘config’ config.load() – sets metatable to default paths tag = plugin.require(config)\nVexations Watch mode File format\nobsidian.md Query vexQL Views tabular kanban Export to .ics Tag creation (i.e. how to create naming from a description) Schedules linkAbstracts can have schedules attached to them which cover an interval of time (or a union of intervals) Atoms can have dates attached to them (e.g. due dates)\nOther dates include:\nstatus dates created dates modification dates commit dates Nesting linkYou can have .vex folders in projects, but you should also be able to view across projects. That may imply that nesting .vex under a .vex is acceptable? This may imply for consistency that you should be able to set up an array of todo folder paths in your config.\nFields linkNeed a preprocessor on every field. That preprocessor can take what’s in the field, and the rest of this task, and the task manager in as args. Combined with default fields, this allows us to create fully derived fields (e.g. date created) .. actually there are 2 types of derived fields:\nDerive when storing data and stamp it into place Derive when accessing the data, and keep it always up to date. I don’t think this one is possible because we may view the task outside of vex. I think things like “is abstract done” should be a derived field of type 1 where resolve updates it. Once updated, it’s always updated. For example, parents must always link to another file (\u0026 validate single parent). So must dependencies (\u0026 validate no cycles). Due dates are converted into a standard date. Cannot have priority and due date in my opinion. Can have urgency \u0026 importance though. Status will check the statemachine. I want status to have a full statemachine even though vexations will only use simple linked lists. Status is a separate concern to options, because it marks whether or not a decision has in fact been made.\nCode plan linksrc\nmain.lua (global config, load plugins) lib plugin (manager) config (manager) pretty serialization statemachine dag tree events optic core task (manager) recipe (manager) init (as in vex init) index (manager) cli (+load extensions from plugins) resolve focus default status-view query-format disk-format query-lang tag-names open plugins watch-mode vexations folderize (hooks into resolve) "
+            }
+        );
+    index.add(
+            {
+                id:  25 ,
+                href: "\/vex\/docs\/",
+                title: "Documentation",
+                description: "",
+                content: ""
+            }
+        );
+    index.add(
+            {
+                id:  26 ,
+                href: "\/vex\/docs\/04-technical-documentation\/vexdex\/events-and-hooks\/",
+                title: "Events and hooks",
+                description: "Events go through one event manager, `src/lib/event.lua`. They fire at two levels:",
+                content: "Events go through one event manager, src/lib/event.lua. They fire at two levels:\nVerbs. lib.cli fires pre-verb- before every command runs and post-verb- after it finishes. Actions. The task, focus, view and recipe managers fire pre- and post- events around each public action, such as pre-task-resolve or post-focus-write. At the end of loading, vex runs every .lua file in .vex/events, sorted by path, and each file registers its handlers. Handlers run in the order they were registered. A handler that raises an error stops the command with a hook-failed error naming the hook and the event. See "
+            }
+        );
+    index.add(
+            {
+                id:  27 ,
+                href: "\/vex\/docs\/04-technical-documentation\/plugin-architecture\/",
+                title: "Plugin architecture",
+                description: "Every swappable part of vex, including id generation, file layout, the task file format and sort order, goes through one mechanism: `src/lib/plugin.lua`.",
+                content: "Every swappable part of vex, including id generation, file layout, the task file format and sort order, goes through one mechanism: src/lib/plugin.lua.\nEnums: named slots with one active member linkPlugin:addenum(name, members, active) registers a slot: a name, the implementations that can fill it, and the one that is active. src/vex.lua registers six:\nplugin:addenum(\"tagger\", {\"canonicalvexid\"}) plugin:addenum(\"taskpath\", {\"grouppath\"}) plugin:addenum(\"taskformat\", {\"obsidian\"}) plugin:addenum(\"sortdata\", {\"canonicalsort\"}) plugin:addenum(\"frontmatter\", {\"canonicalfrontmatter\"}) plugin:addenum(\"body\", {\"canonicalbody\"}) Plugin:select(name, member) switches the active member. The rest of vex depends only on the slot. Markdown with YAML frontmatter is simply what the obsidian member of taskformat writes; another member could store the same fields as JSON or database rows, and schemas, focuses and views would work unchanged.\nSlot Default Controls tagger default.canonicalvexid How a description becomes a vexid ("
+            }
+        );
+    index.add(
+            {
+                id:  28 ,
+                href: "\/vex\/docs\/04-technical-documentation\/resolution-pipeline\/",
+                title: "Resolution pipeline",
+                description: "How a task goes from `vex add` to a file on disk, and what else moves when it does.",
+                content: "How a task goes from vex add to a file on disk, and what else moves when it does. The code is TaskManager in src/core/task.lua.\nadd, resolve, write link TaskManager:add makes a vexid with the tagger plugin and holds the new task in memory only. TaskManager:resolve runs the schema of the task’s type and of each type it extends, from the root down. Each schema runs three steps: normalise (fill defaults, convert values), validate, and derive (compute fields, record links). A failure throws a named resolution-failed-* error and nothing is written. Resolution then indexes the task in memory and moves files into place (below). TaskManager:write formats the task back to its readable form (a timestamp becomes YYYY-MM-DD HH:MM:SS, a vexid becomes [[vexid]]), writes it through the taskformat plugin to a temporary file and renames it into place ("
+            }
+        );
+    index.add(
+            {
+                id:  29 ,
+                href: "\/vex\/docs\/04-technical-documentation\/vexdex\/the-index\/",
+                title: "The index",
+                description: "The vexdex (`src/core/vexdex.lua`) is vex's index: a map from each vexid to its task data, kept in `.vex/vexdex` so that commands don't read every task file on every run. It is derived entirely from the task files, so keep it out of git and rebuild it with `vex resolve all`.",
+                content: "The vexdex (src/core/vexdex.lua) is vex’s index: a map from each vexid to its task data, kept in .vex/vexdex so that commands don’t read every task file on every run. It is derived entirely from the task files, so keep it out of git and rebuild it with vex resolve all.\nOn disk link File Holds index.bin Every task’s fields except the body, unformatted: timestamps as numbers, links as bare vexids. The body lives only in the task file, and a query on vexbody (or the overview’s body count) reads it from there. backlinks.bin For every task, the tasks that link to it. paths.bin Where each task file is, relative to taskfolder. focus.bin The saved focus, as the list of operations that rebuild it. Each .bin file is written with binser and is what vex reads. Next to it, a .lua file holds the same data in readable form. vex never reads the .lua files; they exist so you can inspect the index.\nWith paths.groupby set, a file’s location depends on its fields and on other tasks, so vex records it in paths.bin. If a file isn’t where it was recorded, because it was moved by hand or after a merge, vex finds it by its filename and moves it back.\nAtomic writes linkEvery write goes through VexDex:atomic. The data is written to a new file in .vex/tmp and then renamed into place, so an interrupted write never leaves a half-written file. If the rename fails, vex stops with the write error and leaves the data in .vex/tmp.\nWhen the index is saved linkCommands change the index in memory as they go and save it once, when the command finishes successfully. A command that fails, because a task doesn’t validate or a file can’t be read, saves nothing, so the index on disk is never left half-updated. Reading a task never changes the index: only resolving, writing and vex resolve all do, so a file you edited by hand is not in the index until it is resolved.\nLoading and rebuilding linkWhen a command starts, vex loads the index from .vex/vexdex. If the folder or the index doesn’t exist yet, as in a fresh clone, vex creates it, starting empty.\nadd, set, remove and resolve update the index for the tasks they touch. To pick up changes made outside vex, such as files edited, added or deleted by hand, a script or an AI agent, run:\ncontent_copy vex resolve all This clears the index, reads every task file under taskfolder and resolves each. It stops, changing nothing, if two files hold the same vexid. Files it can’t read, and files whose frontmatter holds no vexid (such as notes from other Obsidian plugins), are ignored.\nSee also link "
+            }
+        );
+    index.add(
+            {
+                id:  30 ,
+                href: "\/vex\/docs\/04-technical-documentation\/vexdex\/",
+                title: "Vexdex",
+                description: "What lives in .vex/vexdex: the index and the event logs.",
+                content: ""
+            }
+        );
+    search.addEventListener('input', show_results, true);
+
+    function show_results(){
+        const maxResult =  5 ;
+        const minlength =  0 ;
+        var searchQuery = sanitizeHTML(this.value);
+        var results = index.search(searchQuery, {limit: maxResult, enrich: true});
+
+        
+        const flatResults = new Map(); 
+        for (const result of results.flatMap(r => r.result)) {
+        if (flatResults.has(result.doc.href)) continue;
+        flatResults.set(result.doc.href, result.doc);
+        }
+
+        suggestions.innerHTML = "";
+        suggestions.classList.remove('d-none');
+
+        
+        if (searchQuery.length < minlength) {
+            const minCharMessage = document.createElement('div')
+            minCharMessage.innerHTML = `Please type at least <strong>${minlength}</strong> characters`
+            minCharMessage.classList.add("suggestion__no-results");
+            suggestions.appendChild(minCharMessage);
+            return;
+        } else {
+            
+            if (flatResults.size === 0 && searchQuery) {
+                const noResultsMessage = document.createElement('div')
+                noResultsMessage.innerHTML = "No results for" + ` "<strong>${searchQuery}</strong>"`
+                noResultsMessage.classList.add("suggestion__no-results");
+                suggestions.appendChild(noResultsMessage);
+                return;
+            }
+        }
+
+        
+        for(const [href, doc] of flatResults) {
+            const entry = document.createElement('div');
+            suggestions.appendChild(entry);
+
+            const a = document.createElement('a');
+            a.href = href;
+            entry.appendChild(a);
+
+            const title = document.createElement('span');
+            title.textContent = doc.title;
+            title.classList.add("suggestion__title");
+            a.appendChild(title);
+
+            const description = document.createElement('span');
+            description.textContent = doc.description;
+            description.classList.add("suggestion__description");
+            a.appendChild(description);
+
+            suggestions.appendChild(entry);
+
+            if(suggestions.childElementCount == maxResult) break;
+        }
+    }
+    }());
+</script></body></html>
