@@ -523,18 +523,11 @@ local function assertfields(operation, ...)
     return fields
 end
 
-local function byvexid()
-    local tasks = {}
-    for _, task in ipairs(Focus.getalltasks()) do tasks[task.vexid] = task end
-    return tasks
-end
-
 local function get_children(fields)
-    local tasks = byvexid()
     return function(task) 
         local children = {}
         for _, child in ipairs(links(task, fields)) do
-            table.insert(children, tasks[child])
+            table.insert(children, vexdex.index[child])
         end 
         return children
     end 
@@ -562,14 +555,15 @@ end
 
 -- reversetree
 local function get_parents(fields)
-    local alltasks = Focus.getalltasks()
     return function(task) 
-        return func.ifilter(alltasks, function(parent)
-            for _, child in ipairs(links(parent, fields)) do
-                if child == task.vexid then return true end
+        local parents = {}
+        for _, vexid in ipairs(vexdex:linksto(task.vexid)) do
+            local parent = vexdex.index[vexid]
+            if parent and func.any(links(parent, fields), function(child) return child == task.vexid end) then
+                table.insert(parents, parent)
             end
-            return false
-        end)
+        end
+        return parents
     end 
 end
 
@@ -603,7 +597,7 @@ end
 -----------------------------------------
 
 function Focus:result(tasks)
-    return self._get(tasks or Focus.getalltasks())
+    return self._get(tasks)
 end
 
 function Focus:get(tasks)
