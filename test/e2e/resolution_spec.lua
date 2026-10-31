@@ -46,11 +46,17 @@ describe("vex resolution never loses or skips data (e2e, subprocess)", function(
     assert.is_true(result.code ~= 0, "resolve all accepted two files for " .. vexid)
   end)
 
-  it("leaves the index alone when only reading a hand-edited task " .. AUDIT, function()
+  it("resolves a hand-edited task before reading it", function()
     local vexid = vex(dir, "add", "Edited", "by", "hand")
     edit(vexid, "\nstatus: todo\n", "\nstatus: todo\ncost: 9\n")
-    vex(dir, "get", vexid, "--cost")
-    assert.equal(0, count("--filter", "cost:9"), "vex get indexed an unresolved file")
+    assert.equal("9", vex(dir, "get", vexid, "--cost"))
+    assert.equal(1, count("--filter", "cost:9"))
+  end)
+
+  it("refuses to read a hand edit that does not resolve", function()
+    local vexid = vex(dir, "add", "Edited", "badly", "here")
+    edit(vexid, "\nstatus: todo\n", "\nstatus: todo\ncost: lots\n")
+    helper.vex_fails(dir, "validation step failed", "get", vexid, "--cost")
   end)
 
   it("changes neither the file nor the index when a linked task fails to resolve " .. AUDIT, function()

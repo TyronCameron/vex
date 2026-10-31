@@ -31,12 +31,115 @@ describe("vex storage (e2e, subprocess)", function()
     vex(dir, "resolve", "all")
   end
 
+  local function mtime(vexid)
+    local handle = io.popen("find " .. helper.shell_escape(dir .. "/" .. vexid .. ".md") .. " -printf '%T@'")
+    local result = handle:read("*a")
+    handle:close()
+    return result
+  end
+
+  local function stamps()
+    local result = snapshot()
+    for vexid in pairs(snapshot()) do result[vexid .. " mtime"] = mtime(vexid) end
+    return result
+  end
+
+  local function edit(vexid, from, to)
+    local path = dir .. "/" .. vexid .. ".md"
+    helper.write_file(path, (helper.read_file(path):gsub(from, to, 1)))
+  end
+
+  local OLD = "2020-01-01 00:00:00"
+
+  local function backdated_project()
+    linked_project()
+    for vexid in pairs(snapshot()) do edit(vexid, "\nmodified: [^\n]*\n", "\nmodified: \"" .. OLD .. "\"\n") end
+    vex(dir, "resolve", "all")
+  end
+
+  local function modified(vexid)
+    return helper.frontmatter(dir .. "/" .. vexid .. ".md").modified
+  end
+
   it("leaves task files untouched when resolving them again", function()
     linked_project()
-    local before = snapshot()
+    local before = stamps()
     vex(dir, "resolve", "all")
+    vex(dir, "resolve", "all", "--force")
+    assert.same(before, stamps())
+  end)
+
+  it("keeps a backdated modified time through resolving, as only modified changed", function()
+    backdated_project()
+    vex(dir, "resolve", "all", "--force")
+    for vexid in pairs(snapshot()) do assert.equal(OLD, modified(vexid), vexid) end
+  end)
+
+  it("rewrites nothing when a set changes nothing", function()
+    backdated_project()
+    local before = stamps()
+    vex(dir, "set", "child-task-here-1", "--cost", "5")
+    assert.same(before, stamps())
+  end)
+
+  it("moves modified only on the task a set changes", function()
+    backdated_project()
+    local before = stamps()
+    vex(dir, "set", "child-task-here-1", "--cost", "6")
+    assert.not_equal(OLD, modified("child-task-here-1"))
+    for _, vexid in ipairs({"parent-abstract-here-1", "dependent-atom-here-1"}) do
+      assert.equal(before[vexid], helper.read_file(dir .. "/" .. vexid .. ".md"), vexid)
+      assert.equal(before[vexid .. " mtime"], mtime(vexid), vexid)
+    end
+  end)
+
+  it("writes no task file when rebuilding a lost index", function()
+    linked_project()
+    local before = stamps()
+    os.execute("rm -rf " .. helper.shell_escape(dir .. "/.vex/vexdex"))
     vex(dir, "resolve", "all")
-    assert.same(before, snapshot())
+    assert.same(before, stamps())
+  end)
+
+  it("treats a touched but unchanged file as unchanged", function()
+    backdated_project()
+    os.execute("touch " .. helper.shell_escape(dir .. "/child-task-here-1.md"))
+    vex(dir, "resolve", "all")
+    assert.equal(OLD, modified("child-task-here-1"))
+  end)
+
+  it("resolves a hand edit when a command reads the task, and moves its modified", function()
+    backdated_project()
+    edit("child-task-here-1", "\ncost: 5\n", "\ncost: 9\n")
+    assert.equal("9", vex(dir, "get", "child-task-here-1", "--cost"))
+    assert.truthy(vex(dir, "focus", "all", "--filter", "cost:9"):find("Focusing on 1 vex", 1, true))
+    assert.not_equal(OLD, modified("child-task-here-1"))
+  end)
+
+  it("lists hand-edited tasks as updated, and takes in new task files on resolve all", function()
+    linked_project()
+    edit("child-task-here-1", "\ncost: 5\n", "\ncost: 9\n")
+    helper.write_file(dir .. "/made-hand-1.md", "---\nvexid: made-hand-1\ndescription: Made by hand\nvextype: task\n---\n")
+    assert.truthy(vex(dir, "focus", "updated"):find("Focusing on 1 vex", 1, true))
+    vex(dir, "resolve", "all")
+    assert.truthy(vex(dir, "focus", "updated"):find("Focusing on 0 vexes", 1, true))
+    assert.truthy(vex(dir, "focus", "all"):find("Focusing on 4 vexes", 1, true))
+  end)
+
+  it("forgets a task whose file was deleted by hand", function()
+    local vexid = vex(dir, "add", "Deleted", "by", "hand")
+    vex(dir, "add", "Kept", "around", "here")
+    os.remove(dir .. "/" .. vexid .. ".md")
+    vex(dir, "resolve", "all")
+    assert.truthy(vex(dir, "focus", "all"):find("Focusing on 1 vex", 1, true))
+  end)
+
+  it("writes a normalised value back to the file it resolves", function()
+    local vexid = vex(dir, "add", "Hand", "dated", "task")
+    edit(vexid, "\nstatus: todo\n", "\nstatus: todo\ndue: tomorrow 8am\n")
+    vex(dir, "resolve", vexid)
+    local t = os.date("*t", os.time() + 86400)
+    assert.equal(string.format("%04d-%02d-%02d 08:00:00", t.year, t.month, t.day), helper.frontmatter(dir .. "/" .. vexid .. ".md").due)
   end)
 
   it("keeps the body and every field through a set", function()
@@ -77,16 +180,6 @@ describe("vex storage (e2e, subprocess)", function()
     vex(dir, "resolve", "all")
     assert.truthy(vex(dir, "focus", "all"):find("Focusing on 1 vex", 1, true))
     assert.truthy(vex(dir, "show", vexid):find("Real task here", 1, true))
-  end)
-
-  it("keeps a hand-written natural-language time until vex next writes the task as a date", function()
-    local vexid = vex(dir, "add", "Hand", "dated", "task")
-    local path = dir .. "/" .. vexid .. ".md"
-    helper.write_file(path, helper.read_file(path):gsub("\nstatus: todo\n", "\nstatus: todo\ndue: tomorrow 8am\n"))
-    vex(dir, "resolve", "all")
-    vex(dir, "set", vexid, "--cost", "1")
-    local t = os.date("*t", os.time() + 86400)
-    assert.equal(string.format("%04d-%02d-%02d 08:00:00", t.year, t.month, t.day), helper.frontmatter(path).due)
   end)
 
   it("rebuilds a deleted index from the task files", function()

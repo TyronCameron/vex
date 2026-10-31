@@ -11,7 +11,10 @@ local default_config = {
         groupby = {"status", "lineage"}
     },
     taskowners = {},
-    loglimit = 1000
+    loglimit = 1000,
+    fingerprint = {
+        exclude = {"modified"}
+    }
 }
 
 local function setup_vex_dir(path)

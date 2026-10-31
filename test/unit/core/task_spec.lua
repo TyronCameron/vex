@@ -283,6 +283,128 @@ describe("task", function()
         assert.equal(7, vexdex:get(vexid).cost)
     end)
 
+    describe("changes", function()
+
+        local OLD = 1577836800
+
+        local function backdated(properties)
+            local vexid = create(properties)
+            task:set(vexid, {modified = OLD})
+            task:resolve(vexid)
+            return vexid
+        end
+
+        local function contents(vexid)
+            local f = io.open(task:getcurrentpath(vexid))
+            local content = f:read("*a")
+            f:close()
+            return content
+        end
+
+        it("leaves modified alone when resolving a task changes nothing but modified", function()
+            local vexid = backdated({description = "unchanged backdated task"})
+            assert.equal(OLD, task.tasks[vexid].modified)
+            task:set(vexid, {cost = task.tasks[vexid].cost})
+            task:resolve(vexid)
+            assert.equal(OLD, task.tasks[vexid].modified)
+        end)
+
+        it("moves modified when resolving a task whose content changed", function()
+            local vexid = backdated({description = "changed backdated task"})
+            task:set(vexid, {cost = 3})
+            task:resolve(vexid)
+            assert.is_true(task.tasks[vexid].modified > OLD)
+        end)
+
+        it("writes a resolved task back to its file", function()
+            local vexid = backdated({description = "written backdated task"})
+            task:set(vexid, {cost = 4})
+            task:resolve(vexid)
+            assert.equal(4, task:readfrompath(task:getcurrentpath(vexid)).cost)
+        end)
+
+        it("does not rewrite a file whose bytes would not change", function()
+            local vexid = backdated({description = "untouched backdated task"})
+            local writes = 0
+            local atomic = vexdex.atomic
+            vexdex.atomic = function(...) writes = writes + 1 return atomic(...) end
+            task:write(vexid)
+            vexdex.atomic = atomic
+            assert.equal(0, writes)
+            assert.truthy(contents(vexid):find("modified: \"2020%-01%-01"))
+        end)
+
+    end)
+
+    describe("files changed on disk", function()
+
+        local function edit(vexid, from, to)
+            local path = task:getcurrentpath(vexid)
+            local f = io.open(path)
+            local content = f:read("*a")
+            f:close()
+            f = io.open(path, "w")
+            f:write((content:gsub(from, to)))
+            f:close()
+        end
+
+        it("resolves a hand-edited task into the index and moves its modified", function()
+            local vexid = create({description = "resolved hand edited task"})
+            task:set(vexid, {modified = 1577836800})
+            task:resolve(vexid)
+            edit(vexid, "\nstatus: todo\n", "\nstatus: todo\ncost: 3\n")
+            task.tasks[vexid] = nil
+            task:resolve(vexid)
+            assert.equal(3, vexdex:get(vexid).cost)
+            assert.is_true(vexdex:get(vexid).modified > 1577836800)
+        end)
+
+        it("drops a task whose file is unreadable from the index, leaving the file", function()
+            local vexid = create({description = "dropped broken hand edited task"})
+            local path = task:getcurrentpath(vexid)
+            edit(vexid, "^%-%-%-\n", "")
+            task.tasks[vexid] = nil
+            task:resolve(vexid)
+            assert.is_nil(vexdex:get(vexid))
+            assert.truthy(io.open(path))
+            os.remove(path)
+        end)
+
+        it("resolves the tasks linked to a task whose file is gone", function()
+            local child = create({description = "gone linked child task"})
+            local parent = create({description = "gone linking parent abstract", vextype = 'abstract', children = {child}})
+            os.remove(task:getcurrentpath(parent))
+            task.tasks[parent] = nil
+            local resolved = {}
+            event:register('pre-task-resolve', 'gone-spec', function(vexid) resolved[vexid] = true end)
+            task:resolve(parent)
+            event:remove('pre-task-resolve', 'gone-spec')
+            assert.is_nil(vexdex:get(parent))
+            assert.truthy(resolved[child])
+        end)
+
+        it("takes in a new task file and the files that changed, but not the others", function()
+            local edited = create({description = "reindexed edited task"})
+            local kept = create({description = "reindexed kept task"})
+            edit(edited, "\nstatus: todo\n", "\nstatus: todo\ncost: 4\n")
+            task.tasks[edited] = nil
+            local path = vexdex:taskroot() .. "/made-by-hand-1.md"
+            local f = io.open(path, "w")
+            f:write("---\nvexid: made-by-hand-1\ndescription: Made by hand\nvextype: task\n---\n")
+            f:close()
+            local resolved = {}
+            event:register('pre-task-resolve', 'reindex-spec', function(vexid) resolved[vexid] = true end)
+            task:reindexall()
+            event:remove('pre-task-resolve', 'reindex-spec')
+            assert.same({[edited] = true, ["made-by-hand-1"] = true}, resolved)
+            assert.equal(4, vexdex:get(edited).cost)
+            assert.is_nil(resolved[kept])
+            task:remove("made-by-hand-1")
+            task:delete("made-by-hand-1")
+        end)
+
+    end)
+
     describe("cascading resolution", function()
 
         task:task 'tracker':extends 'atom' {
@@ -410,12 +532,12 @@ describe("task", function()
             assert.same({vexid, path}, fired['post-task-delete'][1])
         end)
 
-        it("fires pre- and post-task-reindexall, and task-read for each file read", function()
+        it("fires pre- and post-task-reindexall, and task-read for each file read when forced", function()
             local vexid = create({description = "evented reindexed task"})
             local path = task:getcurrentpath(vexid)
-            task:reindexall()
-            assert.same({}, fired['pre-task-reindexall'][1])
-            assert.same({}, fired['post-task-reindexall'][1])
+            task:reindexall(true)
+            assert.same({true}, fired['pre-task-reindexall'][1])
+            assert.same({true}, fired['post-task-reindexall'][1])
             assert.truthy(func.any(fired['pre-task-read'], function(args) return args[1] == path end))
             assert.truthy(func.any(fired['post-task-read'], function(args)
                 return args[1] == path and args[2] and args[2].vexid == vexid

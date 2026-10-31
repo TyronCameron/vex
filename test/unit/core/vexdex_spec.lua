@@ -1,11 +1,13 @@
 local vexdex = require 'core.vexdex'
 local lfs = require 'lib.lfs'
+local lfsext = require 'lib.lfsext'
+local func = require 'lib.func'
 
 describe("vexdex", function()
 
     it("stores and removes index entries", function()
-        vexdex:unsafe_add("__spec-id-1", "/some/path.md")
-        assert.equal("/some/path.md", vexdex:get("__spec-id-1"))
+        vexdex:unsafe_add("__spec-id-1", {vexid = "__spec-id-1"})
+        assert.same({vexid = "__spec-id-1"}, vexdex:get("__spec-id-1"))
         vexdex:unsafe_remove("__spec-id-1")
         assert.is_nil(vexdex:get("__spec-id-1"))
     end)
@@ -59,6 +61,56 @@ describe("vexdex", function()
         vexdex:remove("__placed")
         assert.is_nil(vexdex.paths["__placed"])
         assert.is_nil(vexdex.new(vexdex.path).paths["__placed"])
+    end)
+
+    it("fingerprints a task with its body, leaving out the fields config excludes", function()
+        local task = {vexid = "__printed", cost = 1, modified = 10, vexbody = "notes"}
+        local before = vexdex:fingerprint(task)
+        assert.equal(before, vexdex:fingerprint({vexid = "__printed", cost = 1, modified = 20, vexbody = "notes"}))
+        assert.not_equal(before, vexdex:fingerprint({vexid = "__printed", cost = 2, modified = 10, vexbody = "notes"}))
+        assert.not_equal(before, vexdex:fingerprint({vexid = "__printed", cost = 1, modified = 10, vexbody = "other notes"}))
+    end)
+
+    it("tells a task that changed since it was indexed from one that did not, and from one never indexed", function()
+        assert.is_false(vexdex:changed("__compared", {vexid = "__compared", cost = 1}))
+        vexdex:unsafe_add("__compared", {vexid = "__compared", cost = 1})
+        assert.is_false(vexdex:changed("__compared", {vexid = "__compared", cost = 1}))
+        assert.is_true(vexdex:changed("__compared", {vexid = "__compared", cost = 2}))
+        vexdex:unsafe_remove("__compared")
+    end)
+
+    it("persists fingerprints and mtimes, and forgets them when the task is removed", function()
+        local path = vexdex:taskroot() .. "/__stamped.md"
+        local f = io.open(path, "w")
+        f:write("stamped")
+        f:close()
+        vexdex:unsafe_add("__stamped", {vexid = "__stamped"}):unsafe_stamp("__stamped", path):writeindex()
+        local reloaded = vexdex.new(vexdex.path)
+        assert.equal(vexdex:fingerprint({vexid = "__stamped"}), reloaded.fingerprints["__stamped"])
+        assert.equal(lfsext.mtime(path), reloaded.mtimes["__stamped"])
+        vexdex:remove("__stamped")
+        assert.is_nil(vexdex.new(vexdex.path).mtimes["__stamped"])
+        os.remove(path)
+    end)
+
+    it("lists the indexed tasks whose files changed or went missing, and the files it does not know", function()
+        local root = vexdex:taskroot()
+        for _, name in ipairs({"__kept", "__touched", "__gone", "__unknown"}) do
+            local f = io.open(root .. "/" .. name .. ".md", "w")
+            f:write(name)
+            f:close()
+        end
+        for _, vexid in ipairs({"__kept", "__touched", "__gone"}) do
+            vexdex:unsafe_locate(vexid, vexid .. ".md"):unsafe_stamp(vexid, root .. "/" .. vexid .. ".md")
+        end
+        os.execute("touch -d '2001-01-01 00:00:00' '" .. root .. "/__touched.md'")
+        os.remove(root .. "/__gone.md")
+        local changed, unknown = vexdex:updated()
+        assert.same({"__gone", "__touched"}, func.ifilter(changed, function(vexid) return vexid:match("^__") end))
+        assert.truthy(func.any(unknown, function(path) return path == root .. "/__unknown.md" end))
+        assert.is_false(func.any(unknown, function(path) return path:match("__kept") ~= nil end))
+        for _, name in ipairs({"__kept", "__touched", "__unknown"}) do os.remove(root .. "/" .. name .. ".md") end
+        for _, vexid in ipairs({"__kept", "__touched", "__gone"}) do vexdex:unsafe_remove(vexid) end
     end)
 
     it("persists index entries without their body, in both the index and its readable copy", function()
