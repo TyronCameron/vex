@@ -38,16 +38,16 @@ function VexDex:add(vexid, storage)
     return self:writeindex()
 end
 
-function VexDex:unsafe_remove(vexid)
+function VexDex:unsafe_remove(vexid, previous)
     self.index[vexid] = nil
     self.backlinks[vexid] = nil
     self.paths[vexid] = nil
     self.dirty = true
-    return self:unsafe_link(vexid, {})
+    return self:unsafe_link(vexid, {}, previous)
 end
 
-function VexDex:remove(vexid)
-    self:unsafe_remove(vexid)
+function VexDex:remove(vexid, previous)
+    self:unsafe_remove(vexid, previous)
     return self:writeindex()
 end
 
@@ -57,40 +57,24 @@ function VexDex:linksto(vexid)
     return sources
 end
 
-function VexDex:forwardlinks()
-    if not self.forward then
-        self.forward = {}
-        for target, sources in pairs(self.backlinks) do
-            for source in pairs(sources) do
-                self.forward[source] = self.forward[source] or {}
-                self.forward[source][target] = true
-            end
-        end
-    end
-    return self.forward
-end
-
-function VexDex:unsafe_link(vexid, links)
+function VexDex:unsafe_link(vexid, links, previous)
     self.dirty = true
-    local forward = self:forwardlinks()
-    for target in pairs(forward[vexid] or {}) do
+    for _, target in ipairs(previous or {}) do
         local sources = self.backlinks[target]
         if sources then
             sources[vexid] = nil
             if next(sources) == nil then self.backlinks[target] = nil end
         end
     end
-    forward[vexid] = {}
     for _, target in ipairs(links) do
         self.backlinks[target] = self.backlinks[target] or {}
         self.backlinks[target][vexid] = true
-        forward[vexid][target] = true
     end
     return self
 end
 
-function VexDex:link(vexid, links)
-    self:unsafe_link(vexid, links)
+function VexDex:link(vexid, links, previous)
+    self:unsafe_link(vexid, links, previous)
     return self:writeindex()
 end
 
@@ -124,7 +108,6 @@ function VexDex:readindex()
     if lfs.attributes(self:vexpath("vexdex/backlinks.bin"), "mode") == "file" then
         local backlinks = {binser.readFile(self:vexpath("vexdex/backlinks.bin"))}
         self.backlinks = backlinks[1][1]
-        self.forward = nil
     end
     if lfs.attributes(self:vexpath("vexdex/paths.bin"), "mode") == "file" then
         local paths = {binser.readFile(self:vexpath("vexdex/paths.bin"))}

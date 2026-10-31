@@ -332,7 +332,7 @@ end
 function TaskManager:reindexall()
     event:trigger('pre-task-reindexall')
     for key in pairs(vexdex.index) do
-        vexdex:unsafe_remove(key)
+        vexdex:unsafe_remove(key, vexdex:get(key).forwardlinks)
     end
 
     local vexids, paths = {}, {}
@@ -383,6 +383,7 @@ function TaskManager:resolvesingle(vexid)
     event:trigger('pre-task-resolve', vexid)
 
     local previous = vexdex:get(vexid) or {}
+    local previouslinks = previous.forwardlinks or {}
     local task = self:getsingle(vexid) or {}
     if not task.vextype then cli:throw('missing-required-field', task.vexid, 'vextype') end 
 
@@ -409,11 +410,11 @@ function TaskManager:resolvesingle(vexid)
         if not derive(parent, task, context) then cli:throw('resolution-failed-derivation', vexid) end 
     end 
 
-    local unlinked = func.ifilter(previous.forwardlinks or {}, function(target)
+    local unlinked = func.ifilter(previouslinks, function(target)
         return not func.any(context.links, function(link) return link == target end)
     end)
     self.tasks[vexid] = task
-    vexdex:unsafe_link(vexid, context.links)
+    vexdex:unsafe_link(vexid, context.links, previouslinks)
     vexdex:unsafe_add(vexid, task)
 
     event:trigger('post-task-resolve', vexid, task)
@@ -582,7 +583,7 @@ function TaskManager:delete(vexid)
     local linked = focus.focus(vexid):step('forwardlinks', 'backlinks'):get()
     local path = self:getcurrentpath(vexid)
     os.remove(path)
-    vexdex:unsafe_remove(vexid)
+    vexdex:unsafe_remove(vexid, vexdex:get(vexid).forwardlinks)
     tidy(path)
     local linkedids = func.imap(linked, function(task) return task.vexid end)
     self:resolveall(linkedids)
