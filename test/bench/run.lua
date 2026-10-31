@@ -16,7 +16,7 @@ local function now()
   return tonumber(tv.tv_sec) + tonumber(tv.tv_usec) / 1e6
 end
 
-local total = tonumber(os.getenv("VEX_BENCH_TASKS")) or 300
+local total = tonumber(os.getenv("VEX_BENCH_TASKS")) or 1000
 local layers = 10
 local abstracts = math.max(layers, math.floor(total / 10))
 local atoms = total - abstracts

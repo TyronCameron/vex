@@ -16,7 +16,7 @@ just test                        # unit + e2e + lint; reports every failing suit
 just test-unit [spec...]         # unit tests (all, or the given spec files)
 just test-e2e [spec...]          # e2e tests (all, or the given spec files)
 just lint                        # luacheck (globals, undefined names, broken loops) + mirror check
-just bench                       # time a densely linked project (VEX_BENCH_TASKS tasks, default 300)
+just bench                       # time a densely linked project (VEX_BENCH_TASKS tasks, default 1000)
 just install [--uninstall]       # install this clone the way a release installs (PREFIX, default ~/.local)
 just package <version> [outdir]  # build vex-<version>.tar.gz/.zip + SHA256SUMS into dist/
 just docs [hugo flags]           # build the docs site from vexdoc/ into site/public (needs hugo extended, go and obsidian-export)
