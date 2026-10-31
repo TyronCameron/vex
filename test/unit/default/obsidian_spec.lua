@@ -163,4 +163,54 @@ describe("obsidian", function()
         os.remove(tmp)
     end)
 
+    describe("strings that are not plain text", function()
+
+        local awkward = {
+            'say "hi"', '"quoted"', '"', 'a\\b', 'a\\"b', 'ends with backslash\\', 'c:\\dir\\file',
+            'line1\nline2', 'cr\r\nlf', 'tab\there', '', ' ',
+            '123', '1e5', '0x10', 'true', 'false', 'null', '~',
+            "it's", "'single'", '- dash', '# hash', 'key: value', '[[link]]', '{curly}', 'ünï 🎉',
+        }
+
+        local function roundtrip(value)
+            local tmp = os.tmpname()
+            obsidian.write(tmp, to_iter({field = value}), nil)
+            local back = obsidian.read(tmp).field
+            os.remove(tmp)
+            return back
+        end
+
+        for _, value in ipairs(awkward) do
+            it(string.format("round-trips %q as a value", value), function()
+                assert.equal(value, roundtrip(value))
+            end)
+
+            it(string.format("round-trips %q as a list item", value), function()
+                assert.same({value, "other"}, roundtrip({value, "other"}))
+            end)
+        end
+
+        it("reads a quote escaped by an older writer", function()
+            local tmp = os.tmpname()
+            writefile(tmp, '---\ndescription: "say \\"hi\\" there"\n---\n')
+            assert.equal('say "hi" there', obsidian.read(tmp).description)
+            os.remove(tmp)
+        end)
+
+        it("keeps a backslash that does not start an escape", function()
+            local tmp = os.tmpname()
+            writefile(tmp, '---\ndescription: "c:\\dir file"\n---\n')
+            assert.equal('c:\\dir file', obsidian.read(tmp).description)
+            os.remove(tmp)
+        end)
+
+        it("reads a doubled single quote as one", function()
+            local tmp = os.tmpname()
+            writefile(tmp, "---\ndescription: 'it''s here'\n---\n")
+            assert.equal("it's here", obsidian.read(tmp).description)
+            os.remove(tmp)
+        end)
+
+    end)
+
 end)

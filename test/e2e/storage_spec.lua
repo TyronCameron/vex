@@ -178,4 +178,13 @@ describe("vex storage (e2e, subprocess)", function()
     assert.are.equal("done", replayed["book-flights-1"][1].status)
   end)
 
+
+  it("keeps quotes and backslashes in a description through repeated resolves (fix-descriptions-quotes-gaining-1)", function()
+    local description = 'Say "hi" to C:\\dir, then leave'
+    local vexid = vex(dir, "add", description)
+    vex(dir, "resolve", "all")
+    vex(dir, "resolve", "all")
+    local json = vex(dir, "view", vexid, "json")
+    assert.truthy(json:find('"description": "Say \\"hi\\" to C:\\\\dir, then leave"', 1, true), json)
+  end)
 end)
