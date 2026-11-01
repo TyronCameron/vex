@@ -6,6 +6,7 @@ local binser = require 'lib.binser'
 local lfsext = require 'lib.lfsext'
 local func = require 'lib.func'
 local event = require 'lib.event'
+local hash = require 'lib.hash'
 
 local VexDex = {}
 VexDex.__index = VexDex
@@ -18,17 +19,23 @@ function VexDex.new(path)
     end
     local this = setmetatable({
         path = found,
-        modified = os.time(),
         index = {},
         backlinks = {},
         paths = {},
+        fingerprints = {},
+        mtimes = {},
         dirty = false
     }, VexDex)
     return this:ensureindex()
 end
 
-function VexDex:unsafe_add(vexid, storage)
-    self.index[vexid] = storage
+local function excluded()
+    return (require('core.config').fingerprint or {}).exclude or {}
+end
+
+function VexDex:unsafe_add(vexid, task)
+    self.index[vexid] = task
+    self.fingerprints[vexid] = {whole = self:fingerprint(task), content = self:fingerprint(task, excluded())}
     self.dirty = true
     return self
 end
@@ -42,6 +49,8 @@ function VexDex:unsafe_remove(vexid)
     self.index[vexid] = nil
     self.backlinks[vexid] = nil
     self.paths[vexid] = nil
+    self.fingerprints[vexid] = nil
+    self.mtimes[vexid] = nil
     self.dirty = true
     return self:unsafe_link(vexid, {})
 end
@@ -81,6 +90,44 @@ function VexDex:unsafe_locate(vexid, path)
     return self
 end
 
+-- records the mtime of a task's file as vex last saw it
+function VexDex:unsafe_stamp(vexid, path)
+    local mtime = self.listed and self.listed[path] or lfsext.mtime(path)
+    if self.mtimes[vexid] ~= mtime then self.dirty = true end
+    self.mtimes[vexid] = mtime
+    return self
+end
+
+function VexDex:taskroot()
+    return self.path .. '/' .. require('core.config').taskfolder
+end
+
+-- the indexed vexids whose files changed or went missing since their mtimes were stamped, and the files under the task folder that no indexed task is at
+function VexDex:updated()
+    self.listed = lfsext.mtimes(self:taskroot())
+    local changed, known = {}, {}
+    for vexid, relpath in pairs(self.paths) do
+        local path = self:taskroot() .. '/' .. relpath
+        known[path] = true
+        if self.listed[path] ~= self.mtimes[vexid] then table.insert(changed, vexid) end
+    end
+    table.sort(changed)
+    return changed, func.ifilter(func.sortedkeys(self.listed), function(path) return not known[path] end)
+end
+
+-- a hash of a task, leaving out the given fields
+function VexDex:fingerprint(task, exclude)
+    local plain = func.map(task, function(value) return value end)
+    for _, field in ipairs(exclude or {}) do plain[field] = nil end
+    return hash.fnv1a(pretty.table(plain))
+end
+
+-- whether a task differs from the one last indexed under its vexid, and whether it does outside the fields config.fingerprint.exclude names; a task never indexed differs in both
+function VexDex:changed(vexid, task)
+    local kept = self.fingerprints[vexid] or {}
+    return kept.whole ~= self:fingerprint(task), kept.content ~= self:fingerprint(task, excluded())
+end
+
 function VexDex:get(vexid)
     return self.index[vexid]
 end
@@ -110,6 +157,14 @@ function VexDex:readindex()
         local paths = {binser.readFile(self:vexpath("vexdex/paths.bin"))}
         self.paths = paths[1][1]
     end
+    if lfs.attributes(self:vexpath("vexdex/fingerprints.bin"), "mode") == "file" then
+        local fingerprints = {binser.readFile(self:vexpath("vexdex/fingerprints.bin"))}
+        self.fingerprints = fingerprints[1][1]
+    end
+    if lfs.attributes(self:vexpath("vexdex/mtimes.bin"), "mode") == "file" then
+        local mtimes = {binser.readFile(self:vexpath("vexdex/mtimes.bin"))}
+        self.mtimes = mtimes[1][1]
+    end
     return self 
 end
 
@@ -120,7 +175,6 @@ local function data(task)
 end
 
 function VexDex:writeindex()
-    self.modified = os.time()
     self:atomic(self:vexpath("vexdex/index.bin"), function(path)
         binser.writeFile(path, func.map(self.index, data))
     end)
@@ -138,6 +192,18 @@ function VexDex:writeindex()
     end)
     self:atomic(self:vexpath("vexdex/paths.lua"), function(path)
         pretty.write(path, self.paths)
+    end)
+    self:atomic(self:vexpath("vexdex/fingerprints.bin"), function(path)
+        binser.writeFile(path, self.fingerprints)
+    end)
+    self:atomic(self:vexpath("vexdex/fingerprints.lua"), function(path)
+        pretty.write(path, self.fingerprints)
+    end)
+    self:atomic(self:vexpath("vexdex/mtimes.bin"), function(path)
+        binser.writeFile(path, self.mtimes)
+    end)
+    self:atomic(self:vexpath("vexdex/mtimes.lua"), function(path)
+        pretty.write(path, self.mtimes)
     end)
     self.dirty = false
     return self 
@@ -211,6 +277,7 @@ function VexDex:atomic(path, func)
     if not os.rename(vexpath, path) then
         cli:throw('write', path, vexpath)
     end
+    if self.listed then self.listed[path] = nil end
     return res
 end
 

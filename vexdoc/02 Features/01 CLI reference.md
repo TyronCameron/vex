@@ -21,7 +21,7 @@
 | `vex remove [focus]` | Deletes every task in the focus, removes links to them from other tasks, and clears the focus. |
 | `vex focus [focus] [--flags...]` | Builds and saves a focus. With no arguments, prints the saved focus. |
 | `vex view [focus] [view] [--flags...]` | Renders the focus with a view. With no arguments, lists the views. See [[04 Views]]. |
-| `vex resolve [focus]` | Validates and reindexes the tasks in the focus. `vex resolve all` rebuilds the whole index from disk. |
+| `vex resolve [focus] [--force]` | Resolves the tasks in the focus whose files changed since vex last saw them, and writes back what changes. `vex resolve all` also takes in new task files and drops deleted ones. `--force` resolves every task in the focus; `vex resolve all --force` rebuilds the whole index from disk. |
 | `vex recipe [recipe] Description [--fields...]` | Creates tasks from a recipe and focuses on them. With no recipe, lists the recipes. |
 | `vex autocomplete shell` | Prints a completion script for `bash`, `zsh`, `fish` or `powershell`. |
 | `vex suggest position words...` | Returns completions. The completion script calls it. |
@@ -110,7 +110,7 @@ A list field's own values are joined with commas inside a cell, so a comma colum
 | --- | --- |
 | `all` | Every task. |
 | `none` | No tasks. |
-| `updated` | Tasks modified since the index was last written. |
+| `updated` | Indexed tasks whose files changed since vex last saw them: edited by hand, pulled, moved, unreadable or gone. `vex resolve updated` takes them in; new task files only reach the index through `vex resolve all`. |
 | `initial`, `interim`, `final` | Tasks by `phase`: in their type's first status, in between, or in a status with no way out. |
 | `ready` | Tasks that can be started now: not `final`, with no `blockers`. |
 | `prev` | The saved focus. The default wherever a focus is optional. |
@@ -201,14 +201,14 @@ A saved focus is read again each time it is used, so "next tuesday" always means
 
 ## Resolution
 
-Resolution keeps every task valid. `add`, `set`, `remove` and `recipe` resolve the tasks they touch, and `vex resolve` resolves a focus on demand. For each task, vex runs the schema of its type and of every type it extends:
+Resolution keeps every task valid. `add`, `set`, `remove` and `recipe` resolve the tasks they touch, `show`, `get`, `view`, `set` and `remove` first resolve the tasks in their focus whose files changed on disk, and `vex resolve` resolves a focus on demand. For each task, vex runs the schema of its type and of every type it extends:
 
 1. **Normalise.** Fill defaults (`vextype`, `status`, `created`, `modified`) and convert values: `"15"` to `15`, `"2026-08-01 09:00:00"` to a timestamp, `[[vexid]]` to `vexid`.
 2. **Validate.** Check every field against its schema. Links must point at existing tasks, `status` must follow its state machine, `owner` must be a configured user, dependencies must not form a cycle, and a child can have only one parent.
 3. **Derive.** Compute derived fields and record the task's links.
-4. **Index.** Store the task in `.vex/vexdex` and write its file, formatted for reading.
+4. **Index.** Store the task in `.vex/vexdex` and write its file, formatted for reading, if that changes it. `modified` moves only when the task's content changed.
 
-`vex resolve all` first rebuilds the index from every file under `taskfolder`, so it finds files created, edited or deleted outside vex. A failure exits non-zero with a named error, which makes `vex resolve all` a useful `git pre-commit` hook.
+`vex resolve all` resolves every file under `taskfolder` that changed since vex last saw it, so it finds files created, edited or deleted outside vex. `vex resolve all --force` rebuilds the index from every file, for when config or a task type changed. A failure exits non-zero with a named error, which makes `vex resolve all` a useful `git pre-commit` hook.
 
 ## Recipes
 

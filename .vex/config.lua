@@ -11,4 +11,7 @@ return {
     taskfolder = "vexdoc/vex",
     taskowners = {},
     loglimit = 1000,
+    fingerprint = {
+        exclude = {"modified"},
+    },
 }

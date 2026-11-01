@@ -20,6 +20,8 @@ local verbs = {
   {"set", PARENT, "--insert", "--children", DEPENDENT},
   {"set", PARENT, "--remove", "--children", DEPENDENT},
   {"resolve", "all"},
+  {"resolve", "all", "--force"},
+  {"resolve", CHILD, "--force"},
   {"resolve", CHILD},
   {"focus", "all"},
   {"focus"},

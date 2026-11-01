@@ -25,7 +25,7 @@ describe("vex grouped task paths (e2e, subprocess)", function()
 
   local function unlink(vexid, field)
     local path = helper.task_file(dir, vexid)
-    helper.write_file(path, helper.read_file(path):gsub("\n" .. field .. ":\n[^\n]*\n", "\n" .. field .. ": []\n"))
+    helper.write_file(path, helper.read_file(path):gsub("\n" .. field .. ": ?\n[^\n]*\n", "\n" .. field .. ": []\n"))
   end
 
   local function family()
@@ -168,7 +168,16 @@ describe("vex grouped task paths (e2e, subprocess)", function()
     os.remove(dir .. "/.vex/vexdex/paths.bin")
     groupby "{'status'}"
     assert.truthy(vex(dir, "show", vexid):find(vexid, 1, true))
+    vex(dir, "resolve", "all", "--force")
+    assert.is_true(exists("todo/" .. vexid .. ".md"))
+  end)
+
+  it("rearranges files after a groupby change only when resolving with --force", function()
+    local vexid = vex(dir, "add", "Regrouped", "later", "task")
+    groupby "{'status'}"
     vex(dir, "resolve", "all")
+    assert.is_true(exists(vexid .. ".md"))
+    vex(dir, "resolve", "all", "--force")
     assert.is_true(exists("todo/" .. vexid .. ".md"))
   end)
 

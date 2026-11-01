@@ -10,7 +10,7 @@ vex is a single LuaJIT program with no build step. This page covers working on i
 | `just lint` | `luacheck`, plus a check that every `src` module has a unit spec. |
 | `just docs` | Builds this wiki into a site (needs `hugo`, `go` and `obsidian-export`). |
 
-After cloning, pulling or switching branches, run `./src/vex resolve all`: the index is not in git.
+After cloning, pulling or switching branches, run `./src/vex resolve all`: the index is not in git, and it takes in every task file that changed.
 
 ## Tests
 

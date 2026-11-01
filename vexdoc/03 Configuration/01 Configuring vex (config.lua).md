@@ -10,6 +10,9 @@ return {
     loglimit = 1000,
     paths = {
         groupby = {'status', 'lineage'}
+    },
+    fingerprint = {
+        exclude = {'modified'}
     }
 }
 ```
@@ -25,6 +28,7 @@ This repository's own config sets `taskfolder = "vexdoc/vex"`: its backlog is th
 | `default.tasktype` | The `vextype` of a task added without one. |
 | `paths.groupby` | Nests task files in folders by their fields (see below). |
 | `loglimit` | How many lines the verb and event logs in `.vex/vexdex` keep (see [[Events and hooks]]). Defaults to 1000. |
+| `fingerprint.exclude` | Fields whose changes don't count as a change to the task, so they never move `modified` on their own (see [[Resolution pipeline#Fingerprints and `modified`]]). They are still written to the file. `vex init` sets it to `{'modified'}`. |
 
 For example, to keep tasks in a `todo` folder and assign them to two people:
 
@@ -54,7 +58,7 @@ With this config, a task sits under its ancestors and then in a folder named aft
 - Characters that can't appear in a folder name (`/ \ : * ? " < > |`) become `-`.
 - Files move whenever something they depend on changes. Resolving a task resolves and re-files every task linked to it or from it, transitively: editing a parent's `children` moves its children, and finishing a dependency moves its dependents. Empty folders are removed.
 - vex owns the layout. A file moved by hand is still found, and is moved back the next time it is resolved.
-- After changing `paths.groupby`, run `vex resolve all` to move the existing files. Without `paths.groupby`, task files sit flat at `<vexid>.md`.
+- After changing `paths.groupby`, run `vex resolve all --force` to move the existing files. Without `paths.groupby`, task files sit flat at `<vexid>.md`.
 
 ## The global folder
 
