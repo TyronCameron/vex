@@ -33,9 +33,14 @@ describe("vex user-facing errors (e2e, subprocess)", function()
     end)
   end
 
-  it("rejects a phrase --interpret cannot read", function()
+  it("rejects an ics view of a field that is not a date", function()
+    vex(dir, "add", "Some", "task")
+    fails(dir, "The field `description` is not a date or datetime.", "view", "all", "ics", "--by", "description")
+  end)
+
+  it("rejects a time phrase it cannot read", function()
     vex(dir, "add", "Due", "some", "day", "--due", "2026-08-01")
-    fails(dir, "Cannot interpret `tomorrow blorp`", "focus", "all", "--interpret", "--between", "due:tomorrow blorp:")
+    fails(dir, "Cannot interpret `tomorrow blorp`", "focus", "all", "--between", "due:tomorrow blorp:")
   end)
 
   it("stops a command whose event hook fails, naming the hook", function()

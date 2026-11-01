@@ -44,8 +44,11 @@ end
 
 local function csv_field(val)
     if val == nil then return '' end
+    if type(val) == 'table' then
+        val = table.concat(func.imap(val, function(item) return tostring(item) end), ',')
+    end
     local s = tostring(val)
-    if s:find('[,"\r\n]') then
+    if s:find('[,"\r\n]') or s:find('^%s') or s:find('%s$') then
         return '"' .. s:gsub('"', '""') .. '"'
     end
     return s
@@ -59,12 +62,44 @@ function format.csv(data)
     end
     local fields = func.keys(seen)
     table.sort(fields)
-    table.insert(rows, table.concat(fields, ','))
+    table.insert(rows, table.concat(func.imap(fields, csv_field), ','))
     for _, task in ipairs(data) do 
         local rowdata = func.imap(fields, function(field) return csv_field(task[field]) end)
         table.insert(rows, table.concat(rowdata, ','))
     end 
     return table.concat(rows, '\n')
+end
+
+function format.icstext(text)
+    return (text:gsub('[\\;,]', '\\%0'):gsub('\r?\n', '\\n'))
+end
+
+local function ics_fold(line)
+    local folded, limit = {}, 75
+    while #line > limit do
+        local cut = limit
+        while cut > 1 and line:byte(cut + 1) >= 0x80 and line:byte(cut + 1) < 0xC0 do cut = cut - 1 end
+        table.insert(folded, line:sub(1, cut))
+        line = line:sub(cut + 1)
+        limit = 74
+    end
+    table.insert(folded, line)
+    return table.concat(folded, '\r\n ')
+end
+
+-- events are lists of {name, value, params = 'X=Y' or nil, text = true to escape value}
+function format.ics(events, prodid)
+    local lines = {'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:' .. prodid, 'CALSCALE:GREGORIAN'}
+    for _, event in ipairs(events) do
+        table.insert(lines, 'BEGIN:VEVENT')
+        for _, property in ipairs(event) do
+            local value = property.text and format.icstext(tostring(property.value)) or tostring(property.value)
+            table.insert(lines, property.name .. (property.params and ';' .. property.params or '') .. ':' .. value)
+        end
+        table.insert(lines, 'END:VEVENT')
+    end
+    table.insert(lines, 'END:VCALENDAR')
+    return table.concat(func.imap(lines, ics_fold), '\r\n') .. '\r\n'
 end
 
 return format

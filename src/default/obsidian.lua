@@ -1,3 +1,7 @@
+local escapes = {["\\"] = "\\\\", ['"'] = '\\"', ["\n"] = "\\n", ["\r"] = "\\r", ["\t"] = "\\t"}
+local unescapes = {["\\"] = "\\", ['"'] = '"', n = "\n", r = "\r", t = "\t"}
+setmetatable(unescapes, {__index = function(_, c) return "\\" .. c end})
+
 local function parse_yaml_value(s)
     s = s:match("^%s*(.-)%s*$")
     if s == "true" then return true end
@@ -13,7 +17,10 @@ local function parse_yaml_value(s)
         end
         return list
     end
-    return (s:match('^"(.*)"$') or s:match("^'(.*)'$") or s)
+    local double, single = s:match('^"(.*)"$'), s:match("^'(.*)'$")
+    if double then return (double:gsub("\\(.)", unescapes)) end
+    if single then return (single:gsub("''", "'")) end
+    return s
 end
 
 local function keyvalue(s)
@@ -85,8 +92,9 @@ local function to_yaml_value(v, indent)
     end
     -- String
     local s = tostring(v)
-    if s:match("[:#%[%]{},&*?|>'\"%@`]") or s:match("^%s") or s:match("%s$") then
-        return '"' .. s:gsub('"', '\\"') .. '"'
+    local isliteral = s == "" or s == "true" or s == "false" or tonumber(s) ~= nil
+    if isliteral or s:match("[:#%[%]{},&*?|>'\"%@`\\\n\r\t]") or s:match("^%s") or s:match("%s$") then
+        return '"' .. s:gsub('[\\"\n\r\t]', escapes) .. '"'
     end
     return s
 end

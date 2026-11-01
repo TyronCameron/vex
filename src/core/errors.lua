@@ -111,6 +111,13 @@ cli:error "uninterpretable" {
     end
 }
 
+cli:error "not-a-date-field" {
+    function(field)
+        return 'The field `' .. tostring(field) .. '` is not a date or datetime.'
+    end,
+    hint = "Pick a date field with `--by`, such as `due` or `created`."
+}
+
 cli:error "missing-required-field" {
     function(vexid, field)
         return "A required field is missing from a task. Vexid = " .. tostring(vexid) .. ', field = ' .. tostring(field)

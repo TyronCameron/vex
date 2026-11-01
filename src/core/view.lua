@@ -37,10 +37,84 @@ end
 -- only need one
 local v = View.new()
 
+local function csvrow(t)
+    local formatted = task:format(t.vexid)
+    local result = {}
+    for k, v in pairs(t) do
+        if k ~= 'vexbody' then
+            result[k] = type(v) == 'string' and v or formatted[k]
+            if result[k] == nil then result[k] = v end
+        end
+    end
+    return result
+end
+
 v:view 'csv' {
     display = function(focus, flags)
-        local tasks = focus:get()
-        return format.csv(tasks)
+        return format.csv(func.imap(focus:get(), csvrow))
+    end
+}
+
+local function isdate(t, field)
+    local fieldschema = task:schemaof(t.vextype, field)
+    if not fieldschema then return false end
+    local value = t[field]
+    return #fieldschema:collect('datetime', value) + #fieldschema:collect('date', value) > 0
+end
+
+local function icstime(epoch, allday)
+    if allday then return {params = 'VALUE=DATE', value = os.date('%Y%m%d', epoch)} end
+    return {value = os.date('!%Y%m%dT%H%M%SZ', math.floor(epoch))}
+end
+
+local function atmidnight(epoch)
+    local t = os.date('*t', epoch)
+    return t.hour == 0 and t.min == 0 and t.sec == 0
+end
+
+v:view 'ics' {
+    display = function(focus, flags)
+        local field = flags.by or 'due'
+        local events = {}
+        for _, t in ipairs(focus:get()) do
+            local epoch = t[field]
+            if epoch ~= nil then
+                if not isdate(t, field) then cli:throw('not-a-date-field', field) end
+                local row = csvrow(t)
+                local allday = atmidnight(epoch)
+                local start = icstime(epoch, allday)
+                local event = {
+                    {name = 'UID', value = t.vexid .. '@vex'},
+                    {name = 'DTSTAMP', value = icstime(t.modified or os.time()).value},
+                    {name = 'DTSTART', value = start.value, params = start.params},
+                    {name = 'SUMMARY', value = t.description, text = true},
+                }
+                if allday then
+                    table.insert(event, {name = 'DTEND', value = icstime(epoch + 86400, true).value, params = start.params})
+                end
+                if t.created then table.insert(event, {name = 'CREATED', value = icstime(t.created).value}) end
+                if t.modified then table.insert(event, {name = 'LAST-MODIFIED', value = icstime(t.modified).value}) end
+                local lineage = t.lineage or {}
+                if #lineage > 0 then
+                    table.insert(event, {name = 'RELATED-TO', params = 'RELTYPE=PARENT', value = lineage[#lineage] .. '@vex'})
+                end
+                local categories = func.imap(func.ifilter({t.vextype, t.owner}, function(c) return c ~= nil end), function(c) return format.icstext(tostring(c)) end)
+                table.insert(event, {name = 'CATEGORIES', value = table.concat(categories, ',')})
+                local keys = func.keys(row)
+                table.sort(keys)
+                local details = {}
+                for _, key in ipairs(keys) do
+                    if key ~= 'description' then
+                        local value = row[key]
+                        if type(value) == 'table' then value = table.concat(value, ', ') end
+                        table.insert(details, key .. ': ' .. tostring(value))
+                    end
+                end
+                table.insert(event, {name = 'DESCRIPTION', value = table.concat(details, '\n'), text = true})
+                table.insert(events, event)
+            end
+        end
+        return format.ics(events, '-//vex//vex view ics//EN')
     end
 }
 

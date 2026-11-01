@@ -3,8 +3,8 @@ vexid: add-ics-view-exports-date-field-1
 vextype: atom
 description: Add an ics view that exports a date field as calendar events
 created: "2026-10-19 20:55:57"
-modified: "2026-10-30 03:17:28"
-status: todo
+modified: "2026-10-30 22:40:04"
+status: done
 ---
 
 The design journal ([[Vex]], "Plugins") lists "Export to .ics". Add an `ics` view that writes the focus as an iCalendar file, so tasks can be added to any calendar app:
