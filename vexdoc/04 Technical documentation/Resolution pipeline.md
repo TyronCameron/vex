@@ -4,13 +4,13 @@ How a task goes from `vex add` to a file on disk, and what else moves when it do
 
 1. **`TaskManager:add`** makes a vexid with the `tagger` plugin and holds the new task in memory only.
 2. **`TaskManager:resolve`** runs the schema of the task's type and of each type it extends, from the root down. Each schema runs three steps: normalise (fill defaults, convert values), validate, and derive (compute fields, record links). A failure throws a named `resolution-failed-*` error and nothing is written. Resolution then fingerprints the task (below), indexes it in memory, writes it and moves files into place.
-3. **`TaskManager:write`** formats the task back to its readable form (a timestamp becomes `YYYY-MM-DD HH:MM:SS`, a vexid becomes `[[vexid]]`) and renders it through the `taskformat` plugin. If that is exactly what the file already holds, nothing is written. Otherwise it is written to a temporary file and renamed into place ([[The index]]).
+3. **`TaskManager:write`** formats the task back to its readable form (a timestamp becomes `YYYY-MM-DD HH:MM:SS`, a vexid becomes `[[vexid]]`), writes it through the `taskformat` plugin to a temporary file and renames it into place ([[The index]]).
 
-Every resolve writes what it resolved, so a value you typed by hand (`due: tomorrow`) becomes a date as soon as the task is resolved. A task whose file would not change is never rewritten, so resolving again leaves every file, and git, alone.
+Resolving writes every task whose content changed, so a value you typed by hand (`due: tomorrow`) becomes a date as soon as the task is resolved. A task that resolving leaves as it was is never rewritten, so resolving again leaves every file, and git, alone.
 
 ## Fingerprints and `modified`
 
-Whenever the vexdex indexes a task, it keeps a fingerprint of it (`VexDex:fingerprint`): a hash of every field and the body, leaving out the fields listed in `fingerprint.exclude` in `config.lua` (`modified` by default). At the end of resolving, if the resolved task's fingerprint differs from the one kept (`VexDex:changed`), the task's content changed, by a `set`, a hand edit, a value normalised or a field derived from a neighbour, and `modified` is set to now. Otherwise `modified` keeps its value, so a `set` that changes nothing, a resolve of an unchanged task and a rebuilt index never move it.
+Whenever the vexdex indexes a task, it keeps two fingerprints of it (`VexDex:fingerprint`): a hash of every field and the body, and the same hash leaving out the fields listed in `fingerprint.exclude` in `config.lua` (`modified` by default). Every file is indexed as read before it is resolved, so the fingerprints kept always match a task's file. At the end of resolving, `VexDex:changed` compares the resolved task with them. If the second differs, the task's content changed, by a `set`, a hand edit, a value normalised or a field derived from a neighbour, and `modified` is set to now. If either differs, the task is written. Otherwise nothing happens, so a `set` that changes nothing, a resolve of an unchanged task and a rebuilt index never move `modified` or rewrite a file. A task the vexdex has never indexed counts as changed.
 
 ## Changes on disk
 

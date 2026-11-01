@@ -29,9 +29,13 @@ function VexDex.new(path)
     return this:ensureindex()
 end
 
+local function excluded()
+    return (require('core.config').fingerprint or {}).exclude or {}
+end
+
 function VexDex:unsafe_add(vexid, task)
     self.index[vexid] = task
-    self.fingerprints[vexid] = self:fingerprint(task)
+    self.fingerprints[vexid] = {whole = self:fingerprint(task), content = self:fingerprint(task, excluded())}
     self.dirty = true
     return self
 end
@@ -111,16 +115,17 @@ function VexDex:updated()
     return changed, func.ifilter(func.sortedkeys(self.listed), function(path) return not known[path] end)
 end
 
--- a hash of a task, leaving out the fields config.fingerprint.exclude names
-function VexDex:fingerprint(task)
+-- a hash of a task, leaving out the given fields
+function VexDex:fingerprint(task, exclude)
     local plain = func.map(task, function(value) return value end)
-    for _, field in ipairs((require('core.config').fingerprint or {}).exclude or {}) do plain[field] = nil end
+    for _, field in ipairs(exclude or {}) do plain[field] = nil end
     return hash.fnv1a(pretty.table(plain))
 end
 
--- whether a task differs from the one last indexed under its vexid
+-- whether a task differs from the one last indexed under its vexid, and whether it does outside the fields config.fingerprint.exclude names; a task never indexed differs in both
 function VexDex:changed(vexid, task)
-    return self.fingerprints[vexid] ~= nil and self.fingerprints[vexid] ~= self:fingerprint(task)
+    local kept = self.fingerprints[vexid] or {}
+    return kept.whole ~= self:fingerprint(task), kept.content ~= self:fingerprint(task, excluded())
 end
 
 function VexDex:get(vexid)

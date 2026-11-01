@@ -375,7 +375,7 @@ function TaskManager:index(vexid)
     vexdex:unsafe_add(vexid, self.tasks[vexid])
 end
 
--- resolves one task and returns the vexids of the tasks linked to or from it, and of those it stopped linking to
+-- resolves one task and returns the vexids of the tasks linked to or from it, and of those it stopped linking to, and whether it changed
 function TaskManager:resolvesingle(vexid)
     if not vexid then cli:throw('missing-required-field', vexid, 'vexid') end 
     event:trigger('pre-task-resolve', vexid)
@@ -386,7 +386,7 @@ function TaskManager:resolvesingle(vexid)
         local linked = func.imerge(previous.forwardlinks, previous.backlinks)
         vexdex:unsafe_remove(vexid)
         event:trigger('post-task-resolve', vexid, nil)
-        return linked
+        return linked, false
     end
     task = task or {}
     if not task.vextype then cli:throw('missing-required-field', task.vexid, 'vextype') end 
@@ -417,18 +417,19 @@ function TaskManager:resolvesingle(vexid)
     local unlinked = func.ifilter(previous.forwardlinks or {}, function(target)
         return not func.any(context.links, function(link) return link == target end)
     end)
-    if vexdex:changed(vexid, task) then task.modified = os.time() end
+    local changed, edited = vexdex:changed(vexid, task)
+    if edited then task.modified = os.time() end
     self.tasks[vexid] = task
     vexdex:unsafe_link(vexid, context.links)
     vexdex:unsafe_add(vexid, task)
 
     event:trigger('post-task-resolve', vexid, task)
-    return func.imerge(unlinked, func.imerge(task.forwardlinks, task.backlinks))
+    return func.imerge(unlinked, func.imerge(task.forwardlinks, task.backlinks)), changed
 end
 
--- resolves the given tasks and everything linked to them, each once, writes each and moves every file to where it belongs; a task whose file is gone or unreadable leaves the index
+-- resolves the given tasks and everything linked to them, each once, writes those that changed and moves every file to where it belongs; a task whose file is gone or unreadable leaves the index
 function TaskManager:resolveall(vexids)
-    local resolved, requested, pending = {}, {}, {}
+    local resolved, requested, pending, changed = {}, {}, {}, {}
     for _, vexid in ipairs(vexids) do
         requested[vexid] = true
         table.insert(pending, vexid)
@@ -436,12 +437,14 @@ function TaskManager:resolveall(vexids)
     for _, vexid in ipairs(pending) do
         if not resolved[vexid] and (requested[vexid] or vexdex:get(vexid)) then
             resolved[vexid] = true
-            for _, linked in ipairs(self:resolvesingle(vexid)) do table.insert(pending, linked) end
+            local linked
+            linked, changed[vexid] = self:resolvesingle(vexid)
+            for _, link in ipairs(linked) do table.insert(pending, link) end
         end
     end
     for vexid in pairs(resolved) do
         if vexdex:get(vexid) then
-            self:write(vexid)
+            if changed[vexid] then self:write(vexid) else vexdex:unsafe_stamp(vexid, self:getcurrentpath(vexid)) end
             self:move(vexid)
         end
     end
@@ -486,14 +489,6 @@ function TaskManager:unformat(task)
         unformatted = parent.schema:unapply('format', unformatted)
     end
     return unformatted
-end
-
-local function contents(path)
-    local f = io.open(path, "r")
-    if not f then return nil end
-    local content = f:read("*a")
-    f:close()
-    return content
 end
 
 local function relative(path)
@@ -561,12 +556,10 @@ function TaskManager:write(vexid)
     event:trigger('pre-task-write', vexid)
     local task = self:format(vexid)
     local path = self:getcurrentpath(vexid)
-    if taskformat.render(sortdata(frontmatter(task)), body(task)) ~= contents(path) then
-        lfs.mkdir(dirname(path))
-        vexdex:atomic(path, function(path)
-            taskformat.write(path, sortdata(frontmatter(task)), body(task))
-        end)
-    end
+    lfs.mkdir(dirname(path))
+    vexdex:atomic(path, function(path)
+        taskformat.write(path, sortdata(frontmatter(task)), body(task))
+    end)
     vexdex:unsafe_stamp(vexid, path)
     vexdex:unsafe_locate(vexid, relative(path))
     self:index(vexid)

@@ -91,16 +91,6 @@ local function to_yaml_value(v, indent)
     return s
 end
 
-local function render(frontmatter_iter, body)
-    local lines = {"---\n"}
-    for k, v in frontmatter_iter do
-        table.insert(lines, k .. ": " .. to_yaml_value(v) .. "\n")
-    end
-    table.insert(lines, "---\n")
-    table.insert(lines, body or "")
-    return table.concat(lines)
-end
-
 return {
     read = function(path)
         local f = assert(io.open(path, "r"))
@@ -126,11 +116,19 @@ return {
         return task
     end,
 
-    render = render,
-
     write = function(path, frontmatter_iter, body)
         local f = assert(io.open(path, "w"))
-        f:write(render(frontmatter_iter, body))
+
+        f:write("---\n")
+        for k, v in frontmatter_iter do
+            f:write(k .. ": " .. to_yaml_value(v) .. "\n")
+        end
+        f:write("---\n")
+
+        if body then
+            f:write(body)
+        end
+
         f:close()
     end
 }

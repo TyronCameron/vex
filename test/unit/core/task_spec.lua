@@ -323,12 +323,12 @@ describe("task", function()
             assert.equal(4, task:readfrompath(task:getcurrentpath(vexid)).cost)
         end)
 
-        it("does not rewrite a file whose bytes would not change", function()
+        it("does not rewrite a task that resolving leaves unchanged", function()
             local vexid = backdated({description = "untouched backdated task"})
             local writes = 0
             local atomic = vexdex.atomic
             vexdex.atomic = function(...) writes = writes + 1 return atomic(...) end
-            task:write(vexid)
+            task:resolve(vexid)
             vexdex.atomic = atomic
             assert.equal(0, writes)
             assert.truthy(contents(vexid):find("modified: \"2020%-01%-01"))

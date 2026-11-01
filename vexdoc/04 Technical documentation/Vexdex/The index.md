@@ -7,7 +7,7 @@ The vexdex (`src/core/vexdex.lua`) is vex's index: a map from each vexid to its 
 | `index.bin` | Every task's fields except the body, unformatted: timestamps as numbers, links as bare vexids. The body lives only in the task file, and a query on `vexbody` (or the overview's body count) reads it from there. |
 | `backlinks.bin` | For every task, the tasks that link to it. |
 | `paths.bin` | Where each task file is, relative to `taskfolder`. |
-| `fingerprints.bin` | For every task, a hash of what it held when it was last indexed, body included ([[Resolution pipeline#Fingerprints and `modified`]]). |
+| `fingerprints.bin` | For every task, hashes of what it held when it was last indexed, body included: one of everything, one without the fields in `fingerprint.exclude` ([[Resolution pipeline#Fingerprints and `modified`]]). |
 | `mtimes.bin` | For every task, its file's modification time as vex last saw it. |
 | `focus.bin` | The saved focus, as the list of operations that rebuild it. |
 
