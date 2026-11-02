@@ -14,6 +14,7 @@ A focus is a saved query over your tasks. `vex focus` builds one and most other 
 | --- | --- |
 | `--filter field:value` | Tasks where `field` equals `value`. |
 | `--fuzzy field:value[:n]` | Tasks where `field` contains `value`, give or take `n` typos. |
+| `--regex field:pattern` | Tasks where `field` matches the Lua pattern, e.g. `description:"^Fix.*$"`. |
 | `--between field:low:high` | Tasks where `field` is in the range. Either end may be empty. |
 | `--nil field` | Tasks with no value for `field`. |
 | `--select a,b` | Only those fields. |

@@ -105,6 +105,13 @@ cli:error "unknown-focus-operation" {
     hint = "Use a focus flag such as `--select`, `--filter`, `--orderby` or `--groupby`. See `vex help focus`."
 }
 
+cli:error "bad-regex" {
+    function(pattern)
+        return 'Bad pattern `' .. tostring(pattern) .. '`.'
+    end,
+    hint = "`--regex` takes a Lua pattern, such as `^Fix.*$`. Escape magic characters with `%`."
+}
+
 cli:error "uninterpretable" {
     function(field, failure)
         return tostring(failure) .. '\n\n' .. pretty.string('while interpreting `' .. tostring(field) .. '`', 'dim')
