@@ -38,7 +38,7 @@ The tests exist to give fast, trustworthy feedback on any change. Every behaviou
   - `storage_spec.lua` guards the files on disk: resolving is idempotent, hand edits are picked up, the index can be rebuilt.
   - `errors_spec.lua` checks that each user mistake gets its named error.
   - `dogfood_spec.lua` resolves a copy of this repo's own backlog, so schema changes that would break real task files, or rewrite them, fail.
-- **Benchmark** (`test/benchmark/run.lua`, `just benchmark`) builds a project through `vex add` (atoms in 10 dependency layers around a hub atom, under 10 levels of abstracts), then times creation, `vex resolve all`, a `vex set` on the hub, `vex add` and `vex view all csv`. It is black-box like the e2e tests, asserts nothing beyond each command succeeding, and runs as its own CI job on every PR, posting a table that compares it with the base branch as a comment on the PR. `VEX_BENCHMARK_TASKS` sets the size.
+- **Benchmark** (`test/benchmark/run.lua`, `just benchmark`) builds a project through `vex add` (atoms in 10 dependency layers around a hub atom, under 10 levels of abstracts), then times creation, a full `vex resolve all --force`, a `vex set` on the hub, `vex add` and `vex view all csv`. It is black-box like the e2e tests, asserts nothing beyond each command succeeding, and runs as its own CI job on every PR, posting a table that compares it with the base branch as a comment on the PR. `VEX_BENCHMARK_TASKS` sets the size.
 
 Rules:
 

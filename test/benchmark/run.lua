@@ -112,7 +112,7 @@ for level = layers, 1, -1 do
 end
 record(string.format("create %d tasks with vex add", total), now() - start)
 
-timed("vex resolve all", dir, "resolve", "all")
+timed("vex resolve all --force", dir, "resolve", "all", "--force")
 timed("vex set atom-1-1 (hub) --due tomorrow", dir, "set", atom(1), "--due", "tomorrow")
 timed("vex add (no links)", dir, "add", "Unlinked atom", "--vextype", "atom")
 timed("vex add (depends on hub)", dir, "add", "Hub dependent atom", "--vextype", "atom", "--dependencies", atom(1))
