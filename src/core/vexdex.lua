@@ -95,7 +95,8 @@ end
 
 -- records the mtime of a task's file as vex last saw it
 function VexDex:unsafe_stamp(vexid, path)
-    local mtime = self.listed and self.listed[path] or lfsext.mtime(path)
+    self.listed = self.listed or lfsext.mtimes(self:taskroot())
+    local mtime = self.listed[path] or lfsext.mtime(path)
     if self.mtimes[vexid] ~= mtime then self.dirty = true end
     self.mtimes[vexid] = mtime
     return self
