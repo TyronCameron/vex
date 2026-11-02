@@ -171,12 +171,14 @@ cli:verb "set" {
         local f = focus_pop_args(args)
         local taskproperties = args:flags()
         local modifiers = args:modifiers()
+        local bare = args:bare()
+        if #bare > 0 then cli:throw('missing-value', bare[1][1]) end
         f:each(function(vexid)
             task:set(vexid, taskproperties, modifiers)
             task:resolve(vexid)
         end)
     end,
-    doc = "Allows you to set fields in the focus. Put --insert or --remove before a list field to add or remove values rather than overwrite it. Resolution is called on that `focus`",
+    doc = "Allows you to set fields in the focus. Put --insert or --remove before a list field to add or remove values rather than overwrite it, or --clear before any field to unset it. Resolution is called on that `focus`",
     args = "[focus] [--fields...]",
     example = "vex set plan-trip-1 --insert --children book-flights-1,book-hotel-1"
 }

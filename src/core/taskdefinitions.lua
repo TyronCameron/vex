@@ -98,6 +98,8 @@ local function childless(dependency, context)
     return true
 end
 
+local nolinks = schema.maybe {schema.empty}
+
 local function status()
     return schema.statemachine {
         states = {
@@ -159,8 +161,8 @@ task:task 'task':extends 'basetask' {
 task:task 'abstract':extends 'basetask' {
     schema = schema.atleast {
         vexbody = schema.maybe {schema.empty},
-        options = schema['nil'],
-        dependencies = schema['nil'],
+        options = nolinks,
+        dependencies = nolinks,
         children = schema.default {
             schema.unique {
                 schema.all {
@@ -190,8 +192,8 @@ task:task 'decision':extends 'basetask' {
                 }
             }
         },
-        children = schema['nil'],
-        dependencies = schema['nil']
+        children = nolinks,
+        dependencies = nolinks
     }
 }
 
@@ -200,8 +202,8 @@ task:task 'exploration':extends 'basetask' {
         status = status(),
         dependencies = dependencies(),
         vexbody = schema.empty,
-        children = schema['nil'],
-        options = schema['nil'],
+        children = nolinks,
+        options = nolinks,
     }
 }
 
@@ -209,8 +211,8 @@ task:task 'atom':extends 'basetask' {
     schema = schema.atleast {
         status = status(),
         dependencies = dependencies(),
-        children = schema['nil'],
-        options = schema['nil'],
+        children = nolinks,
+        options = nolinks,
     }
 }
 

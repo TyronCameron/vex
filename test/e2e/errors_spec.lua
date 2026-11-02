@@ -27,6 +27,16 @@ describe("vex user-facing errors (e2e, subprocess)", function()
     {"an unknown focus operation", "Unknown focus operation `bogus`", {"focus", "all", "--bogus", "x"}},
   }
 
+  it("rejects a set flag without a value", function()
+    local vexid = vex(dir, "add", "Some", "task")
+    fails(dir, "needs a value", "set", vexid, "--status")
+  end)
+
+  it("rejects clearing a field and giving it a value", function()
+    local vexid = vex(dir, "add", "Some", "task")
+    fails(dir, "both cleared and given a value", "set", vexid, "--clear", "--cost", "4")
+  end)
+
   for _, case in ipairs(cases) do
     it("rejects " .. case[1], function()
       fails(dir, case[2], unpack(case[3]))

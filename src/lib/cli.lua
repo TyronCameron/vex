@@ -44,17 +44,39 @@ function Arguments:literals()
     end)
 end
 
+-- the positions of each valueless flag and the flag it modifies: --insert --children a, or --clear --children with or without a value
+function Arguments:modified()
+    local positions = {}
+    local taken
+    for i, word in ipairs(self) do
+        local nextword = self[i + 1]
+        if i ~= taken and isflag(word) and not word[2] and isflag(nextword) and (nextword[2] or word[1] == "clear") then
+            table.insert(positions, {i, i + 1})
+            taken = i + 1
+        end
+    end
+    return positions
+end
+
 -- maps each flag to the valueless flag right before it: --insert --children a => {children = "insert"}
 function Arguments:modifiers()
     local modifiers = {}
-    for i, word in ipairs(self) do
-        local nextword = self[i + 1]
-        if isflag(word) and not word[2] and isflag(nextword) and nextword[2] then
-            modifiers[nextword[1]] = word[1]
-        end
+    for _, position in ipairs(self:modified()) do
+        modifiers[self[position[2]][1]] = self[position[1]][1]
     end
     return modifiers
-end 
+end
+
+-- the valueless flags that modify nothing and are not modified
+function Arguments:bare()
+    local used = {}
+    for _, position in ipairs(self:modified()) do
+        used[position[1]], used[position[2]] = true, true
+    end
+    return func.ifilter(self, function(word, i)
+        return isflag(word) and not word[2] and not used[i]
+    end)
+end
 
 -- ---------------------------------------------------------------------------
 -- CLI
