@@ -97,12 +97,12 @@ describe("verbs", function()
         assert.truthy(vexdex:get(vexid))
     end)
 
-    it("resolve all resolves each task once (make-resolve-linear-1)", function()
+    it("resolve all --force resolves each task once (make-resolve-linear-1)", function()
         local event = require 'lib.event'
         local vexid = run("add Resolved just once")
         local count = 0
         event:register('pre-task-resolve', 'verbs-spec', function(resolved) if resolved == vexid then count = count + 1 end end)
-        run("resolve all")
+        run("resolve all --force")
         event:remove('pre-task-resolve', 'verbs-spec')
         assert.equal(1, count)
     end)

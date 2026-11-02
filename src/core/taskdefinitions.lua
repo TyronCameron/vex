@@ -137,9 +137,9 @@ task:task 'basetask' {
             schema.formatted {schema.datetime},
             default = function(self, instance, context) return os.time() end
         },
-        modified = schema.derive {
+        modified = schema.default {
             schema.formatted {schema.datetime},
-            derive = function(self, instance, context) return os.time() end
+            default = function(self, instance, context) return os.time() end
         },
         vexbody = schema.maybe {schema.str},
         due = schema.maybe {schema.formatted {schema.datetime}},

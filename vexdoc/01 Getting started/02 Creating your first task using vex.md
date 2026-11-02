@@ -100,9 +100,9 @@ See [[01 CLI reference#Focuses]] for every way to build one.
 $ vex resolve
 ```
 
-`add`, `set` and `remove` resolve the tasks they change. Run `resolve` yourself after editing a task file in your editor: it validates the file and updates the index.
+`add`, `set` and `remove` resolve the tasks they change, and every command that reads a task first resolves it if you edited its file in your editor. Run `resolve` yourself to check an edit straight away: it validates the file, writes back anything it normalises and updates the index.
 
-`vex resolve all` rebuilds the whole index from the files in `taskfolder`. It picks up new files, drops deleted ones, and fails if any task is invalid. That makes it a good `git pre-commit` hook.
+`vex resolve all` resolves every file in `taskfolder` that changed since vex last saw it. It picks up new files, drops deleted ones, and fails if any task is invalid. That makes it a good `git pre-commit` hook. `vex resolve all --force` rebuilds the whole index from the files.
 
 ## 8. Remove a task
 

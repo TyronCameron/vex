@@ -90,6 +90,10 @@ describe("func", function()
         assert.equal(3, #result)
     end)
 
+    it("`func.sortedkeys` returns the keys of a table in order", function()
+        assert.same({"a", "b", "c"}, func.sortedkeys({c = 3, a = 1, b = 2}))
+    end)
+
     it("`func.values` returns all values of a table", function()
         local result = func.values({a = 1, b = 2, c = 3})
         assert.equal(3, #result)

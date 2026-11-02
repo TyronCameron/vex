@@ -24,7 +24,7 @@ describe("this repo's own backlog (e2e, subprocess)", function()
   end)
 
   local function snapshot()
-    local handle = io.popen("cd " .. helper.shell_escape(dir) .. " && cat vexdoc/vex/*.md | cksum")
+    local handle = io.popen("cd " .. helper.shell_escape(dir) .. " && find vexdoc/vex -type f | sort | while read -r f; do echo \"$f\"; cat \"$f\"; done | cksum")
     local sum = handle:read("*a")
     handle:close()
     return sum
@@ -33,6 +33,7 @@ describe("this repo's own backlog (e2e, subprocess)", function()
   it("still resolves every task without changing its file", function()
     local before = snapshot()
     vex(dir, "resolve", "all")
+    vex(dir, "resolve", "all", "--force")
     assert.equal(before, snapshot())
   end)
 
