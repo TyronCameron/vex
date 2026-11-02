@@ -16,6 +16,7 @@ just test                        # unit + e2e + lint; reports every failing suit
 just test-unit [spec...]         # unit tests (all, or the given spec files)
 just test-e2e [spec...]          # e2e tests (all, or the given spec files)
 just lint                        # luacheck (globals, undefined names, broken loops) + mirror check
+just benchmark                   # time a densely linked project (VEX_BENCHMARK_TASKS tasks, default 1000)
 just install [--uninstall]       # install this clone the way a release installs (PREFIX, default ~/.local)
 just package <version> [outdir]  # build vex-<version>.tar.gz/.zip + SHA256SUMS into dist/
 just docs [hugo flags]           # build the docs site from vexdoc/ into site/public (needs hugo extended, go and obsidian-export)
@@ -37,6 +38,7 @@ The tests exist to give fast, trustworthy feedback on any change. Every behaviou
   - `storage_spec.lua` guards the files on disk: resolving is idempotent, hand edits are picked up, the index can be rebuilt.
   - `errors_spec.lua` checks that each user mistake gets its named error.
   - `dogfood_spec.lua` resolves a copy of this repo's own backlog, so schema changes that would break real task files, or rewrite them, fail.
+- **Benchmark** (`test/benchmark/run.lua`, `just benchmark`) builds a project through `vex add` (atoms in 10 dependency layers around a hub atom, under 10 levels of abstracts), then times creation, a full `vex resolve all --force`, a `vex set` on the hub, `vex add` and `vex view all csv`. It is black-box like the e2e tests, asserts nothing beyond each command succeeding, and runs as its own CI job on every PR, posting a table that compares it with the base branch as a comment on the PR. `VEX_BENCHMARK_TASKS` sets the size.
 
 Rules:
 
@@ -99,7 +101,7 @@ A from-scratch verb/error registry, not a wrapper around an existing arg-parsing
 
 ### Storage (`.vex/` and `src/core/vexdex.lua`)
 
-`vex init` creates: `vexdex/` (index + focus, real; the index stores plain task data, and `core.task` puts the `Task` metatable back on every entry when it loads), `config.lua` (the one file actually read every run, real), `tasks/`, `recipes/`, `focuses/`, `views/` (extensions, see below), `events/`, plus `tmp/` for atomic writes. The vexdex also keeps `backlinks` (`backlinks[target][source] = true` for every `vexlink` from source to target), `paths` (where each task file actually is, relative to `taskfolder`), `fingerprints` (set by `unsafe_add`) and `mtimes` (each file's mtime as vex last saw it, set by `unsafe_stamp`), all saved with the index. `VexDex:taskroot()` is the task folder's absolute path. `TaskManager:getabspath` is where a file *should* be (the `taskpath` plugin); `getcurrentpath` is where it is (`paths`, falling back to `getabspath`). When a task's file isn't at its recorded path (moved by hand, or a stale `paths` after a merge), `TaskManager:read` finds it by filename anywhere under `taskfolder` (`TaskManager:find`), for indexed tasks only, so a new vexid never triggers the walk. The index, backlinks, paths, fingerprints, mtimes and focus are each persisted twice per write: a `binser`-serialized `.bin` (what's actually read back) and a human-readable `pretty`-printed `.lua` mirror (debugging aid only, never read). `VexDex.new()` walks up from cwd looking for `.vex` when the module loads (see Entry point).
+`vex init` creates: `vexdex/` (index + focus, real; the index stores plain task data, and `core.task` puts the `Task` metatable back on every entry when it loads), `config.lua` (the one file actually read every run, real), `tasks/`, `recipes/`, `focuses/`, `views/` (extensions, see below), `events/`, plus `tmp/` for atomic writes. The vexdex also keeps `backlinks` (`backlinks[target][source] = true` for every `vexlink` from source to target), `paths` (where each task file actually is, relative to `taskfolder`), `fingerprints` (set by `unsafe_add`) and `mtimes` (each file's mtime as vex last saw it, set by `unsafe_stamp`), all saved with the index. Relinking a task (`VexDex:unsafe_link`) takes the links it held before, so it touches only those. `VexDex:taskroot()` is the task folder's absolute path. `TaskManager:getabspath` is where a file *should* be (the `taskpath` plugin); `getcurrentpath` is where it is (`paths`, falling back to `getabspath`). When a task's file isn't at its recorded path (moved by hand, or a stale `paths` after a merge), `TaskManager:read` finds it by filename anywhere under `taskfolder` (`TaskManager:find`), for indexed tasks only, so a new vexid never triggers the walk. The index, backlinks, paths, fingerprints, mtimes and focus are each persisted twice per write: a `binser`-serialized `.bin` (what's actually read back) and a human-readable `pretty`-printed `.lua` mirror (debugging aid only, never read). `VexDex.new()` walks up from cwd looking for `.vex` when the module loads (see Entry point).
 
 ### Config (`src/core/config.lua` / `src/lib/config.lua`)
 

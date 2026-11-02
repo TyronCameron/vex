@@ -1,5 +1,6 @@
 local event = require 'lib.event'
 local Focus = require 'core.focus'
+local vexdex = require 'core.vexdex'
 local func = require 'lib.func'
 local cli = require 'lib.cli'
 
@@ -442,7 +443,7 @@ describe("Focus", function()
         local leaf = {vexid = "leaf"}
         local other = {vexid = "other"}
         local linked = {root, mid, leaf, other}
-        local orig
+        local index, backlinks
 
         local function vexids(tasks)
             local ids = {}
@@ -450,13 +451,26 @@ describe("Focus", function()
             return ids
         end
 
+        local function universe(tasks)
+            vexdex.index, vexdex.backlinks = {}, {}
+            for _, task in ipairs(tasks) do
+                vexdex.index[task.vexid] = task
+                for _, value in pairs(task) do
+                    for _, target in ipairs(type(value) == "table" and value or {}) do
+                        vexdex.backlinks[target] = vexdex.backlinks[target] or {}
+                        vexdex.backlinks[target][task.vexid] = true
+                    end
+                end
+            end
+        end
+
         before_each(function()
-            orig = Focus.getalltasks
-            Focus.getalltasks = function() return linked end
+            index, backlinks = vexdex.index, vexdex.backlinks
+            universe(linked)
         end)
 
         after_each(function()
-            Focus.getalltasks = orig
+            vexdex.index, vexdex.backlinks = index, backlinks
         end)
 
         it("tree collects each task and everything below it", function()
@@ -472,7 +486,7 @@ describe("Focus", function()
         it("tree visits each task once on a cycle", function()
             local first = {vexid = "first", children = {"second"}}
             local second = {vexid = "second", children = {"first"}}
-            Focus.getalltasks = function() return {first, second} end
+            universe({first, second})
             local f = Focus.new("first", function() return {first} end)
             assert.same({"first", "second"}, vexids(f:tree('children'):get()))
         end)
@@ -486,7 +500,7 @@ describe("Focus", function()
             local decision = {vexid = "decision", options = {"option"}}
             local option = {vexid = "option"}
             local both = {root, decision, option}
-            Focus.getalltasks = function() return both end
+            universe(both)
             local f = Focus.new("decision", function() return {decision} end)
             assert.same({"decision", "option"}, vexids(f:tree('children', 'options'):get()))
             local g = Focus.new("option", function() return {option} end)
@@ -497,7 +511,7 @@ describe("Focus", function()
             local hub = {vexid = "hub", forwardlinks = {"leaf", "other"}}
             local spoke = {vexid = "leaf", forwardlinks = {}}
             local far = {vexid = "other", forwardlinks = {}}
-            Focus.getalltasks = function() return {hub, spoke, far} end
+            universe({hub, spoke, far})
             local f = Focus.new("hub", function() return {hub} end)
             assert.same({"hub", "leaf", "other"}, vexids(f:tree('forwardlinks'):get()))
             local g = Focus.new("leaf", function() return {spoke} end)
@@ -518,7 +532,7 @@ describe("Focus", function()
         it("step follows several fields, visits each task once and skips ids that match no task", function()
             local twin = {vexid = "twin", children = {"leaf", "ghost"}, dependencies = {"other"}}
             local both = {mid, twin, leaf, other}
-            Focus.getalltasks = function() return both end
+            universe(both)
             local f = Focus.new("both", function() return {mid, twin} end)
             assert.same({"leaf", "other"}, vexids(f:step('children', 'dependencies'):get()))
         end)
@@ -536,7 +550,7 @@ describe("Focus", function()
 
         it("step follows forwardlinks like any other field", function()
             local hub = {vexid = "hub", forwardlinks = {"other", "leaf"}}
-            Focus.getalltasks = function() return {hub, leaf, other} end
+            universe({hub, leaf, other})
             local f = Focus.new("hub", function() return {hub} end)
             assert.same({"other", "leaf"}, vexids(f:step('forwardlinks'):get()))
         end)

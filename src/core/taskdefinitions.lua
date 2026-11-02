@@ -63,8 +63,9 @@ schema.register 'vexlink' {
 }
 
 local function singleparent(child, context)
-    for _, parent in ipairs(focus.getalltasks()) do
-        if parent.vexid ~= context.vexid and type(parent.children) == "table" then
+    for _, vexid in ipairs(vexdex:linksto(child)) do
+        local parent = vexdex:get(vexid)
+        if vexid ~= context.vexid and parent and type(parent.children) == "table" then
             for _, other in ipairs(parent.children) do
                 if other == child then cli:throw('multiple-parents', child, context.vexid, parent.vexid) end
             end

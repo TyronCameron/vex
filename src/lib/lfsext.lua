@@ -41,6 +41,13 @@ function lfsext.globalpath(name, getenv)
     return path and lfs.attributes(path, 'mode') and path
 end
 
+function lfsext.mkdirs(path)
+    if lfs.attributes(path, "mode") == "directory" then return true end
+    local parent = path:match("(.+)[\\/][^\\/]+$")
+    if parent then lfsext.mkdirs(parent) end
+    return lfs.mkdir(path)
+end
+
 function lfsext.walk(path, files)
     files = files or {}
     for file in lfs.dir(path) do

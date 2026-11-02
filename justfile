@@ -27,3 +27,6 @@ install *args:
 
 package version *outdir:
 	scripts/package.sh {{version}} {{outdir}}
+
+benchmark:
+	VEX_HOME=/nonexistent/vex-home luajit test/benchmark/run.lua

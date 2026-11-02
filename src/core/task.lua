@@ -329,7 +329,7 @@ end
 function TaskManager:reindexall(force)
     event:trigger('pre-task-reindexall', force)
     if force then
-        for key in pairs(vexdex.index) do vexdex:unsafe_remove(key) end
+        for key in pairs(vexdex.index) do vexdex:unsafe_remove(key, vexdex:get(key).forwardlinks) end
     end
     local recorded = func.map(vexdex.paths, function(path) return path end)
     local vexids, unknown = vexdex:updated()
@@ -381,10 +381,11 @@ function TaskManager:resolvesingle(vexid)
     event:trigger('pre-task-resolve', vexid)
 
     local previous = vexdex:get(vexid) or {}
+    local previouslinks = previous.forwardlinks or {}
     local task = self:getsingle(vexid)
     if not task and vexdex:get(vexid) then
-        local linked = func.imerge(previous.forwardlinks, previous.backlinks)
-        vexdex:unsafe_remove(vexid)
+        local linked = func.imerge(previouslinks, previous.backlinks)
+        vexdex:unsafe_remove(vexid, previouslinks)
         event:trigger('post-task-resolve', vexid, nil)
         return linked, false
     end
@@ -414,13 +415,13 @@ function TaskManager:resolvesingle(vexid)
         if not derive(parent, task, context) then cli:throw('resolution-failed-derivation', vexid) end 
     end 
 
-    local unlinked = func.ifilter(previous.forwardlinks or {}, function(target)
+    local unlinked = func.ifilter(previouslinks, function(target)
         return not func.any(context.links, function(link) return link == target end)
     end)
     local changed, edited = vexdex:changed(vexid, task)
     if edited then task.modified = os.time() end
     self.tasks[vexid] = task
-    vexdex:unsafe_link(vexid, context.links)
+    vexdex:unsafe_link(vexid, context.links, previouslinks)
     vexdex:unsafe_add(vexid, task)
 
     event:trigger('post-task-resolve', vexid, task)
@@ -556,7 +557,7 @@ function TaskManager:write(vexid)
     event:trigger('pre-task-write', vexid)
     local task = self:format(vexid)
     local path = self:getcurrentpath(vexid)
-    lfs.mkdir(dirname(path))
+    lfsext.mkdirs(dirname(path))
     vexdex:atomic(path, function(path)
         taskformat.write(path, sortdata(frontmatter(task)), body(task))
     end)
@@ -574,7 +575,7 @@ function TaskManager:move(vexid)
     local from, to = self:getcurrentpath(vexid), vexdex:taskroot() .. '/' .. relpath
     if from ~= to and lfs.attributes(from, "mode") ~= "file" then from = self:find(vexid) end
     if from and from ~= to then
-        lfs.mkdir(dirname(to))
+        lfsext.mkdirs(dirname(to))
         local ok, err = os.rename(from, to)
         if not ok then cli:throw('move-failed', vexid, from, to, err) end
         tidy(from)
@@ -590,7 +591,7 @@ function TaskManager:delete(vexid)
     local linked = focus.focus(vexid):step('forwardlinks', 'backlinks'):get()
     local path = self:getcurrentpath(vexid)
     os.remove(path)
-    vexdex:unsafe_remove(vexid)
+    vexdex:unsafe_remove(vexid, vexdex:get(vexid).forwardlinks)
     tidy(path)
     self:resolveall(func.imap(linked, function(task) return task.vexid end))
     event:trigger('post-task-delete', vexid, path)

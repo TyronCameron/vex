@@ -45,18 +45,18 @@ function VexDex:add(vexid, storage)
     return self:writeindex()
 end
 
-function VexDex:unsafe_remove(vexid)
+function VexDex:unsafe_remove(vexid, previous)
     self.index[vexid] = nil
     self.backlinks[vexid] = nil
     self.paths[vexid] = nil
     self.fingerprints[vexid] = nil
     self.mtimes[vexid] = nil
     self.dirty = true
-    return self:unsafe_link(vexid, {})
+    return self:unsafe_link(vexid, {}, previous)
 end
 
-function VexDex:remove(vexid)
-    self:unsafe_remove(vexid)
+function VexDex:remove(vexid, previous)
+    self:unsafe_remove(vexid, previous)
     return self:writeindex()
 end
 
@@ -66,11 +66,14 @@ function VexDex:linksto(vexid)
     return sources
 end
 
-function VexDex:unsafe_link(vexid, links)
+function VexDex:unsafe_link(vexid, links, previous)
     self.dirty = true
-    for target, sources in pairs(self.backlinks) do
-        sources[vexid] = nil
-        if next(sources) == nil then self.backlinks[target] = nil end
+    for _, target in ipairs(previous or {}) do
+        local sources = self.backlinks[target]
+        if sources then
+            sources[vexid] = nil
+            if next(sources) == nil then self.backlinks[target] = nil end
+        end
     end
     for _, target in ipairs(links) do
         self.backlinks[target] = self.backlinks[target] or {}
@@ -79,8 +82,8 @@ function VexDex:unsafe_link(vexid, links)
     return self
 end
 
-function VexDex:link(vexid, links)
-    self:unsafe_link(vexid, links)
+function VexDex:link(vexid, links, previous)
+    self:unsafe_link(vexid, links, previous)
     return self:writeindex()
 end
 
@@ -92,7 +95,8 @@ end
 
 -- records the mtime of a task's file as vex last saw it
 function VexDex:unsafe_stamp(vexid, path)
-    local mtime = self.listed and self.listed[path] or lfsext.mtime(path)
+    self.listed = self.listed or lfsext.mtimes(self:taskroot())
+    local mtime = self.listed[path] or lfsext.mtime(path)
     if self.mtimes[vexid] ~= mtime then self.dirty = true end
     self.mtimes[vexid] = mtime
     return self
