@@ -321,10 +321,31 @@ task:transient 'age' {
     end
 }
 
+local function open(tasks)
+    return func.ifilter(tasks, function(other) return other.phase ~= 'final' end)
+end
+
+task:transient 'deadline' {
+    vextype = 'basetask',
+    definition = function(t)
+        local dues = func.imap(func.ifilter(open(focus.focus(t.vexid):reversetree('dependencies'):get()), function(other)
+            return other.due ~= nil
+        end), function(other) return other.due end)
+        return func.ireduce(dues, function(a, b) return math.min(a, b) end)
+    end
+}
+
+task:transient 'prerequisites' {
+    vextype = 'basetask',
+    definition = function(t)
+        return #open(focus.focus(t.vexid):tree('dependencies'):get()) - (t.phase == 'final' and 0 or 1)
+    end
+}
+
 task:transient 'urgency' {
     vextype = 'basetask',
     definition = function(t)
-        local ranked = focus.focus('final'):complement():groupby('owner'):orderby('due'):rn():filter('vexid', t.vexid):get()[1]
+        local ranked = focus.focus('final'):complement():groupby('owner'):orderby('deadline', 'prerequisites', 'due'):rn():filter('vexid', t.vexid):get()[1]
         return ranked and ranked.rn
     end
 }

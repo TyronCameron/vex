@@ -18,7 +18,7 @@ The query methods match the CLI flags: `filter`, `nil`, `fuzzy`, `match`, `betwe
 The built-in `urgency` transient is a focus of this kind:
 
 ```lua
-focus.focus('final'):complement():groupby('owner'):orderby('due'):rn():filter('vexid', t.vexid)
+focus.focus('final'):complement():groupby('owner'):orderby('deadline', 'prerequisites', 'due'):rn():filter('vexid', t.vexid)
 ```
 
 ## Writing a file

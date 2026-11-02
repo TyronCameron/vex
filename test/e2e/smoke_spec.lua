@@ -44,6 +44,8 @@ local views = {
   {"view", "all", "ics"},
   {"view", "all", "ics", "--by", "created"},
   {"view", "all", "kanban"},
+  {"view", "all", "list"},
+  {"view", "all", "list", "--fields", "vexid,status,due", "--indentby", "dependencies", "--bullet", "check", "--align", "--fold", "1"},
   {"view", "all", "overview"},
   {"view", CHILD, "singular"},
   {"view", PARENT, "singular"},
@@ -52,6 +54,7 @@ local views = {
   {"view", "none", "csv"},
   {"view", "none", "ics"},
   {"view", "none", "kanban"},
+  {"view", "none", "list"},
 }
 
 local focuses = {

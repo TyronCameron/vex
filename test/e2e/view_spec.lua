@@ -98,6 +98,28 @@ describe("vex view with focus flags (e2e, subprocess)", function()
     assert.is_nil(out:find("done", 1, true), out)
   end)
 
+  it("lists tasks as nested markdown bullets, with the chosen fields and bullets", function()
+    local parent = vex(dir, "add", "Do", "the", "shopping", "--vextype", "abstract")
+    vex(dir, "set", parent, "--children", milk .. "," .. eggs)
+    local out = vex(dir, "view", "all", "list", "--fields", "vexid,status", "--sep", " / ", "--bullet", "check", "--orderby", "vexid")
+    assert.truthy(out:find("- [ ] " .. parent .. " / doing\n  - [x] " .. eggs .. " / done\n  - [ ] " .. milk .. " / todo", 1, true), out)
+    assert.truthy(out:find("- [ ] " .. bread .. " / todo", 1, true), out)
+  end)
+
+  it("folds a list and lines its separators up", function()
+    local parent = vex(dir, "add", "Do", "the", "shopping", "--vextype", "abstract")
+    vex(dir, "set", parent, "--children", milk .. "," .. eggs)
+    local folded = vex(dir, "view", parent .. "," .. milk, "list", "--fold", "1")
+    assert.equal("- " .. parent .. " (+1)", folded)
+    local aligned = vex(dir, "view", parent .. "," .. milk, "list", "--fields", "vexid,status", "--sep", " | ", "--align")
+    local first, second = aligned:match("([^\n]*)\n([^\n]*)")
+    assert.equal(first:find(" | ", 1, true), second:find(" | ", 1, true), aligned)
+  end)
+
+  it("rejects a list bullet it does not know", function()
+    helper.vex_fails(dir, "bullet", "view", "all", "list", "--bullet", "stars")
+  end)
+
   it("writes csv a reader gets the same fields back from, whatever they hold", function()
     local awkward = 'Say "hi", then; leave'
     local vexid = vex(dir, "add", awkward, "--due", "2026-08-01 09:30:00")
