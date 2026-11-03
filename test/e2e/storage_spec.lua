@@ -226,10 +226,19 @@ describe("vex storage (e2e, subprocess)", function()
     assert.is_nil(out:find(started, 1, true))
   end)
 
+  it("keeps only binary files in the vexdex besides the logs", function()
+    vex(dir, "add", "Plain", "task")
+    vex(dir, "focus", "all")
+    local listing = helper.shell(dir, "ls .vex/vexdex")
+    assert.is_nil(listing:find("%.lua"))
+    assert.truthy(listing:find("index.bin", 1, true))
+    assert.truthy(listing:find("focus.bin", 1, true))
+  end)
+
   it("keeps task bodies out of the index and still reads them for queries", function()
     local vexid = vex(dir, "add", "Body", "stays", "home", "--vexbody", "Window seat please")
     vex(dir, "add", "Empty", "body", "here")
-    for _, file in ipairs({"index.lua"}) do
+    for _, file in ipairs({"index.bin"}) do
       assert.is_nil(helper.read_file(dir .. "/.vex/vexdex/" .. file):find("Window seat", 1, true))
     end
     assert.equal("Window seat please", vex(dir, "get", vexid, "--vexbody"))

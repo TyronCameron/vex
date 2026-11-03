@@ -387,7 +387,7 @@ function TaskManager:resolvesingle(vexid)
         local linked = func.imerge(previouslinks, previous.backlinks)
         vexdex:unsafe_remove(vexid, previouslinks)
         event:trigger('post-task-resolve', vexid, nil)
-        return linked, false
+        return linked, true
     end
     task = task or {}
     if not task.vextype then cli:throw('missing-required-field', task.vexid, 'vextype') end 
@@ -428,7 +428,7 @@ function TaskManager:resolvesingle(vexid)
     return func.imerge(unlinked, func.imerge(task.forwardlinks, task.backlinks)), changed
 end
 
--- resolves the given tasks and everything linked to them, each once, writes those that changed and moves every file to where it belongs; a task whose file is gone or unreadable leaves the index
+-- resolves the given tasks and the tasks linked to each one that changed, each once, writes those that changed and moves every file to where it belongs; a task whose file is gone or unreadable leaves the index
 function TaskManager:resolveall(vexids)
     local resolved, requested, pending, changed = {}, {}, {}, {}
     for _, vexid in ipairs(vexids) do
@@ -440,7 +440,9 @@ function TaskManager:resolveall(vexids)
             resolved[vexid] = true
             local linked
             linked, changed[vexid] = self:resolvesingle(vexid)
-            for _, link in ipairs(linked) do table.insert(pending, link) end
+            if changed[vexid] or self:getabspath(vexid) ~= self:getcurrentpath(vexid) then
+                for _, link in ipairs(linked) do table.insert(pending, link) end
+            end
         end
     end
     for vexid in pairs(resolved) do

@@ -11,7 +11,7 @@ local default_config = {
         groupby = {"status", "lineage"}
     },
     taskowners = {},
-    loglimit = 1000,
+    loglimit = 100,
     fingerprint = {
         exclude = {"modified"}
     }
