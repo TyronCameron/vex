@@ -92,6 +92,27 @@ describe("task", function()
             assert.same({second}, task.tasks[parent].children)
         end)
 
+        it("clears a field", function()
+            task:set(parent, {}, {children = 'clear'})
+            assert.is_nil(task.tasks[parent].children)
+        end)
+
+        it("rejects clearing a field and giving it a value", function()
+            local cli = require 'lib.cli'
+            stub(cli, 'throw', function(self, name) error(name) end)
+            local ok, err = pcall(task.set, task, parent, {children = second}, {children = 'clear'})
+            cli.throw:revert()
+            assert.is_false(ok)
+            assert.truthy(err:find('clear-with-value', 1, true))
+        end)
+
+        it("shows lists as the YAML written to the file", function()
+            task:set(parent, {children = {first, second}})
+            assert.truthy(task:show(parent):find('\n  - "[[' .. first .. ']]"\n  - "[[' .. second .. ']]"\n', 1, true))
+            task:set(parent, {children = {}})
+            assert.truthy(task:show(parent):find('[]\n', 1, true))
+        end)
+
         it("rejects an unknown modifier", function()
             local cli = require 'lib.cli'
             stub(cli, 'throw', function(self, name) error(name) end)

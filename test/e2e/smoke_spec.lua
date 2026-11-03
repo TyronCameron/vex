@@ -17,6 +17,7 @@ local verbs = {
   {"get", "all", "--select", "status,cost"},
   {"get", "all", ",", ";", "--vexid", "--cost"},
   {"set", DEPENDENT, "--cost", "4"},
+  {"set", DEPENDENT, "--clear", "--cost"},
   {"set", PARENT, "--insert", "--children", DEPENDENT},
   {"set", PARENT, "--remove", "--children", DEPENDENT},
   {"resolve", "all"},

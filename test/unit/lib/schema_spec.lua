@@ -243,6 +243,16 @@ describe("schema", function()
         assert.falsy(s:validate("hello"))
     end)
 
+    it("bare `schema.none` validates only the absence of a value", function()
+        assert.truthy(schema.none:validate(nil))
+        assert.truthy(schema.none:validate({}))
+        assert.truthy(schema.none:validate(""))
+        assert.falsy(schema.none:validate({ 1 }))
+        assert.falsy(schema.none:validate("x"))
+        assert.falsy(schema.none:validate(5))
+        assert.falsy(schema.none:validate(true))
+    end)
+
     it("`schema.maybe` validates nil", function()
         local s = schema.maybe { schema.num }
         assert.truthy(s:validate(nil))

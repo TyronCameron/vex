@@ -67,6 +67,15 @@ $ vex set plan-trip-1 --remove --children book-flights-1
 
 `--insert` skips values already in the list.
 
+To unset a field, put `--clear` before it. Repeat it for each field:
+
+```console
+$ vex set my-abstract-1 --vextype atom --status done --clear --children
+$ vex set my-task-1 --clear --due --clear --owner
+```
+
+A field that the task type requires fails resolution as usual. A flag with no value, such as `vex set x --status`, is an error rather than being ignored.
+
 ## Focuses
 
 A focus is a lazy, saved query over your tasks. `vex focus` builds and saves one, and other commands read it back when you give them none. [[05 Getting into focus]] has the details and worked examples:

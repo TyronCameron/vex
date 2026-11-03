@@ -55,7 +55,7 @@ function Task:show(path)
     local final_str = pretty.string('# ' .. string.upper(tostring(self.vexid)) .. '\n', 'cyan', 'underline', 'bold', {filelink = tostring(path)})
     final_str = final_str .. pretty.string("---\n", 'cyan')
     for k, v in sortdata(frontmatter(self)) do 
-        final_str = final_str .. pretty.string(tostring(k) .. ": ", 'green') .. pretty.string(tostring(v or '') ..  '\n')
+        final_str = final_str .. pretty.string(tostring(k) .. ": ", 'green') .. pretty.string(taskformat.value(v) ..  '\n')
     end 
     final_str = final_str .. pretty.string("---\n", 'cyan')
     final_str = final_str .. pretty.string(tostring(body(self) or '') .. "\n\n")
@@ -282,7 +282,7 @@ local listmodifiers = {
     end,
 }
 
--- sets task properties for a given focus; modifiers[field] = 'insert' or 'remove' edits a list by value instead
+-- sets task properties for a given focus; modifiers[field] = 'insert' or 'remove' edits a list by value instead, and 'clear' unsets the field
 function TaskManager:set(vexid, tab, modifiers)
     assert(tab and type(tab) == "table", "set() requires a table")
     event:trigger('pre-task-set', vexid, tab, modifiers)
@@ -291,11 +291,18 @@ function TaskManager:set(vexid, tab, modifiers)
     for k,v in pairs(tab) do 
         if k == "vexid" then cli:throw('immutable-vexid', vexid) end
         local modifier = modifiers and modifiers[k]
+        if modifier == 'clear' then cli:throw('clear-with-value', k) end
         if modifier then
             if not listmodifiers[modifier] then cli:throw('unknown-modifier', modifier) end
             task[k] = listmodifiers[modifier](aslist(task[k]), aslist(v))
         else
             task[k] = v
+        end
+    end
+    for k, modifier in pairs(modifiers or {}) do
+        if modifier == 'clear' then
+            if k == "vexid" then cli:throw('immutable-vexid', vexid) end
+            task[k] = nil
         end
     end
     self.tasks[vexid] = Task.new(task)

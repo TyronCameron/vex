@@ -494,19 +494,22 @@ Schema.register 'all' {
     postvalidate = postvalidate_children
 }
 
--- nil is always true, 
+-- without subschemas, accepts only the absence of a value: nil, {} or ""
 Schema.register 'none' {
     iterate = function(self, instance, context)
         return coroutine.wrap(function()
-            for key in ipairs(self.specification) do
+            for key in ipairs(self.specification or {}) do
                 coroutine.yield(key, nil)
             end
         end)
     end,
     validate = function(self, instance, context) 
-        if self.specification == nil or func.isempty(self.specification) then return true end
-        for childschema, childinstance in self:iterate(instance, context) do 
-            if childschema:validate(childinstance, context) then 
+        if self.specification == nil or func.isempty(self.specification) then
+            local absent = instance == nil or ((type(instance) == "table" or type(instance) == "string") and #instance == 0)
+            return absent, "Expected no value, got " .. tostring(instance)
+        end
+        for childschema, childinstance in self:iterate(instance, context) do
+            if childschema:validate(childinstance, context) then
                 return false, "Subschema matched instance"
             end 
         end 

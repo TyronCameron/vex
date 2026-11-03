@@ -243,5 +243,19 @@ cli:error "unknown-modifier" {
     function(modifier)
         return 'Unknown modifier `' .. tostring(modifier) .. '`.'
     end,
-    hint = "Put `--insert` or `--remove` before a list field, e.g. `vex set my-task --insert --children a,b`."
+    hint = "Put `--insert` or `--remove` before a list field, e.g. `vex set my-task --insert --children a,b`, or `--clear` before any field to unset it."
+}
+
+cli:error "clear-with-value" {
+    function(field)
+        return 'The field `' .. tostring(field) .. '` was both cleared and given a value.'
+    end,
+    hint = "Use `--clear --field` alone to unset it, or drop `--clear` to set a new value."
+}
+
+cli:error "missing-value" {
+    function(field)
+        return 'The flag `--' .. tostring(field) .. '` needs a value.'
+    end,
+    hint = "Give it one, e.g. `vex set my-task --status done`, or put `--clear` before it to unset the field."
 }

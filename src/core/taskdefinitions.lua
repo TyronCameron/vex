@@ -159,8 +159,8 @@ task:task 'task':extends 'basetask' {
 task:task 'abstract':extends 'basetask' {
     schema = schema.atleast {
         vexbody = schema.maybe {schema.empty},
-        options = schema['nil'],
-        dependencies = schema['nil'],
+        options = schema.none,
+        dependencies = schema.none,
         children = schema.default {
             schema.unique {
                 schema.all {
@@ -190,8 +190,8 @@ task:task 'decision':extends 'basetask' {
                 }
             }
         },
-        children = schema['nil'],
-        dependencies = schema['nil']
+        children = schema.none,
+        dependencies = schema.none
     }
 }
 
@@ -200,8 +200,8 @@ task:task 'exploration':extends 'basetask' {
         status = status(),
         dependencies = dependencies(),
         vexbody = schema.empty,
-        children = schema['nil'],
-        options = schema['nil'],
+        children = schema.none,
+        options = schema.none,
     }
 }
 
@@ -209,8 +209,8 @@ task:task 'atom':extends 'basetask' {
     schema = schema.atleast {
         status = status(),
         dependencies = dependencies(),
-        children = schema['nil'],
-        options = schema['nil'],
+        children = schema.none,
+        options = schema.none,
     }
 }
 

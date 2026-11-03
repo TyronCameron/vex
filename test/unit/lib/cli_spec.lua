@@ -229,6 +229,22 @@ describe("CLI", function()
             assert.same({children = "insert", options = "remove"}, args:modifiers())
         end)
 
+        it("maps a field to clear when --clear is followed by a valueless flag", function()
+            local args = parsed({"--clear", "--children", "--clear", "--options", "--status", "done"})
+            assert.same({children = "clear", options = "clear"}, args:modifiers())
+        end)
+
+        it("maps a field to clear when --clear is followed by a flag with a value", function()
+            assert.same({children = "clear"}, parsed({"--clear", "--children", "a"}):modifiers())
+        end)
+
+        it("lists the valueless flags no modifier consumed", function()
+            local args = parsed({"--insert", "--children", "a", "--clear", "--options", "--due", "x", "--status"})
+            local bare = {}
+            for _, flag in ipairs(args:bare()) do table.insert(bare, flag[1]) end
+            assert.same({"status"}, bare)
+        end)
+
     end)
 
 end)

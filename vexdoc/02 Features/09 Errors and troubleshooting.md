@@ -13,7 +13,9 @@ Every user mistake fails with a named error, a message and a hint, and exits non
 | `uninterpretable` | A time phrase in a focus (`--between due:someday:now`) that vex can't read. A bad `--due` on `add` or `set` is a normalisation failure instead. | Use a phrase from [[01 CLI reference#Interpreting times]]. |
 | `unknown-vextype` | `--vextype` names a type that isn't registered. | Use `task`, `abstract`, `decision`, `exploration`, `atom` or one from `.vex/tasks`. |
 | `unknown-view`, `unknown-recipe` | No such view or recipe. | `vex view` and `vex recipe` list them. |
-| `unknown-modifier` | `--insert` or `--remove` before something that isn't a list field. | `vex set x --insert --children a,b`. |
+| `unknown-modifier` | `--insert` or `--remove` before something that isn't a list field. | `vex set x --insert --children a,b`, or `--clear` to unset a field. |
+| `clear-with-value` | `--clear` before a field that is also given a value. | Use `vex set x --clear --field` alone, or drop `--clear`. |
+| `missing-value` | A `set` flag with no value. | Give it one, or put `--clear` before it to unset the field. |
 | `immutable-vexid` | `vex set --vexid`. | A vexid is the task's identity: add a new task and remove the old one. |
 | `task-creation-failed` | A description of 3 characters or fewer. | Describe the task in at least two words. |
 | `task-already-exists`, `path-already-exists` | The new vexid or file path is taken. | Reword the description, or `vex resolve all` if the file isn't indexed. |

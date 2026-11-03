@@ -26,6 +26,7 @@ A `schema` validates, normalises, derives and converts a task's fields each time
 | `schema.default {s, default = fn}` | A value matching `s`, using `fn()` when there is none. |
 | `schema.vec {s}` | A list of values matching `s`. |
 | `schema.any {...}`, `schema.all {...}`, `schema.none {...}` | Any, all or none of the given schemas or constants. |
+| `schema.none` | No value: nil, or an empty list or string. It marks a field a task type does not use. |
 | `schema.formatted {s}` | A value matching `s`, read from and written as its readable form, such as a datetime. |
 | `schema.str`, `schema.num`, `schema.int`, `schema.bool` | Plain values. |
 | `schema.datetime`, `schema.date` | Timestamps. |
