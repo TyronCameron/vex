@@ -84,6 +84,29 @@ An event holds:
 - `RELATED-TO` the parent task, when it has one.
 - `DESCRIPTION`, a `field: value` line for every other field the task stores. The body is left out.
 
+## `list`
+
+A markdown bullet list, indented to show a tree, for notes and issue trackers:
+
+```console
+$ vex view all list --fields vexid,status,due --sep " | " --bullet check --align
+- [ ] ship-billing-rewrite-1        | doing | 
+  - [x] fix-flaky-webhook-retry-1   | done  | 2026-10-31 00:00:00
+  - [ ] migrate-existing-invoices-1 | todo  | 2026-11-06 00:00:00
+```
+
+Each task is nested under the tasks in the focus that link to it through `--indentby`; a task nothing in the focus links to sits at the top. A task under several parents appears under each. It takes its own flags, and no focus flags:
+
+| Flag | Default | |
+|---|---|---|
+| `--fields a,b` | `vexid` | The fields on each line, transients included. |
+| `--indentby field` | `children` | The link field (or comma list of them) that nests tasks, such as `dependencies`. |
+| `--bullet` | `-` | `-`, `numbered` (`1.` for each level of siblings) or `check` (`- [ ]`, or `- [x]` once the task is `final`). |
+| `--sep` | `", "` | Put between the fields of a line. |
+| `--fold n` | `10` | How many levels to show. A task with hidden tasks below it ends in `(+n)`. |
+| `--align` | off | Pads each field so the separators line up across levels. |
+| `--orderby` | `urgency` | Orders the siblings under each parent, as the focus `--orderby` does (`due:desc`). |
+
 ## `json`
 
 The tasks as a JSON array, without their bodies.

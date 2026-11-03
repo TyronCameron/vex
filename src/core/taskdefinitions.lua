@@ -321,10 +321,22 @@ task:transient 'age' {
     end
 }
 
+task:transient 'implied_due' {
+    vextype = 'basetask',
+    definition = function(t)
+        local dependents = func.ifilter(focus.focus(t.vexid):step('backlinks'):get(), function(other)
+            return other.phase ~= 'final' and func.any(other.dependencies or {}, function(vexid) return vexid == t.vexid end)
+        end)
+        local dues = func.ifilter(func.imap(dependents, function(other) return other.implied_due end), function(due) return due ~= nil end)
+        table.insert(dues, t.due)
+        return func.ireduce(dues, function(a, b) return math.min(a, b) end)
+    end
+}
+
 task:transient 'urgency' {
     vextype = 'basetask',
     definition = function(t)
-        local ranked = focus.focus('final'):complement():groupby('owner'):orderby('due'):rn():filter('vexid', t.vexid):get()[1]
+        local ranked = focus.focus('final'):complement():groupby('owner'):orderby('implied_due'):rn():filter('vexid', t.vexid):get()[1]
         return ranked and ranked.rn
     end
 }

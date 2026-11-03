@@ -68,7 +68,10 @@ for _, phase in ipairs {'initial', 'interim', 'final'} do
 end
 
 Focus.register_focus('ready', function()
-    return func.ifilter(Focus.getalltasks(), function(task) return task.phase ~= 'final' and #task.blockers == 0 end)
+    local unblocked = Focus.new('unblocked', function()
+        return func.ifilter(Focus.getalltasks(), function(task) return task.phase ~= 'final' and #task.blockers == 0 end)
+    end)
+    return unblocked:orderby('implied_due'):get()
 end)
 
 -----------------------------------------

@@ -121,7 +121,7 @@ A list field's own values are joined with commas inside a cell, so a comma colum
 | `none` | No tasks. |
 | `updated` | Indexed tasks whose files changed since vex last saw them: edited by hand, pulled, moved, unreadable or gone. `vex resolve updated` takes them in; new task files only reach the index through `vex resolve all`. |
 | `initial`, `interim`, `final` | Tasks by `phase`: in their type's first status, in between, or in a status with no way out. |
-| `ready` | Tasks that can be started now: not `final`, with no `blockers`. |
+| `ready` | Tasks that can be started now: not `final`, with no `blockers`, ordered by `implied_due`. |
 | `prev` | The saved focus. The default wherever a focus is optional. |
 | a vexid | That task. |
 | a path containing `/` | The task file, or every task file in the folder. |

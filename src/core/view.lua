@@ -156,6 +156,100 @@ v:view 'tabular' {
     end
 }
 
+local function aslist(value, default)
+    if value == nil then return default end
+    return type(value) == "table" and value or {value}
+end
+
+local function hasflag(flagwords, name)
+    return func.any(flagwords, function(word) return cli.isflag(word) and word[1] == name end)
+end
+
+local function listcell(t, field)
+    local value = task:format(t.vexid)[field]
+    if value == nil then value = t[field] end
+    if type(value) == "table" then return table.concat(value, ',') end
+    return value == nil and '' or tostring(value)
+end
+
+local function listbullet(kind, t, position)
+    if kind == 'numbered' then return position .. '.' end
+    if kind == 'check' then return t.phase == 'final' and '- [x]' or '- [ ]' end
+    return '-'
+end
+
+local function descendants(node)
+    return func.ifold(node.children, function(total, child) return total + 1 + descendants(child) end, 0)
+end
+
+v:view 'list' {
+    display = function(focus, flags, flagwords)
+        local kind = flags.bullet or '-'
+        if not func.any({'-', 'numbered', 'check'}, function(allowed) return allowed == kind end) then
+            cli:throw('usage', 'The bullet of the list view is `-`, `numbered` or `check`. We saw ' .. tostring(kind) .. '.')
+        end
+        local fold = tonumber(flags.fold or 10)
+        if not fold then cli:throw('usage', 'The fold of the list view is a number of levels. We saw ' .. tostring(flags.fold) .. '.') end
+        local fields, indentby = aslist(flags.fields, {'vexid'}), aslist(flags.indentby, {'children'})
+        local sep = type(flags.sep) == "table" and table.concat(flags.sep, ',') or flags.sep or ', '
+
+        local ordering = {}
+        for _, word in ipairs(aslist(flags.orderby, {'urgency'})) do
+            for part in tostring(word):gmatch('[^:]+') do table.insert(ordering, part) end
+        end
+        local tasks = Focus.new('list', function() return focus:get() end):orderby(unpack(ordering)):get()
+
+        local infocus, nested = {}, {}
+        for _, t in ipairs(tasks) do infocus[t.vexid] = true end
+        local nodes = {}
+        for _, t in ipairs(tasks) do
+            local linked = func.ifilter(Focus.focus(t.vexid):step(unpack(indentby)):get(), function(child) return infocus[child.vexid] end)
+            local ids = {}
+            for _, child in ipairs(linked) do ids[child.vexid] = true; nested[child.vexid] = true end
+            nodes[t.vexid] = {task = t, linked = ids}
+        end
+
+        local function build(t)
+            local children = {}
+            for _, other in ipairs(tasks) do
+                if nodes[t.vexid].linked[other.vexid] then table.insert(children, build(other)) end
+            end
+            return {task = t, children = children}
+        end
+        local roots = {}
+        for _, t in ipairs(tasks) do
+            if not nested[t.vexid] then table.insert(roots, build(t)) end
+        end
+
+        local rows = {}
+        local function walk(siblings, depth)
+            for position, node in ipairs(siblings) do
+                local bullet = listbullet(kind, node.task, position)
+                local cells = func.imap(fields, function(field) return listcell(node.task, field) end)
+                cells[1] = string.rep(' ', depth * (kind == 'numbered' and 3 or 2)) .. bullet .. ' ' .. cells[1]
+                local hidden = depth + 1 >= fold and descendants(node) or 0
+                table.insert(rows, {cells = cells, hidden = hidden})
+                if depth + 1 < fold then walk(node.children, depth + 1) end
+            end
+        end
+        walk(roots, 0)
+
+        local widths = {}
+        if hasflag(flagwords, 'align') then
+            for _, row in ipairs(rows) do
+                for i, cell in ipairs(row.cells) do widths[i] = math.max(widths[i] or 0, #cell) end
+            end
+        end
+        local lines = func.imap(rows, function(row)
+            local cells = func.imap(row.cells, function(cell, i)
+                return i < #row.cells and widths[i] and cell .. string.rep(' ', widths[i] - #cell) or cell
+            end)
+            return table.concat(cells, sep) .. (row.hidden > 0 and ' (+' .. row.hidden .. ')' or '')
+        end)
+        return table.concat(lines, "\n")
+    end
+}
+
 v:view 'json' {
     display = function(focus, flags)
         local tasks = focus:get()

@@ -340,6 +340,38 @@ describe("taskdefinitions", function()
             assert.is_nil(task.tasks[finished].urgency)
         end)
 
+        it("ranks a dependency by the due date of the open tasks that depend on it", function()
+            local base = os.time() + 30 * 86400
+            local needed = create({description = "pulled needed task", due = base + 20 * 86400})
+            local unrelated = create({description = "pulled unrelated task", due = base + 10 * 86400})
+            create({description = "pulled dependent task", due = base, dependencies = {needed}})
+            assert.equal(base, task.tasks[needed].implied_due)
+            assert.truthy(task.tasks[needed].urgency < task.tasks[unrelated].urgency)
+        end)
+
+        it("ranks an undated dependency ahead of an unrelated dated task when a dated task needs it", function()
+            local needed = create({description = "undated needed task"})
+            local unrelated = create({description = "dated unrelated task", due = os.time() + 90 * 86400})
+            create({description = "dated needing task", due = os.time() + 60 * 86400, dependencies = {needed}})
+            assert.truthy(task.tasks[needed].urgency < task.tasks[unrelated].urgency)
+        end)
+
+        it("carries a due date down a chain of dependents", function()
+            local due = os.time() + 3 * 86400
+            local bottom = create({description = "chained bottom task"})
+            local middle = create({description = "chained middle task", dependencies = {bottom}})
+            create({description = "chained top task", due = due, dependencies = {middle}})
+            assert.equal(due, task.tasks[middle].implied_due)
+            assert.equal(due, task.tasks[bottom].implied_due)
+        end)
+
+        it("ignores finished dependents when working out its implied due date", function()
+            local needed = create({description = "ignored needed task", due = os.time() + 40 * 86400})
+            local dependent = create({description = "ignored dependent task", due = os.time() + 86400, dependencies = {needed}})
+            setstatus(dependent, "done")
+            assert.equal(task.tasks[needed].due, task.tasks[needed].implied_due)
+        end)
+
     end)
 
 end)

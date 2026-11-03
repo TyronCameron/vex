@@ -42,7 +42,8 @@ Transients are fields vex works out each time they are read. They are never stor
 | `forwardlinks` | The vexids of the tasks the task links to. |
 | `path` | Where the task file is. |
 | `age` | Whole days since `created`. |
-| `urgency` | The task's rank among its owner's open tasks by `due`, soonest first: 1 is the most urgent. Tasks without a due date rank last, and finished tasks have none. |
+| `implied_due` | The earliest `due` among the task and the open tasks that depend on it, directly or not: a task is needed by the time its soonest dependent is due. Empty when none of them has a due date. |
+| `urgency` | The task's rank among its owner's open tasks by `implied_due`, 1 being the most urgent. Tasks without one rank last, and finished tasks have none. |
 
 Add your own in `.vex/tasks` ([[03 Configuring task types]]).
 

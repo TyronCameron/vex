@@ -141,6 +141,83 @@ describe("view", function()
         assert.truthy(err:find('not-a-date-field', 1, true))
     end)
 
+    describe("list", function()
+
+        local cli = require 'lib.cli'
+        local function list(focusname, flags, flagline)
+            return view:display('list', focus.focus(unpack(focusname)), flags or {}, flagline and cli:parse(flagline) or {})
+        end
+
+        it("nests each task under the tasks that link to it through children by default", function()
+            assert.equal("- " .. parent .. "\n  - " .. child, list({child, parent}))
+        end)
+
+        it("leaves a task at the top when nothing in the focus links to it", function()
+            assert.equal("- " .. child, list({child}))
+        end)
+
+        it("shows the chosen fields joined by the separator", function()
+            local result = list({child, parent}, {fields = {'vexid', 'status'}, sep = ' | '})
+            assert.equal("- " .. parent .. " | todo\n  - " .. child .. " | todo", result)
+        end)
+
+        it("nests along any link field given to indentby", function()
+            local result = list({child, dependent}, {indentby = 'dependencies'})
+            assert.equal("- " .. dependent .. "\n  - " .. child, result)
+        end)
+
+        it("numbers each level of siblings", function()
+            local first = create({description = "listed first numbered task", due = "2026-08-02 09:00:00"})
+            local second = create({description = "listed second numbered task", due = "2026-08-03 09:00:00"})
+            local top = create({description = "listed numbered abstract", vextype = 'abstract', children = {first, second}})
+            local result = list({top, first, second}, {bullet = 'numbered', orderby = 'due'})
+            assert.equal("1. " .. top .. "\n   1. " .. first .. "\n   2. " .. second, result)
+        end)
+
+        it("marks finished tasks in the checkbox bullets", function()
+            local result = list({child, dependent}, {bullet = 'check', indentby = 'dependencies'})
+            assert.equal("- [x] " .. dependent .. "\n  - [ ] " .. child, result)
+        end)
+
+        it("orders the siblings under each parent", function()
+            local early = create({description = "listed early ordered task", due = "2026-08-02 09:00:00"})
+            local late = create({description = "listed late ordered task", due = "2026-08-09 09:00:00"})
+            local top = create({description = "listed ordered abstract", vextype = 'abstract', children = {early, late}})
+            assert.equal("- " .. top .. "\n  - " .. early .. "\n  - " .. late, list({late, early, top}, {orderby = 'due'}))
+            assert.equal("- " .. top .. "\n  - " .. late .. "\n  - " .. early, list({early, late, top}, {orderby = {'due', 'desc'}}))
+        end)
+
+        it("orders by urgency by default", function()
+            local soon = create({description = "listed soon urgent task", due = os.time() + 86400})
+            local later = create({description = "listed later urgent task", due = os.time() + 9 * 86400})
+            assert.equal("- " .. soon .. "\n- " .. later, list({later, soon}))
+        end)
+
+        it("folds the levels past the fold, counting what is hidden", function()
+            assert.equal("- " .. parent .. " (+1)", list({child, parent}, {fold = '1'}))
+        end)
+
+        it("lines the separators up across levels with align", function()
+            local result = list({child, parent}, {fields = {'vexid', 'status'}, sep = ' | '}, '--align')
+            local first, second = result:match("([^\n]*)\n([^\n]*)")
+            assert.equal(first:find(' | ', 1, true), second:find(' | ', 1, true))
+            assert.is_nil(list({child, parent}, {fields = {'vexid', 'status'}, sep = ' | '}):match("^[^\n]*\n[^\n]*"):find("  | ", 1, true))
+        end)
+
+        it("renders nothing for an empty focus", function()
+            assert.equal("", list({'none'}))
+        end)
+
+        it("rejects a bullet it does not know", function()
+            stub(cli, 'throw', function(self, name) error(name) end)
+            local ok, err = pcall(list, {child}, {bullet = 'stars'})
+            cli.throw:revert()
+            assert.is_false(ok)
+            assert.truthy(err:find('usage', 1, true))
+        end)
+
+    end)
+
     it("fires pre- and post-view-display with the view, focus and flags, then the result", function()
         local fired = {}
         for _, name in ipairs {'pre-view-display', 'post-view-display'} do
