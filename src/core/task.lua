@@ -55,8 +55,7 @@ function Task:show(path)
     local final_str = pretty.string('# ' .. string.upper(tostring(self.vexid)) .. '\n', 'cyan', 'underline', 'bold', {filelink = tostring(path)})
     final_str = final_str .. pretty.string("---\n", 'cyan')
     for k, v in sortdata(frontmatter(self)) do 
-        local shown = type(v) == "table" and "[" .. table.concat(v, ", ") .. "]" or tostring(v or '')
-        final_str = final_str .. pretty.string(tostring(k) .. ": ", 'green') .. pretty.string(shown ..  '\n')
+        final_str = final_str .. pretty.string(tostring(k) .. ": ", 'green') .. pretty.string(taskformat.value(v) ..  '\n')
     end 
     final_str = final_str .. pretty.string("---\n", 'cyan')
     final_str = final_str .. pretty.string(tostring(body(self) or '') .. "\n\n")

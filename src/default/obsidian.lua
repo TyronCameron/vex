@@ -138,5 +138,7 @@ return {
         end
 
         f:close()
-    end
+    end,
+
+    value = to_yaml_value
 }

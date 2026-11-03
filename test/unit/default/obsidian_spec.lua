@@ -84,6 +84,14 @@ describe("obsidian", function()
         os.remove(tmp)
     end)
 
+    it("renders a value the way write puts it after the key", function()
+        assert.equal("todo", obsidian.value("todo"))
+        assert.equal("3", obsidian.value(3))
+        assert.equal('"has: colon"', obsidian.value("has: colon"))
+        assert.equal("[]", obsidian.value({}))
+        assert.equal("\n  - a\n  - b", obsidian.value({"a", "b"}))
+    end)
+
     -- ==================== List fields (fix-list-field-roundtrip-1) ====================
 
     it("round-trips a non-empty list field", function()
