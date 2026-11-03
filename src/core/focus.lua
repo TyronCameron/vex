@@ -71,7 +71,7 @@ Focus.register_focus('ready', function()
     local unblocked = Focus.new('unblocked', function()
         return func.ifilter(Focus.getalltasks(), function(task) return task.phase ~= 'final' and #task.blockers == 0 end)
     end)
-    return unblocked:orderby('deadline'):get()
+    return unblocked:orderby('implied_due'):get()
 end)
 
 -----------------------------------------
