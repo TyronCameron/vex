@@ -24,6 +24,7 @@ describe("vex user-facing errors (e2e, subprocess)", function()
     {"vex init inside a project", "Already in a vex directory", {"init"}},
     {"a filter without a value", "You need to provide a field and value", {"focus", "all", "--filter", "status"}},
     {"an unknown shell", "is not known", {"autocomplete", "nosuchshell"}},
+    {"a malformed match", "Bad pattern `[a`", {"focus", "all", "--match", "description:[a"}},
     {"an unknown focus operation", "Unknown focus operation `bogus`", {"focus", "all", "--bogus", "x"}},
   }
 
