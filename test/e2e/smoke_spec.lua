@@ -65,7 +65,7 @@ local focuses = {
   {"focus", CHILD .. "," .. PARENT},
   {"focus", "all", "--filter", "status:todo"},
   {"focus", "all", "--fuzzy", "description:child"},
-  {"focus", "all", "--regex", "description:^.*child"},
+  {"focus", "all", "--match", "description:^.*child"},
   {"focus", "all", "--select", "description"},
   {"focus", PARENT, "--tree", "children"},
   {"focus", CHILD, "--reversetree", "children"},

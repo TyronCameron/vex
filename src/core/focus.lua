@@ -380,14 +380,14 @@ function Focus:fuzzy(field, fuzz, n)
     end, field, fuzz, n)
 end 
 
--- regex field:pattern, a Lua pattern
-function Focus:regex(field, ...)
+-- match field:pattern, a Lua pattern
+function Focus:match(field, ...)
     local pattern = table.concat({...}, ':')
     if field == nil or pattern == '' then
         cli:throw('usage', 'You need to provide a field and pattern to match.')
     end
-    if not pcall(string.find, '', pattern) then cli:throw('bad-regex', pattern) end
-    return self:chain('regex', function(tasks)
+    if not pcall(string.find, '', pattern) then cli:throw('bad-match', pattern) end
+    return self:chain('match', function(tasks)
         return func.ifilter(tasks, function(task)
             return type(task[field]) == 'string' and task[field]:find(pattern) ~= nil
         end)

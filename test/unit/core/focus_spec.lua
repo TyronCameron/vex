@@ -102,7 +102,7 @@ describe("Focus", function()
         assert.same({tasks[1]}, f:fuzzy("description", "milc", 1):get(tasks))
     end)
 
-    describe("regex", function()
+    describe("match", function()
         local tasks = {
             {vexid = "a", description = "Hello world: part one"},
             {vexid = "b", description = "Say Hello world"},
@@ -111,34 +111,34 @@ describe("Focus", function()
         local f = Focus.new("all", function(t) return t end)
 
         it("keeps tasks whose field matches the pattern", function()
-            assert.same({tasks[1]}, f:regex("description", "^Hello world.*$"):get(tasks))
+            assert.same({tasks[1]}, f:match("description", "^Hello world.*$"):get(tasks))
         end)
 
         it("matches anywhere without anchors and skips tasks without a string", function()
-            assert.same({tasks[1], tasks[2]}, f:regex("description", "Hello"):get(tasks))
-            assert.same({}, f:regex("cost", "3"):get(tasks))
+            assert.same({tasks[1], tasks[2]}, f:match("description", "Hello"):get(tasks))
+            assert.same({}, f:match("cost", "3"):get(tasks))
         end)
 
         it("keeps colons in the pattern", function()
-            local parts = f:apply(require('lib.cli'):parse('--regex description:world: part'))
+            local parts = f:apply(require('lib.cli'):parse('--match description:world: part'))
             assert.same({tasks[1]}, parts:get(tasks))
         end)
 
         it("rejects a malformed pattern", function()
             local cli = require 'lib.cli'
             stub(cli, 'throw', function(self, name) error(name) end)
-            local ok, err = pcall(function() f:regex("description", "[a") end)
+            local ok, err = pcall(function() f:match("description", "[a") end)
             cli.throw:revert()
             assert.is_false(ok)
-            assert.truthy(err:find('bad-regex', 1, true))
+            assert.truthy(err:find('bad-match', 1, true))
         end)
 
         it("replays from the saved focus", function()
             local task = require 'core.task'
-            local vexid = task:add({description = "saved regex task"})
+            local vexid = task:add({description = "saved match task"})
             task:resolve(vexid)
             task:write(vexid)
-            Focus.focus('all'):regex('description', '^saved regex'):write()
+            Focus.focus('all'):match('description', '^saved match'):write()
             assert.equal(vexid, Focus.read():get()[1].vexid)
         end)
     end)
