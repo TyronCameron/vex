@@ -441,4 +441,4 @@ function CLI:throw(errtype, msg, ...)
 end
 
 -- onky need one
-return CLI.new("vex")
+return CLI.new("vex")
