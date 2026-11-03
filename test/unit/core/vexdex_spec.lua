@@ -115,13 +115,13 @@ describe("vexdex", function()
         for _, vexid in ipairs({"__kept", "__touched", "__gone"}) do vexdex:unsafe_remove(vexid) end
     end)
 
-    it("persists index entries without their body, in both the index and its readable copy", function()
+    it("persists index entries without their body", function()
         vexdex:add("__bodied", {vexid = "__bodied", status = "todo", vexbody = "private notes"})
         assert.equal("private notes", vexdex:get("__bodied").vexbody)
         assert.same({vexid = "__bodied", status = "todo"}, vexdex.new(vexdex.path):get("__bodied"))
-        local mirror = io.open(vexdex:vexpath("vexdex/index.lua")):read("*a")
-        assert.is_nil(mirror:find("private notes", 1, true))
-        assert.truthy(mirror:find("__bodied", 1, true))
+        local stored = io.open(vexdex:vexpath("vexdex/index.bin"), "rb"):read("*a")
+        assert.is_nil(stored:find("private notes", 1, true))
+        assert.truthy(stored:find("__bodied", 1, true))
         vexdex:remove("__bodied")
     end)
 
@@ -171,6 +171,7 @@ describe("vexdex", function()
         end
 
         before_each(function()
+            vexdex:closelog("verb-log.txt"):closelog("event-log.txt")
             os.remove(vexdex:vexpath("vexdex/verb-log.txt"))
             os.remove(vexdex:vexpath("vexdex/event-log.txt"))
         end)
@@ -202,6 +203,37 @@ describe("vexdex", function()
             assert.truthy(logged[1]:find("spec 3", 1, true))
             assert.truthy(logged[3]:find("spec 5", 1, true))
             assert.equal(3, #lines("event-log.txt"))
+        end)
+
+        it("keeps event-log.txt within loglimit once a verb has finished", function()
+            config.properties.loglimit = 3
+            event:trigger('pre-verb-spec', {raw = 'spec'})
+            for i = 1, 10 do event:trigger('__spec-event', 'arg ' .. i) end
+            event:trigger('post-verb-spec', {raw = 'spec'}, nil)
+            local logged = lines("event-log.txt")
+            assert.equal(3, #logged)
+            assert.truthy(logged[2]:find("arg 10", 1, true))
+            assert.truthy(logged[3]:find("post-verb-spec", 1, true))
+        end)
+
+        it("logs a table arg by its raw text, or as a table, rather than printing it whole", function()
+            event:trigger('__spec-event', {raw = 'add Make coffee'}, {nested = {deep = 'value'}})
+            local logged = lines("event-log.txt")[1]
+            assert.truthy(logged:find("add Make coffee", 1, true))
+            assert.is_nil(logged:find("deep", 1, true))
+        end)
+
+        it("cuts a long arg short in the event log", function()
+            event:trigger('__spec-event', string.rep("a", 1000), {raw = string.rep("b", 1000)})
+            local logged = lines("event-log.txt")[1]
+            assert.is_true(#logged < 600)
+            assert.truthy(logged:find("a...", 1, true))
+        end)
+
+        it("keeps 100 lines of each log by default", function()
+            for i = 1, 120 do event:trigger('pre-verb-spec', {raw = 'spec ' .. i}) end
+            assert.equal(100, #lines("verb-log.txt"))
+            assert.equal(100, #lines("event-log.txt"))
         end)
 
     end)

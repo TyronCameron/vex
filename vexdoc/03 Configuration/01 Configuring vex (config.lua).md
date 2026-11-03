@@ -7,7 +7,7 @@ return {
         tasktype = 'task'
     },
     taskowners = {},
-    loglimit = 1000,
+    loglimit = 100,
     paths = {
         groupby = {'status', 'lineage'}
     },
@@ -27,7 +27,7 @@ This repository's own config sets `taskfolder = "vexdoc/vex"`: its backlog is th
 | `taskowners` | The names `owner` may take. With no task owners, tasks can't have an owner. |
 | `default.tasktype` | The `vextype` of a task added without one. |
 | `paths.groupby` | Nests task files in folders by their fields (see below). |
-| `loglimit` | How many lines the verb and event logs in `.vex/vexdex` keep (see [[Events and hooks]]). Defaults to 1000. |
+| `loglimit` | How many lines the verb and event logs in `.vex/vexdex` keep (see [[Events and hooks]]). Defaults to 100. |
 | `fingerprint.exclude` | Fields whose changes don't count as a change to the task, so they never move `modified` on their own (see [[Resolution pipeline#Fingerprints and `modified`]]). They are still written to the file. `vex init` sets it to `{'modified'}`. |
 
 For example, to keep tasks in a `todo` folder and assign them to two people:

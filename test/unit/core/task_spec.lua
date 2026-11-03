@@ -443,15 +443,37 @@ describe("task", function()
             assert.same({[first] = true, [second] = true}, resolved)
         end)
 
-        it("resolves each linked task once", function()
+        local function resolving(vexid)
+            local resolved = {}
+            event:register('pre-task-resolve', 'cascade-spec', function(id) resolved[id] = (resolved[id] or 0) + 1 end)
+            task:resolve(vexid)
+            event:remove('pre-task-resolve', 'cascade-spec')
+            return resolved
+        end
+
+        it("resolves each linked task once when the task changed", function()
             local first = create({description = "cascade chain first", vextype = 'atom'})
             local second = create({description = "cascade chain second", vextype = 'atom', dependencies = {first}})
             local third = create({description = "cascade chain third", vextype = 'atom', dependencies = {second}})
-            local resolved = {}
-            event:register('pre-task-resolve', 'cascade-spec', function(vexid) resolved[vexid] = (resolved[vexid] or 0) + 1 end)
-            task:resolve(second)
-            event:remove('pre-task-resolve', 'cascade-spec')
-            assert.same({[first] = 1, [second] = 1, [third] = 1}, resolved)
+            task:set(second, {cost = 7})
+            assert.same({[first] = 1, [second] = 1, [third] = 1}, resolving(second))
+        end)
+
+        it("resolves only the task itself when it is unchanged", function()
+            local first = create({description = "cascade clean first", vextype = 'atom'})
+            local second = create({description = "cascade clean second", vextype = 'atom', dependencies = {first}})
+            create({description = "cascade clean third", vextype = 'atom', dependencies = {second}})
+            assert.same({[second] = 1}, resolving(second))
+        end)
+
+        it("stops at a linked task that did not change", function()
+            local first = create({description = "cascade stop first", vextype = 'atom'})
+            local second = create({description = "cascade stop second", vextype = 'atom', dependencies = {first}})
+            local third = create({description = "cascade stop third", vextype = 'atom', dependencies = {second}})
+            task:set(first, {cost = 9})
+            local resolved = resolving(first)
+            assert.equal(1, resolved[second])
+            assert.is_nil(resolved[third])
         end)
 
     end)

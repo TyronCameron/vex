@@ -24,6 +24,7 @@ function VexDex.new(path)
         paths = {},
         fingerprints = {},
         mtimes = {},
+        logs = {},
         dirty = false
     }, VexDex)
     return this:ensureindex()
@@ -182,32 +183,17 @@ function VexDex:writeindex()
     self:atomic(self:vexpath("vexdex/index.bin"), function(path)
         binser.writeFile(path, func.map(self.index, data))
     end)
-    self:atomic(self:vexpath("vexdex/index.lua"), function(path)
-        pretty.write(path, func.map(self.index, data))
-    end)
     self:atomic(self:vexpath("vexdex/backlinks.bin"), function(path)
         binser.writeFile(path, self.backlinks)
-    end)
-    self:atomic(self:vexpath("vexdex/backlinks.lua"), function(path)
-        pretty.write(path, self.backlinks)
     end)
     self:atomic(self:vexpath("vexdex/paths.bin"), function(path)
         binser.writeFile(path, self.paths)
     end)
-    self:atomic(self:vexpath("vexdex/paths.lua"), function(path)
-        pretty.write(path, self.paths)
-    end)
     self:atomic(self:vexpath("vexdex/fingerprints.bin"), function(path)
         binser.writeFile(path, self.fingerprints)
     end)
-    self:atomic(self:vexpath("vexdex/fingerprints.lua"), function(path)
-        pretty.write(path, self.fingerprints)
-    end)
     self:atomic(self:vexpath("vexdex/mtimes.bin"), function(path)
         binser.writeFile(path, self.mtimes)
-    end)
-    self:atomic(self:vexpath("vexdex/mtimes.lua"), function(path)
-        pretty.write(path, self.mtimes)
     end)
     self.dirty = false
     return self 
@@ -241,30 +227,49 @@ function VexDex:writefocus()
     self:atomic(self:vexpath("vexdex/focus.bin"), function(path)
         binser.writeFile(path, self.focus)
     end)
-    self:atomic(self:vexpath("vexdex/focus.lua"), function(path)
-        pretty.write(path, self.focus)
-    end)
     return self 
 end
 
 function VexDex:log(file, line)
-    local f = assert(io.open(self:vexpath("vexdex/" .. file), "a"))
+    local f = self.logs[file]
+    if not f then
+        f = assert(io.open(self:vexpath("vexdex/" .. file), "a"))
+        f:setvbuf("line")
+        self.logs[file] = f
+    end
     f:write(line, "\n")
-    f:close()
+    return self
+end
+
+function VexDex:closelog(file)
+    if self.logs[file] then
+        self.logs[file]:close()
+        self.logs[file] = nil
+    end
     return self
 end
 
 function VexDex:trimlog(file, limit)
+    self:closelog(file)
     local path = self:vexpath("vexdex/" .. file)
     if lfs.attributes(path, "mode") ~= "file" then return self end
-    local lines = {}
-    for line in io.lines(path) do table.insert(lines, line) end
-    if #lines <= limit then return self end
-    self:atomic(path, function(tmp)
-        local f = assert(io.open(tmp, "w"))
-        f:write(table.concat(func.last(lines, limit), "\n"), "\n")
-        f:close()
-    end)
+    local f = assert(io.open(path, "rb"))
+    local text = f:read("*a")
+    f:close()
+    local newlines = 0
+    for i = #text, 1, -1 do
+        if text:byte(i) == 10 then
+            newlines = newlines + 1
+            if newlines > limit then
+                self:atomic(path, function(tmp)
+                    local out = assert(io.open(tmp, "wb"))
+                    out:write(text:sub(i + 1))
+                    out:close()
+                end)
+                break
+            end
+        end
+    end
     return self
 end
 
@@ -288,14 +293,26 @@ end
 -- only need one
 local vexdex = VexDex.new()
 
+local function brief(value)
+    local text = type(value) == 'table' and (rawget(value, 'raw') or '<table>') or tostring(value)
+    if #text > 200 then return text:sub(1, 200) .. '...' end
+    return text
+end
+
 event:register('*', 'vexdex', function(name, ...)
-    local limit = require('core.config').loglimit or 1000
+    local limit = require('core.config').loglimit or 100
     local time = os.date("%Y-%m-%d %H:%M:%S")
-    vexdex:log("event-log.txt", time .. "\t" .. name .. "\t" .. pretty.table({...}):gsub("\n%s*", " "))
-    local args = ...
-    if name:match("^post%-verb%-") and vexdex.dirty then vexdex:writeindex() end
-    if name:match("^pre%-verb%-") and args.raw then
-        vexdex:log("verb-log.txt", time .. "\t" .. args.raw)
+    local args = {...}
+    local shown = {}
+    for i = 1, select('#', ...) do shown[i] = brief(args[i]) end
+    vexdex:log("event-log.txt", time .. "\t" .. name .. "\t" .. table.concat(shown, " "):gsub("\n%s*", " "))
+    local first = args[1]
+    if name:match("^post%-verb%-") then
+        if vexdex.dirty then vexdex:writeindex() end
+        vexdex:trimlog("event-log.txt", limit)
+    end
+    if name:match("^pre%-verb%-") and type(first) == "table" and first.raw then
+        vexdex:log("verb-log.txt", time .. "\t" .. first.raw)
         vexdex:trimlog("verb-log.txt", limit):trimlog("event-log.txt", limit)
     end
 end)
