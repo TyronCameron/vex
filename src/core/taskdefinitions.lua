@@ -86,36 +86,32 @@ local function acyclic(dependency, context)
     return true
 end
 
-local function finished(task)
-    return rawget(task, 'status') ~= nil and task.phase == 'final'
+local function withdue(tasks)
+    return func.ifilter(tasks, function(other) return other.due ~= nil and other.phase ~= 'final' end)
 end
 
-local function dependents(vexid)
-    return func.ifilter(func.imap(vexdex:linksto(vexid), function(source) return vexdex:get(source) end), function(other)
-        return func.any(other.dependencies or {}, function(dependency) return dependency == vexid end) and not finished(other)
-    end)
+local function extreme(tasks, before)
+    return func.ireduce(tasks, function(best, other) return before(other.due, best.due) and other or best end)
 end
 
-local function soonestdependentdue(self, instance, context)
-    if finished(context.previous) then return nil end
-    local dues = func.ifilter(func.imap(dependents(context.vexid), function(other) return other.due end), function(due) return due ~= nil end)
-    return func.ireduce(dues, function(a, b) return math.min(a, b) end)
+local function duebounds(context)
+    local dependencies = context.task.dependencies or {}
+    local needed = func.imap(type(dependencies) == "table" and dependencies or {dependencies}, function(vexid) return vexdex:get(vexid) end)
+    local needing = func.imap(context.task.dependents, function(vexid) return vexdex:get(vexid) end)
+    return extreme(withdue(needed), function(a, b) return a > b end), extreme(withdue(needing), function(a, b) return a < b end)
+end
+
+local function duefromdependents(self, instance, context)
+    if context.previous.phase == 'final' then return nil end
+    local _, dependent = duebounds(context)
+    return dependent and dependent.due
 end
 
 local function dueinorder(due, context)
-    if finished(context.previous) then return true end
-    local dependencies = context.task.dependencies or {}
-    for _, dependency in ipairs(type(dependencies) == "table" and dependencies or {dependencies}) do
-        local needed = vexdex:get(dependency)
-        if needed and needed.phase ~= 'final' and needed.due and needed.due > due then
-            cli:throw('due-out-of-order', context.vexid, dependency, 'dependency')
-        end
-    end
-    for _, dependent in ipairs(dependents(context.vexid)) do
-        if dependent.due and dependent.due < due then
-            cli:throw('due-out-of-order', context.vexid, dependent.vexid, 'dependent')
-        end
-    end
+    if context.previous.phase == 'final' then return true end
+    local dependency, dependent = duebounds(context)
+    if dependency and dependency.due > due then cli:throw('due-out-of-order', context.vexid, dependency.vexid, 'dependency') end
+    if dependent and dependent.due < due then cli:throw('due-out-of-order', context.vexid, dependent.vexid, 'dependent') end
     return true
 end
 
@@ -177,7 +173,7 @@ task:task 'basetask' {
         vexbody = schema.maybe {schema.str},
         due = schema.default {
             schema.maybe {schema.all {schema.formatted {schema.datetime}, schema.constraint {dueinorder}}},
-            default = soonestdependentdue
+            default = duefromdependents
         },
         cost = schema.maybe {schema.num},
         benefit = schema.maybe {schema.num},
@@ -268,7 +264,7 @@ task:transient 'phase' {
     vextype = 'basetask',
     definition = function(t)
         local status = task:schemaof(t.vextype, 'status').specification
-        local machine = statemachine.new(status.states, t.status, status.initial)
+        local machine = statemachine.new(status.states, t.status or status.initial, status.initial)
         if machine:isinitial() then return 'initial' end
         if machine:isfinal() then return 'final' end
         return 'interim'
@@ -310,6 +306,16 @@ task:transient 'blockers' {
             unfinished[dependency.vexid] = true
         end
         return func.ifilter(t.dependencies, function(vexid) return unfinished[vexid] end)
+    end
+}
+
+task:transient 'dependents' {
+    vextype = 'basetask',
+    definition = function(t)
+        return func.ifilter(t.backlinks, function(vexid)
+            local other = vexdex:get(vexid)
+            return other and func.any(other.dependencies or {}, function(dependency) return dependency == t.vexid end)
+        end)
     end
 }
 
@@ -362,7 +368,7 @@ task:transient 'urgency' {
     definition = function(t)
         if t.phase == 'final' then return nil end
         local sooner = func.ifilter(focus.focus('all'):get(), function(other)
-            return other.owner == t.owner and other.due ~= nil and (t.due == nil or other.due < t.due) and not finished(other)
+            return other.owner == t.owner and other.due ~= nil and (t.due == nil or other.due < t.due) and other.phase ~= 'final'
         end)
         return #sooner + 1
     end

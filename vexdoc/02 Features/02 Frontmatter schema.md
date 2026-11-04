@@ -39,6 +39,7 @@ Transients are fields vex works out each time they are read. They are never stor
 | `blockers` | The vexids of the task's `dependencies` that are not `final` yet. |
 | `lineage` | The vexids of the abstracts above the task, root first. |
 | `backlinks` | The vexids of the tasks that link to the task. |
+| `dependents` | The vexids of the tasks that depend on the task (list it in their `dependencies`). |
 | `forwardlinks` | The vexids of the tasks the task links to. |
 | `path` | Where the task file is. |
 | `age` | Whole days since `created`. |
