@@ -379,16 +379,24 @@ describe("schema", function()
         assert.equal(99, result)
     end)
 
-    it("`schema.default` accepts a nil default when its child allows nil", function()
-        local s = schema.default { schema.maybe { 'num' }, default = function() return nil end }
-        assert.is_nil(s:prevalidate(nil))
-        assert.is_true(s:validate(nil))
-    end)
+    local wrappers = {
+        all = function(child) return schema.all { child } end,
+        formatted = function(child) return schema.formatted { child } end,
+        derive = function(child) return schema.derive { child, derive = function() return nil end } end,
+        default = function(child) return schema.default { child, default = function() return nil end } end,
+    }
 
-    it("`schema.default` rejects a nil default when its child needs a value", function()
-        local s = schema.default { 'num', default = function() return nil end }
-        assert.is_false(s:validate(nil))
-    end)
+    for name, wrap in pairs(wrappers) do
+        it("`schema." .. name .. "` leaves a nil instance to its child, which may allow it", function()
+            local valid = wrap(schema.maybe { 'num' }):validate(nil)
+            assert.is_true(valid)
+        end)
+
+        it("`schema." .. name .. "` rejects a nil instance when its child needs a value", function()
+            local valid = wrap(schema.num):validate(nil)
+            assert.is_false(valid)
+        end)
+    end
 
     -- ==================== CLI input coercion (fix-typed-field-cli-input-1) ====================
 
