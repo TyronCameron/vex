@@ -30,6 +30,7 @@ end
 cli:verb "show" {
     function(args)
         local f = focus_pop_args(args)
+        task:writeall()
         local lines = {}
         f:each(function(vexid)
             table.insert(lines, task:show(vexid))
@@ -87,6 +88,7 @@ cli:verb "view" {
             viewname = table.remove(positional_args, 1)
             focusname = focus_pop_args(positional_args)
         end
+        task:writeall()
         local flags = args:flags()
         return view:display(viewname, focusname, flags, func.ifilter(args, cli.isflag))
     end,
@@ -104,6 +106,7 @@ cli:verb "resolve" {
             local f = focus_pop_args(args)
             if force then task:resolveall(vexids(f)) end
         end
+        task:writeall()
     end,
     doc = "Validates, updates and normalises the tasks in the focus whose files changed since vex last saw them, and writes back what changes. `all` also takes in new task files and drops deleted ones. --force resolves every task in the focus, and with `all` rebuilds the index from the files: use it after changing config or task types.",
     args = "[focus] [--force]",
@@ -116,6 +119,7 @@ cli:verb "add" {
         taskproperties.description = args:text()
         local vexid = task:add(taskproperties)
         task:resolve(vexid)
+        task:writeall()
         focus.focus(vexid):write()
         return vexid
     end,
@@ -133,6 +137,7 @@ cli:verb "remove" {
             task:delete(vexid)
             table.insert(lines, pretty.any(vexid))
         end)
+        task:writeall()
         vexdex:setfocus(nil)
         return join_lines(lines)
     end,
@@ -144,6 +149,7 @@ cli:verb "remove" {
 cli:verb "get" {
     function(args)
         local f = focus_pop_args(args)
+        task:writeall()
         local fields = {}
         for _, flag in ipairs(func.ifilter(args, cli.isflag)) do
             if flag[1] == 'select' then
@@ -177,6 +183,7 @@ cli:verb "set" {
             task:set(vexid, taskproperties, modifiers)
             task:resolve(vexid)
         end)
+        task:writeall()
     end,
     doc = "Allows you to set fields in the focus. Put --insert or --remove before a list field to add or remove values rather than overwrite it, or --clear before any field to unset it. Resolution is called on that `focus`",
     args = "[focus] [--fields...]",
@@ -198,6 +205,7 @@ cli:verb "recipe" {
         taskproperties.description = args:text()
 
         local f = recipe:add(recipename, taskproperties)
+        task:writeall()
         local lines = {}
         f:each(function(vexid)
             table.insert(lines, pretty.any(vexid))
