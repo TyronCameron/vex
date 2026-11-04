@@ -1,8 +1,8 @@
 local Config = require 'lib.config'
 local cli = require 'lib.cli'
-local lfs = require 'lib.lfs'
 local lfsext = require 'lib.lfsext'
 local schema = require 'lib.schema'
+local vexdex = require 'core.vexdex'
 local defaults = require 'core.configdefaults'
 
 local specification = schema.atleast {
@@ -15,10 +15,7 @@ local specification = schema.atleast {
     plugins = schema.maybe {schema.table}
 }
 
-if not lfsext.rootdir(lfs.currentdir()) then cli:throw('not-vexed') end
-
-local config = Config.new(defaults)
-for _, dir in ipairs(lfsext.layers()) do config:registerpath(dir .. '/config.lua') end
+local config = Config.new(defaults):registerpath(lfsext.globalpath('config.lua')):registerpath(vexdex:vexpath('config.lua'))
 
 local loaded, path, err = config:loadall()
 if not loaded then cli:throw('bad-config-file', path, err) end

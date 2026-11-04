@@ -1,4 +1,4 @@
-`config.lua` returns a Lua table and is read on every command, from the global folder and from every `.vex` folder above where you run vex (see [[01 Configuring vex (config.lua)#Layers]]). Settings you leave out take the defaults. `vex init` writes this one into `.vex/config.lua`:
+`.vex/config.lua` returns a Lua table and is read on every command, after the global folder's `config.lua` (see [[01 Configuring vex (config.lua)#The global folder]]). Settings you leave out take the defaults. `vex init` writes this one into `.vex/config.lua`:
 
 ```lua
 return {
@@ -42,18 +42,6 @@ return {
 
 `taskfolder` is a path relative to the project, and vex tidies it: backslashes become `/`, and `./`, repeated slashes and a trailing slash are dropped, so `'ehvilee/tasks/'`, `'./ehvilee//tasks'` and `'ehvilee\\tasks'` all mean `ehvilee/tasks`. An absolute path is refused. A setting of the wrong kind, such as `loglimit = 'lots'`, stops the command with a message naming the setting, and so does a config file that isn't valid Lua or doesn't return a table.
 
-## Layers
-
-vex reads these `config.lua` files, in order, and each one overrides the settings before it:
-
-1. The global folder's (see [[01 Configuring vex (config.lua)#The global folder]]).
-2. The `.vex/config.lua` of every folder above your project, from the outermost to the innermost.
-3. Your project's own `.vex/config.lua`.
-
-Tables merge key by key, so a project can change `paths.groupby` and keep the rest of `paths`. Lists and empty tables replace the earlier value outright: `taskowners = {'carol'}` drops the owners an outer config listed, and `paths = { groupby = {} }` turns grouping off. `taskfolder` is always relative to the innermost project, so an outer config can only give a default. `vex init` writes every setting into `.vex/config.lua`, which pins each of them for that project; delete a line to inherit it from an outer layer.
-
-A `.vex` folder in a parent folder is a layer for everything below it: its `config.lua`, its extension folders (`tasks/`, `recipes/`, `focuses/`, `views/`, `events/`) and its `plugin/` folder. Extensions load from the outermost layer first, so inner ones can build on them.
-
 ## Plugins
 
 `plugins` chooses which plugin does each job and switches standalone plugins off (see [[Plugin architecture]]):
@@ -94,7 +82,7 @@ With this config, a task sits under its ancestors and then in a folder named aft
 
 ## The global folder
 
-Besides each project's `.vex` (and those above it), vex reads a global folder that belongs to you, not to a project or to the install, so it survives upgrades. It is the first of these that exists:
+Besides each project's `.vex`, vex reads a global folder that belongs to you, not to a project or to the install, so it survives upgrades. It is the first of these that exists:
 
 | Where | Used when |
 | --- | --- |

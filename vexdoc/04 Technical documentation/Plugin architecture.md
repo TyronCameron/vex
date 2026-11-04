@@ -35,11 +35,11 @@ if not ok then
 end
 ```
 
-`src/default` holds the reference implementation for every slot. To replace one, add a module of the same name to a `plugin` folder: `.vex/plugin` for one project, a `.vex/plugin` in a parent folder for every project below it, or the `plugin` folder of your global folder for all of them (see [[01 Configuring vex (config.lua)#Layers]]). These sit ahead of the install on Lua's module path, innermost first, and the global one survives upgrades. To add a new member instead, put it in one of those folders under a new name and select it with `plugins = { slot = 'name' }`.
+`src/default` holds the reference implementation for every slot. To replace one, add a module of the same name to a `plugin` folder: `.vex/plugin` for one project, or the `plugin` folder of your global folder for all of them (see [[01 Configuring vex (config.lua)#The global folder]]). These sit ahead of the install on Lua's module path, the project's first, and the global one survives upgrades. To add a new member instead, put it in one of those folders under a new name and select it with `plugins = { slot = 'name' }`.
 
 ## Standalone plugins
 
-`Plugin:add(name)` and `Plugin:addall(dir)` register plugins outside any slot. At startup, `src/vex.lua` registers every file in `src/plugin`, then every file in the `plugin` folder of each layer. A file named after an existing plugin or slot member is not registered again; it only changes which module gets loaded. `src/plugin` holds `vexcomplete`, which provides `vex autocomplete` and `vex suggest`, and `vexations`, which registers the `abstract`, `decision`, `exploration` and `atom` task types, the `abstract` recipe and the abstract `status` and `phase` transients.
+`Plugin:add(name)` and `Plugin:addall(dir)` register plugins outside any slot. At startup, `src/vex.lua` registers every file in `src/plugin`, then every file in the global `plugin` folder and in the project's `.vex/plugin`. A file named after an existing plugin or slot member is not registered again; it only changes which module gets loaded. `src/plugin` holds `vexcomplete`, which provides `vex autocomplete` and `vex suggest`, and `vexations`, which registers the `abstract`, `decision`, `exploration` and `atom` task types, the `abstract` recipe and the abstract `status` and `phase` transients.
 
 `Plugin:enable` and `Plugin:disable` switch a plugin without unregistering it: a disabled plugin is never loaded, so its verbs, task types and errors are not registered. `Plugin:reload` loads its module from disk again.
 

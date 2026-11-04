@@ -55,23 +55,6 @@ function lfsext.normalise(path)
     return joined == "" and "." or joined
 end
 
--- the global folder if there is one, then every .vex folder from the outermost above path to the innermost
-function lfsext.layers(path, getenv)
-    local layers = {}
-    local global = lfsext.globaldir(getenv)
-    if global then table.insert(layers, global) end
-    local current = path or lfs.currentdir()
-    local vexdirs = {}
-    while current do
-        if lfs.attributes(current .. "/.vex", "mode") == "directory" then
-            table.insert(vexdirs, 1, current .. "/.vex")
-        end
-        current = current:match("(.+)[\\/][^\\/]+$")
-    end
-    for _, dir in ipairs(vexdirs) do table.insert(layers, dir) end
-    return layers
-end
-
 function lfsext.mkdirs(path)
     if lfs.attributes(path, "mode") == "directory" then return true end
     local parent = path:match("(.+)[\\/][^\\/]+$")

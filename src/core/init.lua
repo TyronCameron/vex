@@ -1,10 +1,11 @@
 local pretty = require 'lib.pretty'
 local lfs = require "lib.lfs"
 local cli = require "lib.cli"
-local Config = require "lib.config"
 local defaults = require "core.configdefaults"
 
-local default_config = Config.merge(defaults, {paths = {groupby = {"status", "lineage"}}})
+local default_config = {}
+for key, value in pairs(defaults) do default_config[key] = value end
+default_config.paths = {groupby = {"status", "lineage"}}
 
 local function setup_vex_dir(path)
     path = path or lfs.currentdir()

@@ -5,36 +5,10 @@ Config.__index = function(tab, key)
     return rawget(Config, key) or rawget(rawget(tab, "properties"), key)
 end
 
-local function ismap(value)
-    if type(value) ~= 'table' then return false end
-    for key in pairs(value) do
-        if type(key) ~= 'number' then return true end
-    end
-    return false
-end
-
-local function copy(value)
-    if type(value) ~= 'table' then return value end
-    local result = {}
-    for key, child in pairs(value) do result[key] = copy(child) end
-    return result
-end
-
--- maps merge key by key, anything else (lists included) in the second replaces the first
-function Config.merge(base, over)
-    local result = copy(base)
-    for key, value in pairs(over) do
-        if ismap(value) and ismap(result[key]) then
-            result[key] = Config.merge(result[key], value)
-        else
-            result[key] = copy(value)
-        end
-    end
-    return result
-end
-
 function Config.new(defaults)
-    return setmetatable({files = {}, properties = copy(defaults or {})}, Config)
+    local properties = {}
+    for key, value in pairs(defaults or {}) do properties[key] = value end
+    return setmetatable({files = {}, properties = properties}, Config)
 end
 
 function Config:registerpath(path)
@@ -50,7 +24,9 @@ function Config:loadall()
             if not ok or type(cfg) ~= 'table' then
                 return nil, path, ok and 'it must return a table, not ' .. type(cfg) or cfg
             end
-            self.properties = Config.merge(self.properties, cfg)
+            for key, value in pairs(cfg) do
+                self.properties[key] = value
+            end
         end
     end
     return self

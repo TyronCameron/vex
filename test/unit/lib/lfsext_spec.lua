@@ -130,21 +130,4 @@ describe("lfsext", function()
         end)
     end)
 
-    describe("layers", function()
-        it("lists the global folder, then every .vex above the path from the outermost in", function()
-            local dir, home = tmpdir(), tmpdir()
-            os.execute("mkdir -p '" .. dir .. "/.vex' '" .. dir .. "/a/.vex' '" .. dir .. "/a/b/c'")
-            local getenv = function(name) return name == "VEX_HOME" and home or nil end
-            assert.same({home, dir .. "/.vex", dir .. "/a/.vex"}, lfsext.layers(dir .. "/a/b/c", getenv))
-            os.execute("rm -rf '" .. dir .. "' '" .. home .. "'")
-        end)
-
-        it("leaves out a global folder that does not exist", function()
-            local dir = tmpdir()
-            os.execute("mkdir -p '" .. dir .. "/.vex'")
-            assert.same({dir .. "/.vex"}, lfsext.layers(dir, function() end))
-            os.execute("rm -rf '" .. dir .. "'")
-        end)
-    end)
-
 end)

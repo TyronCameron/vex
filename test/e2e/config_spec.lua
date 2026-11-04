@@ -18,13 +18,6 @@ describe("vex config (e2e, subprocess)", function()
     helper.write_file((where or dir) .. "/.vex/config.lua", code)
   end
 
-  local function project_in(parent, name)
-    local inner = parent .. "/" .. name
-    os.execute("mkdir -p " .. helper.shell_escape(inner))
-    vex(inner, "init")
-    return inner
-  end
-
   describe("task folder", function()
     local spellings = {
       {"a trailing slash", "x/tasks/"},
@@ -71,38 +64,6 @@ describe("vex config (e2e, subprocess)", function()
       config("return {}")
       local vexid = vex(dir, "add", "Plain", "task", "here")
       assert.equal(dir .. "/" .. vexid .. ".md", helper.task_file(dir, vexid))
-    end)
-  end)
-
-  describe("hierarchy", function()
-    it("inherits settings from the .vex folders above, with the innermost project owning the task folder", function()
-      config("return { taskfolder = 'outer', taskowners = {'alice'}, paths = { groupby = {'status'} } }")
-      local inner = project_in(dir, "inner")
-      config("return {}", inner)
-      local vexid = vex(inner, "add", "Inherit", "settings", "--owner", "alice")
-      assert.equal(inner .. "/outer/todo/" .. vexid .. ".md", helper.task_file(inner, vexid))
-    end)
-
-    it("lets an inner config override an outer one", function()
-      config("return { taskfolder = 'outer', paths = { groupby = {'status'} } }")
-      local inner = project_in(dir, "inner")
-      config("return { paths = { groupby = {} } }", inner)
-      local vexid = vex(inner, "add", "Override", "settings")
-      assert.equal(inner .. "/outer/" .. vexid .. ".md", helper.task_file(inner, vexid))
-    end)
-
-    it("loads extensions and plugins from the .vex folders above", function()
-      helper.write_file(dir .. "/.vex/tasks/bug.lua", [[
-        task:task 'bug':extends 'task' { schema = schema.atleast {} }
-      ]])
-      helper.write_file(dir .. "/.vex/plugin/hello.lua", [[
-        local cli = require 'lib.cli'
-        cli:verb "hello" { function() print('hello from above') end, doc = "Greet", args = "", example = "vex hello" }
-        return {}
-      ]])
-      local inner = project_in(dir, "inner")
-      assert.are.equal(0, helper.run_vex(inner, {"add", "Crash", "on", "start", "--vextype", "bug"}).code)
-      assert.equal("hello from above", vex(inner, "hello"))
     end)
   end)
 

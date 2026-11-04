@@ -12,9 +12,14 @@ end
 local script_dir = source_dir() .. "/"
 local lfs = require 'lib.lfs'
 local lfsext = require 'lib.lfsext'
-local layers = lfsext.layers()
-for _, layer in ipairs(layers) do
-    package.path = layer .. "/?.lua;" .. package.path
+local root = lfsext.rootdir(lfs.currentdir())
+local projectdir = root and root .. "/.vex"
+local globaldir = lfsext.globaldir()
+if globaldir then
+    package.path = globaldir .. "/?.lua;" .. package.path
+end
+if projectdir then
+    package.path = projectdir .. "/?.lua;" .. package.path
 end
 
 math.randomseed(os.time())
@@ -27,9 +32,9 @@ plugin:addenum("sortdata", {"canonicalsort"})
 plugin:addenum("frontmatter", {"canonicalfrontmatter"})
 plugin:addenum("body", {"canonicalbody"})
 plugin:addall(script_dir .. 'plugin')
-for _, layer in ipairs(layers) do
-    if lfs.attributes(layer .. '/plugin', 'mode') == 'directory' then plugin:addall(layer .. '/plugin') end
-end
+local globalplugins = lfsext.globalpath('plugin')
+if globalplugins then plugin:addall(globalplugins) end
+if projectdir and lfs.attributes(projectdir .. '/plugin', 'mode') == 'directory' then plugin:addall(projectdir .. '/plugin') end
 
 local cli = require 'lib.cli'
 
