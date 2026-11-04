@@ -26,6 +26,8 @@ describe("vex user-facing errors (e2e, subprocess)", function()
     {"an unknown shell", "is not known", {"autocomplete", "nosuchshell"}},
     {"a malformed match", "Bad pattern `[a`", {"focus", "all", "--match", "description:[a"}},
     {"an unknown focus operation", "Unknown focus operation `bogus`", {"focus", "all", "--bogus", "x"}},
+    {"contains without a value", "You need to provide a field and value", {"focus", "all", "--contains", "tags"}},
+    {"a manual tag with a space", "Expected a tag", {"add", "Spaced", "tag", "task", "--manualtags", "two words"}},
   }
 
   it("rejects a set flag without a value", function()
@@ -164,5 +166,19 @@ describe("vex user-facing errors (e2e, subprocess)", function()
     local leaf = vex(dir, "add", "Plain", "leaf", "task")
     local parent = vex(dir, "add", "Needy", "parent", "--vextype", "abstract")
     fails(dir, "validation step failed", "set", parent, "--dependencies", leaf)
+  end)
+  local function autotags(source)
+    local config = dir .. "/.vex/config.lua"
+    helper.write_file(config, (helper.read_file(config):gsub("^return {", "return {\n  autotags = {" .. source .. "},", 1)))
+  end
+
+  it("names a tag rule that errors", function()
+    autotags("broken = function() error('boom') end")
+    fails(dir, "The rule for the tag `#broken` failed", "add", "Broken", "rule", "task")
+  end)
+
+  it("rejects tag rules that are not tag names mapped to functions", function()
+    autotags("broken = true")
+    fails(dir, "The `autotags` setting in your config", "add", "Badly", "ruled", "task")
   end)
 end)

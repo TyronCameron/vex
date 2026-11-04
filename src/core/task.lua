@@ -422,6 +422,8 @@ function TaskManager:resolvesingle(vexid)
         if not derive(parent, task, context) then cli:throw('resolution-failed-derivation', vexid) end 
     end 
 
+    task.tags = task.effectivetags
+
     local unlinked = func.ifilter(previouslinks, function(target)
         return not func.any(context.links, function(link) return link == target end)
     end)

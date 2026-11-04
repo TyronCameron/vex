@@ -374,4 +374,84 @@ describe("taskdefinitions", function()
 
     end)
 
+    describe("tags", function()
+        local config = require 'core.config'
+
+        after_each(function()
+            config.properties.autotags = nil
+        end)
+
+        it("leaves tags unset without rules or manual tags", function()
+            local vexid = create({description = "untagged plain task"})
+            assert.is_nil(rawget(task.tasks[vexid], 'tags'))
+            assert.is_nil(rawget(task.tasks[vexid], 'manualtags'))
+        end)
+
+        it("adds a hash to manual tags and keeps the last word on each tag", function()
+            local vexid = create({description = "manual tagged task", manualtags = {"pinned", "+#kept", "-urgent", "#urgent", "-pinned"}})
+            assert.same({"#kept", "#urgent", "-#pinned"}, task.tasks[vexid].manualtags)
+        end)
+
+        it("rejects a manual tag with a space", function()
+            local vexid = task:add({description = "spaced tag task", manualtags = {"two words"}})
+            assert.has_error(function() task:resolve(vexid) end)
+        end)
+
+        it("names each tag whose rule holds, with a hash", function()
+            config.properties.autotags = {
+                open = function(t) return t.phase ~= 'final' end,
+                ['#costly'] = function(t) return (t.cost or 0) > 5 end,
+                ['area/build'] = function(t) return true end,
+            }
+            local vexid = create({description = "ruled tagged task", cost = 9})
+            assert.same({"#area/build", "#costly", "#open"}, task.tasks[vexid].tags)
+        end)
+
+        it("sees the resolved task in its rules", function()
+            config.properties.autotags = {todo = function(t) return t.status == 'todo' end}
+            local vexid = create({vextype = "atom", description = "fresh atom tagged task"})
+            assert.same({"#todo"}, task.tasks[vexid].tags)
+        end)
+
+        it("follows the rules as the task changes", function()
+            config.properties.autotags = {open = function(t) return t.phase ~= 'final' end}
+            local vexid = create({description = "following tagged task"})
+            setstatus(vexid, "done")
+            assert.is_nil(rawget(task.tasks[vexid], 'tags'))
+        end)
+
+        it("unions manual tags with the rules' and drops the suppressed ones", function()
+            config.properties.autotags = {open = function() return true end, review = function() return true end}
+            local vexid = create({description = "overridden tagged task", manualtags = {"pinned", "-review"}})
+            assert.same({"#open", "#pinned"}, task.tasks[vexid].tags)
+        end)
+
+        it("recomputes tags over a hand edit to them", function()
+            config.properties.autotags = {open = function() return true end}
+            local vexid = create({description = "hand edited tags task"})
+            task:set(vexid, {tags = {"#bogus"}})
+            task:resolve(vexid)
+            assert.same({"#open"}, task.tasks[vexid].tags)
+        end)
+
+        it("throws tag-rule-failed when a rule errors", function()
+            config.properties.autotags = {broken = function() error("boom") end}
+            local vexid = task:add({description = "broken rule task"})
+            local ok, err = pcall(function() task:resolve(vexid) end)
+            assert.is_false(ok)
+            assert.truthy(tostring(err):find('tag-rule-failed', 1, true))
+        end)
+
+        it("throws bad-autotags when the rules are not tag names mapped to functions", function()
+            for _, rules in ipairs({"done", {done = true}, {"done"}, {['two words'] = function() end}}) do
+                config.properties.autotags = rules
+                local vexid = task:add({description = "badly ruled task " .. _})
+                local ok, err = pcall(function() task:resolve(vexid) end)
+                assert.is_false(ok)
+                assert.truthy(tostring(err):find('bad-autotags', 1, true))
+            end
+        end)
+
+    end)
+
 end)

@@ -62,6 +62,52 @@ schema.register 'vexlink' {
     end
 }
 
+local tagpattern = '^#[^%s#]+$'
+
+local function hashed(word)
+    return (word:gsub('^#?', '#', 1))
+end
+
+local function unsigned(override)
+    return (override:gsub('^%-', '', 1))
+end
+
+schema.register 'tag' {
+    prevalidate = function(self, instance)
+        return type(instance) == "string" and hashed(instance) or instance
+    end,
+    validate = function(self, instance)
+        return type(instance) == "string" and instance:match(tagpattern) ~= nil, "Expected a tag, a # and then a word without spaces, got `" .. tostring(instance) .. "`"
+    end
+}
+
+schema.register 'tagoverride' {
+    prevalidate = function(self, instance)
+        if type(instance) ~= "string" then return instance end
+        local sign, word = instance:match('^([+-]?)(.*)$')
+        return (sign == '-' and '-' or '') .. hashed(word)
+    end,
+    validate = function(self, instance)
+        return type(instance) == "string" and unsigned(instance):match(tagpattern) ~= nil, "Expected a tag, a # and then a word without spaces, with a - in front to suppress it, got `" .. tostring(instance) .. "`"
+    end
+}
+
+schema.register 'lastoverride' {
+    prevalidate = function(self, instance)
+        if type(instance) ~= "table" then return instance end
+        local kept, seen = {}, {}
+        for i = #instance, 1, -1 do
+            local tag = type(instance[i]) == "string" and unsigned(instance[i]) or instance[i]
+            if not seen[tag] then
+                seen[tag] = true
+                table.insert(kept, 1, instance[i])
+            end
+        end
+        return #kept > 0 and kept or nil
+    end,
+    validate = function() return true end
+}
+
 local function singleparent(child, context)
     for _, vexid in ipairs(vexdex:linksto(child)) do
         local parent = vexdex:get(vexid)
@@ -146,6 +192,13 @@ task:task 'basetask' {
         cost = schema.maybe {schema.num},
         benefit = schema.maybe {schema.num},
         owner = schema.maybe {schema.any(config.taskowners)},
+        manualtags = schema.maybe {
+            schema.all {
+                schema.vec {schema.tagoverride},
+                schema.lastoverride
+            }
+        },
+        tags = schema.maybe {schema.vec {schema.tag}},
     }
 }
 
@@ -225,6 +278,40 @@ task:transient 'wordcount' {
     vextype = 'basetask',
     definition = function(t)
         return select(2, t.description:gsub('%S+', ''))
+    end
+}
+
+local function tagrules()
+    local rules = config.autotags or {}
+    if type(rules) ~= "table" then cli:throw('bad-autotags', rules) end
+    for name, rule in pairs(rules) do
+        if type(name) ~= "string" or not hashed(name):match(tagpattern) or type(rule) ~= "function" then cli:throw('bad-autotags', name) end
+    end
+    return rules
+end
+
+task:transient 'autotags' {
+    vextype = 'basetask',
+    definition = function(t)
+        local tags = {}
+        for name, rule in pairs(tagrules()) do
+            local ok, holds = pcall(rule, t)
+            if not ok then cli:throw('tag-rule-failed', hashed(name), t.vexid, holds) end
+            if holds then table.insert(tags, hashed(name)) end
+        end
+        table.sort(tags)
+        return #tags > 0 and tags or nil
+    end
+}
+
+task:transient 'effectivetags' {
+    vextype = 'basetask',
+    definition = function(t)
+        local wanted = {}
+        for _, tag in ipairs(t.autotags or {}) do wanted[tag] = true end
+        for _, override in ipairs(t.manualtags or {}) do wanted[unsigned(override)] = override:sub(1, 1) ~= '-' end
+        local tags = func.ifilter(func.sortedkeys(wanted), function(tag) return wanted[tag] end)
+        return #tags > 0 and tags or nil
     end
 }
 

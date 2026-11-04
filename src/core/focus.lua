@@ -334,6 +334,33 @@ Focus['nil'] = function(self, field)
     end, field)
 end
 
+local function element(task, field, value)
+    local fieldschema = require('core.task'):schemaof(task.vextype, field)
+    local ok, result = pcall(function() return fieldschema:prevalidate(value, {}) end)
+    if not ok or result == nil then return value end
+    return type(result) == "table" and result[1] or result
+end
+
+local function holds(collection, value)
+    if #collection == 0 then return collection[value] ~= nil end
+    return func.any(collection, function(element) return element == value end)
+end
+
+-- contains field:value..., keeping tasks whose list holds every value, or whose set holds each as a key
+function Focus:contains(field, ...)
+    local values = {...}
+    if field == nil or #values == 0 then
+        cli:throw('usage', 'You need to provide a field and value to check with contains. We saw field = ' .. tostring(field))
+    end
+    return self:chain('contains', function(tasks)
+        return func.ifilter(tasks, function(task)
+            local collection = task[field]
+            if type(collection) ~= "table" then return false end
+            return func.all(values, function(value) return holds(collection, element(task, field, value)) end)
+        end)
+    end, field, ...)
+end
+
 -- fuzzy key:value 
 local function levenshtein(a, b)
     local la, lb = #a, #b

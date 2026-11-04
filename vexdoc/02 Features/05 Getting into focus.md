@@ -17,6 +17,7 @@ A focus is a saved query over your tasks. `vex focus` builds one and most other 
 | `--match field:pattern` | Tasks where `field` matches the Lua pattern, e.g. `description:"^Fix.*$"`. |
 | `--between field:low:high` | Tasks where `field` is in the range. Either end may be empty. |
 | `--nil field` | Tasks with no value for `field`. |
+| `--contains field:value[,value...]` | Tasks where the list in `field` holds every value, or where the set in `field` has each one as a key, e.g. `tags:pinned` or `children:fix-login-1`. |
 | `--select a,b` | Only those fields. |
 | `--orderby field[:desc]` | Tasks sorted by those fields. |
 | `--groupby field` | Tasks in groups. Later flags work per group. |
