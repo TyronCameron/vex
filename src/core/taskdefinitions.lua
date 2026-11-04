@@ -86,6 +86,39 @@ local function acyclic(dependency, context)
     return true
 end
 
+local function finished(task)
+    return rawget(task, 'status') ~= nil and task.phase == 'final'
+end
+
+local function dependents(vexid)
+    return func.ifilter(func.imap(vexdex:linksto(vexid), function(source) return vexdex:get(source) end), function(other)
+        return func.any(other.dependencies or {}, function(dependency) return dependency == vexid end) and not finished(other)
+    end)
+end
+
+local function soonestdependentdue(self, instance, context)
+    if finished(context.previous) then return nil end
+    local dues = func.ifilter(func.imap(dependents(context.vexid), function(other) return other.due end), function(due) return due ~= nil end)
+    return func.ireduce(dues, function(a, b) return math.min(a, b) end)
+end
+
+local function dueinorder(due, context)
+    if finished(context.previous) then return true end
+    local dependencies = context.task.dependencies or {}
+    for _, dependency in ipairs(type(dependencies) == "table" and dependencies or {dependencies}) do
+        local needed = vexdex:get(dependency)
+        if needed and needed.phase ~= 'final' and needed.due and needed.due > due then
+            cli:throw('due-out-of-order', context.vexid, dependency, 'dependency')
+        end
+    end
+    for _, dependent in ipairs(dependents(context.vexid)) do
+        if dependent.due and dependent.due < due then
+            cli:throw('due-out-of-order', context.vexid, dependent.vexid, 'dependent')
+        end
+    end
+    return true
+end
+
 local function holds(task, field)
     return type(task[field]) == "table" and #task[field] > 0
 end
@@ -142,7 +175,10 @@ task:task 'basetask' {
             default = function(self, instance, context) return os.time() end
         },
         vexbody = schema.maybe {schema.str},
-        due = schema.maybe {schema.formatted {schema.datetime}},
+        due = schema.default {
+            schema.maybe {schema.all {schema.formatted {schema.datetime}, schema.constraint {dueinorder}}},
+            default = soonestdependentdue
+        },
         cost = schema.maybe {schema.num},
         benefit = schema.maybe {schema.num},
         owner = schema.maybe {schema.any(config.taskowners)},
@@ -321,23 +357,14 @@ task:transient 'age' {
     end
 }
 
-task:transient 'implied_due' {
-    vextype = 'basetask',
-    definition = function(t)
-        local dependents = func.ifilter(focus.focus(t.vexid):step('backlinks'):get(), function(other)
-            return other.phase ~= 'final' and func.any(other.dependencies or {}, function(vexid) return vexid == t.vexid end)
-        end)
-        local dues = func.ifilter(func.imap(dependents, function(other) return other.implied_due end), function(due) return due ~= nil end)
-        table.insert(dues, t.due)
-        return func.ireduce(dues, function(a, b) return math.min(a, b) end)
-    end
-}
-
 task:transient 'urgency' {
     vextype = 'basetask',
     definition = function(t)
-        local ranked = focus.focus('final'):complement():groupby('owner'):orderby('implied_due'):rn():filter('vexid', t.vexid):get()[1]
-        return ranked and ranked.rn
+        if t.phase == 'final' then return nil end
+        local sooner = func.ifilter(focus.focus('all'):get(), function(other)
+            return other.owner == t.owner and other.due ~= nil and (t.due == nil or other.due < t.due) and not finished(other)
+        end)
+        return #sooner + 1
     end
 }
 

@@ -24,6 +24,7 @@ Every user mistake fails with a named error, a message and a hint, and exits non
 | `self-child` | A task is in its own `children`. | Remove it. |
 | `dependency-cycle` | Dependencies that lead back to the task. | Remove one of them. |
 | `dependency-with-children` | A dependency on an abstract or a decision. | Depend on the atoms under it. |
+| `due-out-of-order` | A `due` earlier than a dependency's, or later than a dependent's. | Change one of the due dates. |
 | `duplicate-vexid` | Two files hold the same `vexid`, usually a copied task file. | Keep one. Nothing was changed. |
 | `bad-groupby` | `paths.groupby` isn't a list of field names. | `groupby = {'lineage', 'status'}`. |
 | `move-failed` | A task file couldn't be moved to its folder. | Check the folder is writable. |

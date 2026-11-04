@@ -11,7 +11,7 @@ Every task is validated against the schema of its `vextype` and of each type tha
 | `created` | datetime | Set when the task is added. |
 | `modified` | datetime | Set on add, and moved to now whenever the task's content changes: a `set` that changes a field, a hand edit, or a value resolution normalises or derives. A `set` that changes nothing, or resolving an unchanged task, leaves it alone. |
 | `vexbody` | text | Optional. The markdown body below the frontmatter. |
-| `due` | datetime | Optional. |
+| `due` | datetime | Optional. When a task has none, vex fills in the earliest `due` of the open tasks that depend on it, the date it is needed by; it stays empty if none of them has one. Once set it is an ordinary date: it doesn't change again unless you change it (`vex set <id> --clear --due` lets it be filled in afresh). It must be no earlier than the `due` of the open tasks it depends on and no later than the `due` of the open tasks that depend on it (equal dates are fine; tasks without a `due`, and finished tasks, don't count), otherwise vex fails with `due-out-of-order`. |
 | `cost`, `benefit` | number | Optional. |
 | `owner` | text | Optional. Must be one of the `taskowners` in `.vex/config.lua`. |
 | `dependencies` | list of links | Optional. Each entry must be an existing task without `children` or `options`, and dependencies can't form a cycle. |
@@ -42,8 +42,7 @@ Transients are fields vex works out each time they are read. They are never stor
 | `forwardlinks` | The vexids of the tasks the task links to. |
 | `path` | Where the task file is. |
 | `age` | Whole days since `created`. |
-| `implied_due` | The earliest `due` among the task and the open tasks that depend on it, directly or not: a task is needed by the time its soonest dependent is due. Empty when none of them has a due date. |
-| `urgency` | The task's rank among its owner's open tasks by `implied_due`, 1 being the most urgent. Tasks without one rank last, and finished tasks have none. |
+| `urgency` | The task's rank among its owner's open tasks by `due`, 1 being the most urgent. Tasks with the same `due` share a rank, tasks without one rank after all that have one, and finished tasks have none. |
 
 Add your own in `.vex/tasks` ([[03 Configuring task types]]).
 

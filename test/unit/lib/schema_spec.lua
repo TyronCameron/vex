@@ -379,6 +379,17 @@ describe("schema", function()
         assert.equal(99, result)
     end)
 
+    it("`schema.default` accepts a nil default when its child allows nil", function()
+        local s = schema.default { schema.maybe { 'num' }, default = function() return nil end }
+        assert.is_nil(s:prevalidate(nil))
+        assert.is_true(s:validate(nil))
+    end)
+
+    it("`schema.default` rejects a nil default when its child needs a value", function()
+        local s = schema.default { 'num', default = function() return nil end }
+        assert.is_false(s:validate(nil))
+    end)
+
     -- ==================== CLI input coercion (fix-typed-field-cli-input-1) ====================
 
     it("`schema.num` coerces a numeric string on prevalidate", function()

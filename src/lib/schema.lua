@@ -811,7 +811,13 @@ Schema.register 'default' {
         end
         return instance
     end,
-    validate = validate_children,
+    validate = function(self, instance, context)
+        for childschema in self:iterate(instance, context) do
+            local valid, err = childschema:validate(instance, context)
+            if not valid then return false, err end
+        end
+        return true
+    end,
     postvalidate = postvalidate_children
 }
 
