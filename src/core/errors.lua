@@ -50,6 +50,27 @@ cli:error "duplicate-vexid" {
     hint = "Keep one of the files. Nothing was changed."
 }
 
+cli:error "bad-config" {
+    function(failure)
+        return 'A setting in your config is wrong: ' .. tostring(failure)
+    end,
+    hint = "Fix it in `.vex/config.lua`, in a `.vex/config.lua` further up the folder tree, or in the global `config.lua`."
+}
+
+cli:error "bad-config-file" {
+    function(path, err)
+        return 'Could not read the config file `' .. tostring(path) .. '`: ' .. tostring(err)
+    end,
+    hint = "A config file must be valid Lua that returns a table, e.g. `return { taskfolder = 'tasks' }`."
+}
+
+cli:error "bad-plugin-setting" {
+    function(name, problem)
+        return 'The `plugins` setting in your config is wrong at `' .. tostring(name) .. '`: ' .. tostring(problem)
+    end,
+    hint = "Write `plugins = { slot = 'member' }` to choose what fills a slot, or `plugins = { name = false }` to turn a plugin off. Plugins come from `src/plugin` and from the `plugin` folder of `.vex` and the global folder."
+}
+
 cli:error "bad-groupby" {
     function(groupby)
         return 'The `paths.groupby` setting in your config must be a list of field names, but it is `' .. tostring(groupby) .. '`.'

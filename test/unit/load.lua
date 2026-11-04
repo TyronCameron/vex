@@ -18,4 +18,5 @@ require 'core.errors'
 require 'core.verbs'
 
 plugin:each(function(plug) end) -- automatically loads them
+require 'core.extensions'
 

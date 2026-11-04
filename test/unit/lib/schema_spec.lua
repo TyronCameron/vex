@@ -609,4 +609,19 @@ describe("schema", function()
         end)
     end)
 
+    describe("path", function()
+        it("normalises a relative path when prevalidating it", function()
+            local s = schema.path
+            assert.equal("a/b", s:prevalidate("./a//b/"))
+            assert.equal(".", s:prevalidate(""))
+            assert.equal(42, s:prevalidate(42))
+        end)
+
+        it("accepts a relative path and rejects an absolute one or a non-string", function()
+            assert.is_true(schema.path:validate("a/b"))
+            assert.is_false(schema.path:validate("/a/b"))
+            assert.is_false(schema.path:validate(5))
+        end)
+    end)
+
 end)

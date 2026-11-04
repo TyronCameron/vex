@@ -20,7 +20,7 @@ describe("init", function()
         assert.equal(100, config.loglimit)
         assert.same({groupby = {"status", "lineage"}}, config.paths)
         assert.is_nil(config.plugins)
-        for _, folder in ipairs({"vexdex", "tasks", "recipes", "focuses", "views", "events", "tmp"}) do
+        for _, folder in ipairs({"vexdex", "tasks", "recipes", "focuses", "views", "events", "plugin", "tmp"}) do
             assert.truthy(io.open(dir .. "/.vex/" .. folder .. "/."), folder .. " was not created")
         end
         os.execute("rm -rf '" .. dir .. "'")

@@ -1,21 +1,10 @@
 local pretty = require 'lib.pretty'
 local lfs = require "lib.lfs"
 local cli = require "lib.cli"
+local Config = require "lib.config"
+local defaults = require "core.configdefaults"
 
-local default_config = {
-    taskfolder = '.',
-    default = {
-        tasktype = 'task'
-    },
-    paths = {
-        groupby = {"status", "lineage"}
-    },
-    taskowners = {},
-    loglimit = 100,
-    fingerprint = {
-        exclude = {"modified"}
-    }
-}
+local default_config = Config.merge(defaults, {paths = {groupby = {"status", "lineage"}}})
 
 local function setup_vex_dir(path)
     path = path or lfs.currentdir()
@@ -44,6 +33,7 @@ local function create_ext_folders(path)
     lfs.mkdir(path .. "/recipes")
     lfs.mkdir(path .. "/tmp")
     lfs.mkdir(path .. "/events")
+    lfs.mkdir(path .. "/plugin")
 end 
 
 local function init(path)

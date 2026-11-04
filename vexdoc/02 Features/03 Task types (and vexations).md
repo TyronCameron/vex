@@ -1,4 +1,4 @@
-Every task has a `vextype`. The base type is `task`. The vexations plugin adds four types on top of it, each answering a different question about the work. Every type keeps all of `task`'s fields (see [[02 Frontmatter schema]]).
+Every task has a `vextype`. The base type is `task`. The vexations plugin adds four types on top of it, each answering a different question about the work. It ships with vex and is on by default; `plugins = { vexations = false }` in `config.lua` switches it off and leaves only `task` (see [[01 Configuring vex (config.lua)#Plugins]]). Every type keeps all of `task`'s fields (see [[02 Frontmatter schema]]).
 
 | `vextype` | Answers | Body | Structure |
 | --- | --- | --- | --- |

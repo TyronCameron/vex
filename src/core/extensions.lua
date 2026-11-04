@@ -2,7 +2,6 @@ local func = require 'lib.func'
 local lfs = require 'lib.lfs'
 local lfsext = require 'lib.lfsext'
 local cli = require 'lib.cli'
-local vexdex = require 'core.vexdex'
 
 local env = setmetatable({
     task = require 'core.task',
@@ -28,6 +27,5 @@ local function run(dir)
 end
 
 for _, folder in ipairs {'tasks', 'recipes', 'focuses', 'views', 'events'} do
-    run(lfsext.globalpath(folder))
-    run(vexdex:vexpath(folder))
+    for _, layer in ipairs(lfsext.layers()) do run(layer .. '/' .. folder) end
 end

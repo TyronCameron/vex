@@ -60,4 +60,57 @@ describe("Config", function()
         assert.same({}, cfg.files)
     end)
 
+    local function configfile(code)
+        local path = os.tmpname()
+        local f = io.open(path, "w")
+        f:write(code)
+        f:close()
+        return path
+    end
+
+    it("merges maps from later files into earlier ones and replaces lists", function()
+        local first = configfile("return { paths = { groupby = {'status'}, other = 1 }, taskowners = {'a', 'b'} }")
+        local second = configfile("return { paths = { groupby = {} }, taskowners = {'c'} }")
+        local cfg = Config.new():registerpath(first):registerpath(second):loadall()
+        assert.same({groupby = {}, other = 1}, cfg.paths)
+        assert.same({'c'}, cfg.taskowners)
+        os.remove(first)
+        os.remove(second)
+    end)
+
+    it("starts from the defaults it is given and lets files override them", function()
+        local defaults = {loglimit = 100, fingerprint = {exclude = {'modified'}, extra = true}}
+        local path = configfile("return { fingerprint = { exclude = {} } }")
+        local cfg = Config.new(defaults):registerpath(path):loadall()
+        assert.equal(100, cfg.loglimit)
+        assert.same({exclude = {}, extra = true}, cfg.fingerprint)
+        assert.same({exclude = {'modified'}, extra = true}, defaults.fingerprint)
+        os.remove(path)
+    end)
+
+    it("reports a file that does not run instead of carrying on", function()
+        local path = configfile("return {")
+        local cfg, failed, err = Config.new():registerpath(path):loadall()
+        assert.is_nil(cfg)
+        assert.equal(path, failed)
+        assert.truthy(err)
+        os.remove(path)
+    end)
+
+    it("reports a file that does not return a table", function()
+        local path = configfile("return 5")
+        local cfg, failed = Config.new():registerpath(path):loadall()
+        assert.is_nil(cfg)
+        assert.equal(path, failed)
+        os.remove(path)
+    end)
+
+    it("merges two tables without changing either", function()
+        local base = {a = {b = 1, c = 2}, list = {1, 2}}
+        local over = {a = {b = 3}, list = {9}}
+        assert.same({a = {b = 3, c = 2}, list = {9}}, Config.merge(base, over))
+        assert.same({a = {b = 1, c = 2}, list = {1, 2}}, base)
+        assert.same({a = {b = 3}, list = {9}}, over)
+    end)
+
 end)

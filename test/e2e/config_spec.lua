@@ -1,0 +1,144 @@
+local spec_dir = debug.getinfo(1, "S").source:match("^@(.+[\\/])")
+package.path = spec_dir .. "?.lua;" .. package.path
+local helper = require 'helper'
+local vex, fails = helper.vex, helper.vex_fails
+
+describe("vex config (e2e, subprocess)", function()
+  local dir
+
+  before_each(function()
+    dir = helper.project()
+  end)
+
+  after_each(function()
+    helper.rm_tmp_dir(dir)
+  end)
+
+  local function config(code, where)
+    helper.write_file((where or dir) .. "/.vex/config.lua", code)
+  end
+
+  local function project_in(parent, name)
+    local inner = parent .. "/" .. name
+    os.execute("mkdir -p " .. helper.shell_escape(inner))
+    vex(inner, "init")
+    return inner
+  end
+
+  describe("task folder", function()
+    local spellings = {
+      {"a trailing slash", "x/tasks/"},
+      {"a leading dot and doubled slashes", "./x//tasks"},
+      {"backslashes", "x\\tasks"},
+    }
+    for _, case in ipairs(spellings) do
+      it("is normalised when written with " .. case[1], function()
+        config("return { taskfolder = [[" .. case[2] .. "]], paths = { groupby = {'status', 'lineage'} } }")
+        vex(dir, "add", "Make", "seed", "data", "--vextype", "abstract")
+        local parent = "make-seed-data-1"
+        local child = vex(dir, "add", "Make", "seeding", "reproducible", "--vextype", "atom")
+        vex(dir, "set", parent, "--insert", "--children", child)
+        vex(dir, "resolve", "all")
+        vex(dir, "resolve", "all", "--force")
+        assert.equal(dir .. "/x/tasks/todo/" .. parent .. "/" .. child .. ".md", helper.task_file(dir, child))
+      end)
+    end
+
+    it("is read as relative to the project, so an absolute one is refused", function()
+      config("return { taskfolder = '/tmp' }")
+      fails(dir, "A setting in your config is wrong", "resolve", "all")
+    end)
+  end)
+
+  describe("validation", function()
+    it("refuses a setting of the wrong kind, naming it", function()
+      config("return { loglimit = 'lots' }")
+      fails(dir, "loglimit", "resolve", "all")
+    end)
+
+    it("refuses a config file that does not run, naming it", function()
+      config("return {")
+      fails(dir, ".vex/config.lua", "resolve", "all")
+      fails(dir, "Could not read the config file", "resolve", "all")
+    end)
+
+    it("refuses a config file that does not return a table", function()
+      config("return 5")
+      fails(dir, "must return a table", "resolve", "all")
+    end)
+
+    it("runs with no config settings at all", function()
+      config("return {}")
+      local vexid = vex(dir, "add", "Plain", "task", "here")
+      assert.equal(dir .. "/" .. vexid .. ".md", helper.task_file(dir, vexid))
+    end)
+  end)
+
+  describe("hierarchy", function()
+    it("inherits settings from the .vex folders above, with the innermost project owning the task folder", function()
+      config("return { taskfolder = 'outer', taskowners = {'alice'}, paths = { groupby = {'status'} } }")
+      local inner = project_in(dir, "inner")
+      config("return {}", inner)
+      local vexid = vex(inner, "add", "Inherit", "settings", "--owner", "alice")
+      assert.equal(inner .. "/outer/todo/" .. vexid .. ".md", helper.task_file(inner, vexid))
+    end)
+
+    it("lets an inner config override an outer one", function()
+      config("return { taskfolder = 'outer', paths = { groupby = {'status'} } }")
+      local inner = project_in(dir, "inner")
+      config("return { paths = { groupby = {} } }", inner)
+      local vexid = vex(inner, "add", "Override", "settings")
+      assert.equal(inner .. "/outer/" .. vexid .. ".md", helper.task_file(inner, vexid))
+    end)
+
+    it("loads extensions and plugins from the .vex folders above", function()
+      helper.write_file(dir .. "/.vex/tasks/bug.lua", [[
+        task:task 'bug':extends 'task' { schema = schema.atleast {} }
+      ]])
+      helper.write_file(dir .. "/.vex/plugin/hello.lua", [[
+        local cli = require 'lib.cli'
+        cli:verb "hello" { function() print('hello from above') end, doc = "Greet", args = "", example = "vex hello" }
+        return {}
+      ]])
+      local inner = project_in(dir, "inner")
+      assert.are.equal(0, helper.run_vex(inner, {"add", "Crash", "on", "start", "--vextype", "bug"}).code)
+      assert.equal("hello from above", vex(inner, "hello"))
+    end)
+  end)
+
+  describe("plugins", function()
+    it("swaps a slot's member for a project plugin", function()
+      helper.write_file(dir .. "/.vex/plugin/shorttag.lua", [[
+        return { generate = function(_, lookup)
+          local n = 1
+          while lookup['short-' .. n] do n = n + 1 end
+          return 'short-' .. n
+        end }
+      ]])
+      config("return { plugins = { tagger = 'shorttag' } }")
+      assert.equal("short-1", vex(dir, "add", "Anything", "at", "all"))
+    end)
+
+    it("switches a standalone plugin off", function()
+      assert.truthy(helper.run_vex(dir, {"autocomplete", "bash"}).stdout:find("complete", 1, true))
+      config("return { plugins = { vexcomplete = false } }")
+      fails(dir, "unknown verb 'autocomplete'", "autocomplete", "bash")
+    end)
+
+    it("refuses a plugin or slot that does not exist", function()
+      config("return { plugins = { nosuch = false } }")
+      fails(dir, "nosuch", "resolve", "all")
+    end)
+
+    it("refuses a slot given a plugin that does not exist", function()
+      config("return { plugins = { tagger = 'nosuch' } }")
+      fails(dir, "unknown plugin 'nosuch'", "resolve", "all")
+    end)
+
+    it("takes the vexations task types away when vexations is switched off, leaving plain tasks", function()
+      config("return { plugins = { vexations = false } }")
+      assert.truthy(vex(dir, "add", "Plain", "task", "here"))
+      assert.are_not.equal(0, helper.run_vex(dir, {"add", "An", "atom", "here", "--vextype", "atom"}).code)
+    end)
+  end)
+end)

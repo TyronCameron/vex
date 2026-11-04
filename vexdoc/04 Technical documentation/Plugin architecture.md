@@ -13,7 +13,7 @@ plugin:addenum("frontmatter", {"canonicalfrontmatter"})
 plugin:addenum("body", {"canonicalbody"})
 ```
 
-`Plugin:select(name, member)` switches the active member. The rest of vex depends only on the slot. Markdown with YAML frontmatter is simply what the `obsidian` member of `taskformat` writes; another member could store the same fields as JSON or database rows, and schemas, focuses and views would work unchanged.
+`Plugin:select(name, member)` switches the active member to any registered plugin, including one shipped in a `plugin` folder of your own. A project does it from `config.lua`: `plugins = { tagger = 'shorttag' }` (see [[01 Configuring vex (config.lua)#Plugins]]). The rest of vex depends only on the slot. Markdown with YAML frontmatter is simply what the `obsidian` member of `taskformat` writes; another member could store the same fields as JSON or database rows, and schemas, focuses and views would work unchanged.
 
 | Slot | Default | Controls |
 | --- | --- | --- |
@@ -35,10 +35,12 @@ if not ok then
 end
 ```
 
-`src/default` holds the reference implementation for every slot. To replace one for every project, add a module of the same name to the `plugin` folder of your global folder (see [[01 Configuring vex (config.lua)#The global folder]]), which sits ahead of the install on Lua's module path and so survives upgrades.
+`src/default` holds the reference implementation for every slot. To replace one, add a module of the same name to a `plugin` folder: `.vex/plugin` for one project, a `.vex/plugin` in a parent folder for every project below it, or the `plugin` folder of your global folder for all of them (see [[01 Configuring vex (config.lua)#Layers]]). These sit ahead of the install on Lua's module path, innermost first, and the global one survives upgrades. To add a new member instead, put it in one of those folders under a new name and select it with `plugins = { slot = 'name' }`.
 
 ## Standalone plugins
 
-`Plugin:add(name)` and `Plugin:addall(dir)` register plugins outside any slot. At startup, `src/vex.lua` registers every file in `src/plugin`, then every file in the global `plugin` folder. A file named after an existing plugin or slot member is not registered again; it only changes which module gets loaded. That includes `vexcomplete`, which provides `vex autocomplete` and `vex suggest`, and the `vexations` and `inline` plugins.
+`Plugin:add(name)` and `Plugin:addall(dir)` register plugins outside any slot. At startup, `src/vex.lua` registers every file in `src/plugin`, then every file in the `plugin` folder of each layer. A file named after an existing plugin or slot member is not registered again; it only changes which module gets loaded. `src/plugin` holds `vexcomplete`, which provides `vex autocomplete` and `vex suggest`, and `vexations`, which registers the `abstract`, `decision`, `exploration` and `atom` task types, the `abstract` recipe and the abstract `status` and `phase` transients.
 
-`Plugin:enable` and `Plugin:disable` switch a plugin without unregistering it. `Plugin:reload` loads its module from disk again.
+`Plugin:enable` and `Plugin:disable` switch a plugin without unregistering it: a disabled plugin is never loaded, so its verbs, task types and errors are not registered. `Plugin:reload` loads its module from disk again.
+
+`Plugin:configure(settings)` applies the `plugins` table of `config.lua` to all of this at startup: `slot = 'plugin'` selects, `plugin = false` or `true` switches. It runs before `core.task` and `core.view` load, because they read the active members as they load. An unknown name, or a plugin that fills a slot being switched off, is the `bad-plugin-setting` error.
