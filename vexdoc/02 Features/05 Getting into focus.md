@@ -39,7 +39,7 @@ A focus starts from one of these:
 | `initial` | Tasks in their type's first status: `todo`, and abstracts whose children are all untouched. |
 | `interim` | Tasks in between: abstracts with some children done. |
 | `final` | Tasks with no way out of their status: `done`, and abstracts whose children are all done. |
-| `ready` | Tasks that aren't `final` and have no `blockers`: work you can start now, ordered by `implied_due` (soonest first, undated last). |
+| `ready` | Tasks that aren't `final` and have no `blockers`: work you can start now, ordered by `due` (soonest first, undated last). |
 | `prev` | The saved focus. |
 | a vexid | That one task. |
 | a path containing `/` | The task file there, or every task file in that folder. |
@@ -124,7 +124,7 @@ $ vex view tabular --select owner,due,urgency
 └─────────────────────────────┴─────────────────────┴───────┴─────────┘
 ```
 
-`ready` drops finished and blocked tasks, and `--nil children` drops abstracts, which nobody works on directly. `urgency` ranks each owner's open tasks by `implied_due`, so everyone's most urgent task comes first, then everyone's second. A task due soon pulls the tasks it depends on forward through `implied_due`, so a dependency never ranks after a dependent with a later due date.
+`ready` drops finished and blocked tasks, and `--nil children` drops abstracts, which nobody works on directly. `urgency` ranks each owner's open tasks by `due`, so everyone's most urgent task comes first, then everyone's second. A task with no `due` takes its soonest open dependent's, so it ranks ahead of the tasks that need it. Tasks that tie share a rank, and `due` breaks the tie when you add `--orderby urgency:due`.
 
 ### Open decisions
 

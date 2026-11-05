@@ -282,6 +282,19 @@ describe("Focus", function()
             return func.imap(list, function(t) return t.vexid end)
         end
 
+        it("orderby reads each task's field once, however many comparisons the sort makes", function()
+            local reads = 0
+            local counted = {}
+            for i = 1, 20 do
+                counted[i] = setmetatable({vexid = "c" .. i}, {__index = function(_, field)
+                    if field == 'lazy' then reads = reads + 1 return 21 - i end
+                end})
+            end
+            local ordered = f:orderby('lazy'):get(counted)
+            assert.equal("c20", ordered[1].vexid)
+            assert.equal(20, reads)
+        end)
+
         it("orderby sorts by a field, keeping ties in order and missing values last", function()
             assert.same({"b", "e", "c", "a", "d"}, vexids(f:orderby('cost'):get(tasks)))
         end)

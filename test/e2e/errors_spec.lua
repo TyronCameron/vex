@@ -153,6 +153,11 @@ describe("vex user-facing errors (e2e, subprocess)", function()
     fails(dir, "already depends on it", "resolve", "all")
   end)
 
+  it("rejects a due date earlier than a dependency's", function()
+    local needed = vex(dir, "add", "Needed", "first", "task", "--due", "2026-12-10 09:00:00")
+    fails(dir, "due earlier than", "add", "Needy", "second", "task", "--dependencies", needed, "--due", "2026-12-01 09:00:00")
+  end)
+
   it("rejects a dependency on a task with children", function()
     local leaf = vex(dir, "add", "Grouped", "leaf", "task")
     local parent = vex(dir, "add", "Grouping", "parent", "--vextype", "abstract")

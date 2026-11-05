@@ -369,7 +369,6 @@ local function prevalidate_children(self, instance, context)
 end 
 
 local function validate_children(self, instance, context)
-    if instance == nil then return false, "Found nil instance when expecting to iterate through subschemas" end 
     for childschema, childinstance in self:iterate(instance, context) do 
         local valid, err = childschema:validate(childinstance, context)
         if not valid then return false, err end 

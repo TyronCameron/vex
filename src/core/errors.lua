@@ -211,6 +211,13 @@ cli:error 'dependency-cycle' {
     hint = "Dependencies must not form a cycle. Remove one of the dependencies."
 }
 
+cli:error 'due-out-of-order' {
+    function(vexid, dependency)
+        return 'Task `' .. tostring(vexid) .. '` is due earlier than `' .. tostring(dependency) .. '`, which it depends on.'
+    end,
+    hint = "A task must be due no earlier than the tasks it depends on. Change one of the due dates."
+}
+
 cli:error 'dependency-with-children' {
     function(vexid, dependency)
         return 'Task `' .. tostring(vexid) .. '` cannot depend on `' .. tostring(dependency) .. '`, because it has children or options.'

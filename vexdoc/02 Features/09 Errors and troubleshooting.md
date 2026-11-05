@@ -24,6 +24,7 @@ Every user mistake fails with a named error, a message and a hint, and exits non
 | `self-child` | A task is in its own `children`. | Remove it. |
 | `dependency-cycle` | Dependencies that lead back to the task. | Remove one of them. |
 | `dependency-with-children` | A dependency on an abstract or a decision. | Depend on the atoms under it. |
+| `due-out-of-order` | A task is due earlier than one of its dependencies. | Change one of the due dates. |
 | `duplicate-vexid` | Two files hold the same `vexid`, usually a copied task file. | Keep one. Nothing was changed. |
 | `bad-autotags` | `autotags` isn't a table of tag names mapped to functions. | `autotags = { done = function(t) return t.phase == 'final' end }`. |
 | `tag-rule-failed` | A rule in `autotags` raised an error. | Fix the rule named. |

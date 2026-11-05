@@ -15,10 +15,10 @@ A named focus works wherever a focus does (see [[05 Getting into focus]]): as a 
 
 The query methods match the CLI flags: `filter`, `nil`, `fuzzy`, `match`, `between`, `select`, `step`, `tree`, `reversetree`, `orderby`, `groupby`, `rn`, `first`, `last`, `complement`, `union`, `intersect`, `xor`, `notin` and `onlyin` (see [[01 CLI reference#Focuses]]). After `groupby`, `focus:groups()` returns the tasks as their groups; `focus:get()` always returns them as one list.
 
-The built-in `urgency` transient is a focus of this kind:
+The built-in `blockers` transient is a focus of this kind:
 
 ```lua
-focus.focus('final'):complement():groupby('owner'):orderby('implied_due'):rn():filter('vexid', t.vexid)
+focus.focus(t.dependencies):intersect(focus.focus('final'):complement())
 ```
 
 ## Writing a file
