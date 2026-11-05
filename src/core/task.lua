@@ -76,7 +76,9 @@ function TaskManager.new()
         transients = {},
         tasktypes = {},
         modifiers = {},
-        tasks = {}
+        tasks = {},
+        unwritten = {},
+        deleted = {}
     }, TaskManager)
 end
 
@@ -435,7 +437,7 @@ function TaskManager:resolvesingle(vexid)
     return func.imerge(unlinked, func.imerge(task.forwardlinks, task.backlinks)), changed
 end
 
--- resolves the given tasks and the tasks linked to each one that changed, each once, writes those that changed and moves every file to where it belongs; a task whose file is gone or unreadable leaves the index
+-- resolves the given tasks and the tasks linked to each one that changed, each once, in memory, keeping them for writeall; a task whose file is gone or unreadable leaves the index
 function TaskManager:resolveall(vexids)
     local resolved, requested, pending, changed = {}, {}, {}, {}
     for _, vexid in ipairs(vexids) do
@@ -453,10 +455,7 @@ function TaskManager:resolveall(vexids)
         end
     end
     for vexid in pairs(resolved) do
-        if vexdex:get(vexid) then
-            if changed[vexid] then self:write(vexid) else vexdex:unsafe_stamp(vexid, self:getcurrentpath(vexid)) end
-            self:move(vexid)
-        end
+        self.unwritten[vexid] = self.unwritten[vexid] or changed[vexid]
     end
 end
 
@@ -599,12 +598,26 @@ function TaskManager:delete(vexid)
     event:trigger('pre-task-delete', vexid)
     local linked = focus.focus(vexid):step('forwardlinks', 'backlinks'):get()
     local path = self:getcurrentpath(vexid)
-    os.remove(path)
+    table.insert(self.deleted, path)
     vexdex:unsafe_remove(vexid, vexdex:get(vexid).forwardlinks)
-    tidy(path)
     self:resolveall(func.imap(linked, function(task) return task.vexid end))
     event:trigger('post-task-delete', vexid, path)
     return vexid
+end
+
+-- writes the resolved tasks that changed, moves every resolved file to where it belongs, then removes the deleted files
+function TaskManager:writeall()
+    for vexid, changed in pairs(self.unwritten) do
+        if vexdex:get(vexid) then
+            if changed then self:write(vexid) else vexdex:unsafe_stamp(vexid, self:getcurrentpath(vexid)) end
+            self:move(vexid)
+        end
+    end
+    for _, path in ipairs(self.deleted) do
+        os.remove(path)
+        tidy(path)
+    end
+    self.deleted, self.unwritten = {}, {}
 end
 
 ---------------------------------------------------

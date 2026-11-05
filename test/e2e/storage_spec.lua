@@ -281,6 +281,16 @@ describe("vex storage (e2e, subprocess)", function()
   end)
 
 
+  it("writes no task file when a verb fails on a later task", function()
+    local child = vex(dir, "add", "Child", "task", "here", "--vextype", "atom")
+    local abstract = vex(dir, "add", "Alpha", "abstract", "here", "--vextype", "abstract")
+    local atom = vex(dir, "add", "Zulu", "atom", "here", "--vextype", "atom")
+    local before = helper.read_file(dir .. "/" .. abstract .. ".md")
+    helper.vex_fails(dir, "Expected no value", "set", abstract .. "," .. atom, "--children", child)
+    assert.are.equal(before, helper.read_file(dir .. "/" .. abstract .. ".md"))
+    assert.are.equal("", vex(dir, "get", abstract, "--children"))
+  end)
+
   it("keeps quotes and backslashes in a description through repeated resolves (fix-descriptions-quotes-gaining-1)", function()
     local description = 'Say "hi" to C:\\dir, then leave'
     local vexid = vex(dir, "add", description)

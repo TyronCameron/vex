@@ -8,7 +8,7 @@ require 'core.taskdefinitions'
 local function create(properties)
     local vexid = task:add(properties)
     task:resolve(vexid)
-    task:write(vexid)
+    task:writeall()
     return vexid
 end
 
@@ -137,10 +137,39 @@ describe("task", function()
         local dependent = create({description = "cascading dependent task", dependencies = {child}})
         task:remove(child)
         task:delete(child)
+        task:writeall()
         assert.same({}, task.tasks[parent].children)
         assert.same({}, task.tasks[dependent].dependencies)
         assert.same({}, task:read(parent).children)
         assert.same({}, task:read(dependent).dependencies)
+    end)
+
+    it("delete leaves the file until writeall removes it", function()
+        local vexid = create({description = "deferred deleted task"})
+        local path = task:getcurrentpath(vexid)
+        task:remove(vexid)
+        task:delete(vexid)
+        assert.truthy(io.open(path))
+        task:writeall()
+        assert.is_nil(io.open(path))
+    end)
+
+    it("writeall keeps a deleted task's file when a write fails", function()
+        local deleted = create({description = "deleted before failed write"})
+        local kept = create({description = "kept through failed write"})
+        local path = task:getcurrentpath(deleted)
+        task:remove(deleted)
+        task:delete(deleted)
+        task:set(kept, {cost = 2})
+        task:resolve(kept)
+        local atomic = vexdex.atomic
+        vexdex.atomic = function() error("write failed") end
+        local ok = pcall(task.writeall, task)
+        vexdex.atomic = atomic
+        assert.is_false(ok)
+        assert.truthy(io.open(path))
+        task:writeall()
+        assert.is_nil(io.open(path))
     end)
 
     it("remove deletes the task entry from memory", function()
@@ -312,6 +341,7 @@ describe("task", function()
             local vexid = create(properties)
             task:set(vexid, {modified = OLD})
             task:resolve(vexid)
+            task:writeall()
             return vexid
         end
 
@@ -337,11 +367,22 @@ describe("task", function()
             assert.is_true(task.tasks[vexid].modified > OLD)
         end)
 
-        it("writes a resolved task back to its file", function()
+        it("leaves the file alone until writeall writes the resolved task back to it", function()
             local vexid = backdated({description = "written backdated task"})
             task:set(vexid, {cost = 4})
             task:resolve(vexid)
+            assert.is_nil(contents(vexid):find("cost:"))
+            task:writeall()
             assert.equal(4, task:readfrompath(task:getcurrentpath(vexid)).cost)
+        end)
+
+        it("writes a task that changed on an earlier resolve even when a later one leaves it unchanged", function()
+            local vexid = backdated({description = "twice resolved backdated task"})
+            task:set(vexid, {cost = 5})
+            task:resolve(vexid)
+            task:resolve(vexid)
+            task:writeall()
+            assert.equal(5, task:readfrompath(task:getcurrentpath(vexid)).cost)
         end)
 
         it("does not rewrite a task that resolving leaves unchanged", function()
@@ -350,6 +391,7 @@ describe("task", function()
             local atomic = vexdex.atomic
             vexdex.atomic = function(...) writes = writes + 1 return atomic(...) end
             task:resolve(vexid)
+            task:writeall()
             vexdex.atomic = atomic
             assert.equal(0, writes)
             assert.truthy(contents(vexid):find("modified: \"2020%-01%-01"))
@@ -422,6 +464,7 @@ describe("task", function()
             assert.is_nil(resolved[kept])
             task:remove("made-by-hand-1")
             task:delete("made-by-hand-1")
+            task:writeall()
         end)
 
     end)
@@ -440,7 +483,7 @@ describe("task", function()
         local function finish(vexid)
             task:set(vexid, {status = "done"})
             task:resolve(vexid)
-            task:write(vexid)
+            task:writeall()
         end
 
         it("re-derives the stored fields of the tasks linked to a resolved task", function()
@@ -541,6 +584,8 @@ describe("task", function()
         end)
 
         it("fires pre- and post-task-write with the vexid, then the path written", function()
+            task:writeall()
+            fired = {}
             local vexid = create({description = "evented written task"})
             assert.same({vexid}, fired['pre-task-write'][1])
             assert.same({vexid, task:getcurrentpath(vexid)}, fired['post-task-write'][1])
