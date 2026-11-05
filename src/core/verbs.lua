@@ -16,6 +16,7 @@ end
 local function focus_pop_args(args)
     local f = cli.isflag(args[1]) and focus.focus() or focus.focus(table.remove(args, 1))
     task:resolveall(vexids(f:intersect(focus.focus('updated'))))
+    task:writeall()
     return f
 end
 
@@ -30,7 +31,6 @@ end
 cli:verb "show" {
     function(args)
         local f = focus_pop_args(args)
-        task:writeall()
         local lines = {}
         f:each(function(vexid)
             table.insert(lines, task:show(vexid))
@@ -88,7 +88,6 @@ cli:verb "view" {
             viewname = table.remove(positional_args, 1)
             focusname = focus_pop_args(positional_args)
         end
-        task:writeall()
         local flags = args:flags()
         return view:display(viewname, focusname, flags, func.ifilter(args, cli.isflag))
     end,
@@ -149,7 +148,6 @@ cli:verb "remove" {
 cli:verb "get" {
     function(args)
         local f = focus_pop_args(args)
-        task:writeall()
         local fields = {}
         for _, flag in ipairs(func.ifilter(args, cli.isflag)) do
             if flag[1] == 'select' then
