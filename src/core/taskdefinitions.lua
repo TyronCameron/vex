@@ -108,6 +108,24 @@ schema.register 'lastoverride' {
     validate = function() return true end
 }
 
+local taglist = schema.maybe {schema.vec {schema.tag}}
+
+schema.register 'autotagged' {
+    prevalidate = function(self, instance)
+        return taglist:prevalidate(instance)
+    end,
+    validate = function(self, instance)
+        return taglist:validate(instance)
+    end,
+    postvalidate = function(self, instance, context)
+        local wanted = {}
+        for _, tag in ipairs(context.root.autotags or {}) do wanted[tag] = true end
+        for _, override in ipairs(context.root.manualtags or {}) do wanted[unsigned(override)] = override:sub(1, 1) ~= '-' end
+        local tags = func.ifilter(func.sortedkeys(wanted), function(tag) return wanted[tag] end)
+        return #tags > 0 and tags or nil
+    end
+}
+
 local function singleparent(child, context)
     for _, vexid in ipairs(vexdex:linksto(child)) do
         local parent = vexdex:get(vexid)
@@ -198,7 +216,7 @@ task:task 'basetask' {
                 schema.lastoverride
             }
         },
-        tags = schema.maybe {schema.vec {schema.tag}},
+        tags = schema.autotagged,
     }
 }
 
@@ -300,17 +318,6 @@ task:transient 'autotags' {
             if holds then table.insert(tags, hashed(name)) end
         end
         table.sort(tags)
-        return #tags > 0 and tags or nil
-    end
-}
-
-task:transient 'effectivetags' {
-    vextype = 'basetask',
-    definition = function(t)
-        local wanted = {}
-        for _, tag in ipairs(t.autotags or {}) do wanted[tag] = true end
-        for _, override in ipairs(t.manualtags or {}) do wanted[unsigned(override)] = override:sub(1, 1) ~= '-' end
-        local tags = func.ifilter(func.sortedkeys(wanted), function(tag) return wanted[tag] end)
         return #tags > 0 and tags or nil
     end
 }

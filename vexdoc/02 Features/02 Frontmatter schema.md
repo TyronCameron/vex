@@ -68,7 +68,6 @@ Transients are fields vex works out each time they are read. They are never stor
 | `implied_due` | The earliest `due` among the task and the open tasks that depend on it, directly or not: a task is needed by the time its soonest dependent is due. Empty when none of them has a due date. |
 | `urgency` | The task's rank among its owner's open tasks by `implied_due`, 1 being the most urgent. Tasks without one rank last, and finished tasks have none. |
 | `autotags` | The tags whose rule in the `autotags` setting holds for the task. |
-| `effectivetags` | `autotags` with `manualtags` applied: what `tags` becomes on the next resolve. |
 
 Add your own in `.vex/tasks` ([[03 Configuring task types]]).
 

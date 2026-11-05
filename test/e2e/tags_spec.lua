@@ -69,7 +69,7 @@ describe("vex tags (e2e, subprocess)", function()
     rules("open = function() return true end")
     local vexid = helper.vex(dir, "add", "Steady", "tagged", "task")
     local before = helper.read_file(helper.task_file(dir, vexid))
-    helper.vex(dir, "resolve", vexid, "--force")
+    helper.vex(dir, "resolve", "all", "--force")
     assert.equal(before, helper.read_file(helper.task_file(dir, vexid)))
   end)
 

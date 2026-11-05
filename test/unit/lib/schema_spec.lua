@@ -536,6 +536,37 @@ describe("schema", function()
         assert.same({4}, schema.vec { schema.formatted { schema.__spec_double } }:postvalidate({2}))
     end)
 
+    describe("merge", function()
+
+        it("replaces the first schema's fields with the second's and keeps the rest", function()
+            local parent = schema.atleast {name = schema.str, size = schema.num}
+            local child = schema.atleast {size = schema.str}
+            local merged = parent:merge(child)
+            assert.is_true(merged:validate({name = "x", size = "big"}))
+            assert.is_false(merged:validate({name = "x", size = 3}))
+            assert.is_false(merged:validate({name = 1, size = "big"}))
+        end)
+
+        it("leaves both schemas untouched", function()
+            local parent = schema.atleast {size = schema.num}
+            local child = schema.atleast {size = schema.str}
+            parent:merge(child)
+            assert.is_true(parent:validate({size = 3}))
+            assert.is_true(child:validate({size = "big"}))
+        end)
+
+        it("takes the second schema's specification when it is not a table", function()
+            local merged = schema.constant(1):merge(schema.constant(2))
+            assert.is_true(merged:validate(2))
+            assert.is_false(merged:validate(1))
+        end)
+
+        it("refuses schemas of different types", function()
+            assert.has_error(function() schema.atleast {}:merge(schema.exactly {}) end)
+        end)
+
+    end)
+
     describe("failures", function()
         local function plain(failure)
             return (tostring(failure):gsub("\27%[[%d;]*m", ""))

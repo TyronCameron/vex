@@ -437,18 +437,16 @@ describe("taskdefinitions", function()
         it("throws tag-rule-failed when a rule errors", function()
             config.properties.autotags = {broken = function() error("boom") end}
             local vexid = task:add({description = "broken rule task"})
-            local ok, err = pcall(function() task:resolve(vexid) end)
-            assert.is_false(ok)
-            assert.truthy(tostring(err):find('tag-rule-failed', 1, true))
+            assert.is_false(pcall(function() task:resolve(vexid) end))
+            assert.stub(cli.throw).was_called_with(cli, 'tag-rule-failed', '#broken', vexid, match._)
         end)
 
         it("throws bad-autotags when the rules are not tag names mapped to functions", function()
             for _, rules in ipairs({"done", {done = true}, {"done"}, {['two words'] = function() end}}) do
                 config.properties.autotags = rules
                 local vexid = task:add({description = "badly ruled task " .. _})
-                local ok, err = pcall(function() task:resolve(vexid) end)
-                assert.is_false(ok)
-                assert.truthy(tostring(err):find('bad-autotags', 1, true))
+                assert.is_false(pcall(function() task:resolve(vexid) end))
+                assert.stub(cli.throw).was_called_with(cli, 'bad-autotags', match._)
             end
         end)
 
