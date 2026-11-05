@@ -605,17 +605,17 @@ function TaskManager:delete(vexid)
     return vexid
 end
 
--- removes the deleted files, writes the resolved tasks that changed and moves every resolved file to where it belongs
+-- writes the resolved tasks that changed, moves every resolved file to where it belongs, then removes the deleted files
 function TaskManager:writeall()
-    for _, path in ipairs(self.deleted) do
-        os.remove(path)
-        tidy(path)
-    end
     for vexid, changed in pairs(self.unwritten) do
         if vexdex:get(vexid) then
             if changed then self:write(vexid) else vexdex:unsafe_stamp(vexid, self:getcurrentpath(vexid)) end
             self:move(vexid)
         end
+    end
+    for _, path in ipairs(self.deleted) do
+        os.remove(path)
+        tidy(path)
     end
     self.deleted, self.unwritten = {}, {}
 end

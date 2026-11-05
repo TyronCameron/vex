@@ -154,6 +154,24 @@ describe("task", function()
         assert.is_nil(io.open(path))
     end)
 
+    it("writeall keeps a deleted task's file when a write fails", function()
+        local deleted = create({description = "deleted before failed write"})
+        local kept = create({description = "kept through failed write"})
+        local path = task:getcurrentpath(deleted)
+        task:remove(deleted)
+        task:delete(deleted)
+        task:set(kept, {cost = 2})
+        task:resolve(kept)
+        local atomic = vexdex.atomic
+        vexdex.atomic = function() error("write failed") end
+        local ok = pcall(task.writeall, task)
+        vexdex.atomic = atomic
+        assert.is_false(ok)
+        assert.truthy(io.open(path))
+        task:writeall()
+        assert.is_nil(io.open(path))
+    end)
+
     it("remove deletes the task entry from memory", function()
         local vexid = task:add({description = "task to be removed by spec"})
         task:remove(vexid)
