@@ -86,32 +86,25 @@ local function acyclic(dependency, context)
     return true
 end
 
-local function withdue(tasks)
-    return func.ifilter(tasks, function(other) return other.due ~= nil and other.phase ~= 'final' end)
-end
-
-local function extreme(tasks, before)
-    return func.ireduce(tasks, function(best, other) return before(other.due, best.due) and other or best end)
-end
-
-local function duebounds(context)
-    local dependencies = context.task.dependencies or {}
-    local needed = func.imap(type(dependencies) == "table" and dependencies or {dependencies}, function(vexid) return vexdex:get(vexid) end)
-    local needing = func.imap(context.task.dependents, function(vexid) return vexdex:get(vexid) end)
-    return extreme(withdue(needed), function(a, b) return a > b end), extreme(withdue(needing), function(a, b) return a < b end)
+local function openwithdue(vexids)
+    local neighbours = func.imap(type(vexids) == "table" and vexids or {vexids}, function(vexid) return vexdex:get(vexid) end)
+    return func.ifilter(neighbours, function(other) return other.due ~= nil and other.phase ~= 'final' end)
 end
 
 local function duefromdependents(self, instance, context)
     if context.previous.phase == 'final' then return nil end
-    local _, dependent = duebounds(context)
-    return dependent and dependent.due
+    local dues = func.imap(openwithdue(context.task.dependents), function(other) return other.due end)
+    return func.ireduce(dues, function(a, b) return math.min(a, b) end)
 end
 
 local function dueinorder(due, context)
     if context.previous.phase == 'final' then return true end
-    local dependency, dependent = duebounds(context)
-    if dependency and dependency.due > due then cli:throw('due-out-of-order', context.vexid, dependency.vexid, 'dependency') end
-    if dependent and dependent.due < due then cli:throw('due-out-of-order', context.vexid, dependent.vexid, 'dependent') end
+    for _, dependency in ipairs(openwithdue(context.task.dependencies)) do
+        if dependency.due > due then cli:throw('due-out-of-order', context.vexid, dependency.vexid, 'dependency') end
+    end
+    for _, dependent in ipairs(openwithdue(context.task.dependents)) do
+        if dependent.due < due then cli:throw('due-out-of-order', context.vexid, dependent.vexid, 'dependent') end
+    end
     return true
 end
 
