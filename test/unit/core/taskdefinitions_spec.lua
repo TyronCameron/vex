@@ -387,9 +387,14 @@ describe("taskdefinitions", function()
             assert.is_nil(rawget(task.tasks[vexid], 'manualtags'))
         end)
 
-        it("adds a hash to manual tags and keeps the last word on each tag", function()
-            local vexid = create({description = "manual tagged task", manualtags = {"pinned", "+#kept", "-urgent", "#urgent", "-pinned"}})
-            assert.same({"#kept", "#urgent", "-#pinned"}, task.tasks[vexid].manualtags)
+        it("adds a hash to manual tags", function()
+            local vexid = create({description = "manual tagged task", manualtags = {"pinned", "+#kept", "-urgent"}})
+            assert.same({"#pinned", "#kept", "-#urgent"}, task.tasks[vexid].manualtags)
+        end)
+
+        it("lets a suppressed tag win over the same tag pinned", function()
+            local vexid = create({description = "contradicted tagged task", manualtags = {"-pinned", "kept", "pinned"}})
+            assert.same({"#kept"}, task.tasks[vexid].tags)
         end)
 
         it("rejects a manual tag with a space", function()

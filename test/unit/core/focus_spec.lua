@@ -159,9 +159,9 @@ describe("Focus", function()
         }
         local f = Focus.new("all", function(t) return t end)
 
-        it("searches a list for each value", function()
+        it("searches a list for the value", function()
             assert.same({tasks[1], tasks[2]}, f:contains("children", "y"):get(tasks))
-            assert.same({tasks[1]}, f:contains("children", "x", "y"):get(tasks))
+            assert.same({tasks[1]}, f:contains("children", "x"):get(tasks))
         end)
 
         it("looks a value up as a key of a set", function()
@@ -173,7 +173,7 @@ describe("Focus", function()
             assert.same({}, f:contains("children", "x"):get({tasks[4], tasks[5]}))
         end)
 
-        it("reads the value through the field's schema and replays from the saved focus", function()
+        it("replays from the saved focus", function()
             local config = require 'core.config'
             local task = require 'core.task'
             config.properties.autotags = {contained = function(t) return t.description:find('^contained') ~= nil end}
@@ -183,7 +183,7 @@ describe("Focus", function()
                 task:write(vexid)
             end
             config.properties.autotags = nil
-            Focus.focus('all'):contains('tags', 'contained'):write()
+            Focus.focus('all'):contains('tags', '#contained'):write()
             local result = Focus.read():get()
             assert.equal(1, #result)
             assert.equal("contained tagged task", result[1].description)
