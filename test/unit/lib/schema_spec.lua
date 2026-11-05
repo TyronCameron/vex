@@ -379,6 +379,25 @@ describe("schema", function()
         assert.equal(99, result)
     end)
 
+    local wrappers = {
+        all = function(child) return schema.all { child } end,
+        formatted = function(child) return schema.formatted { child } end,
+        derive = function(child) return schema.derive { child, derive = function() return nil end } end,
+        default = function(child) return schema.default { child, default = function() return nil end } end,
+    }
+
+    for name, wrap in pairs(wrappers) do
+        it("`schema." .. name .. "` leaves a nil instance to its child, which may allow it", function()
+            local valid = wrap(schema.maybe { 'num' }):validate(nil)
+            assert.is_true(valid)
+        end)
+
+        it("`schema." .. name .. "` rejects a nil instance when its child needs a value", function()
+            local valid = wrap(schema.num):validate(nil)
+            assert.is_false(valid)
+        end)
+    end
+
     -- ==================== CLI input coercion (fix-typed-field-cli-input-1) ====================
 
     it("`schema.num` coerces a numeric string on prevalidate", function()

@@ -86,13 +86,17 @@ local function acyclic(dependency, context)
     return true
 end
 
-local function holds(task, field)
-    return type(task[field]) == "table" and #task[field] > 0
+local function dueinorder(dependency, context)
+    local needed = vexdex:get(dependency)
+    if needed.due and context.task.due and needed.due > context.task.due and needed.phase ~= 'final' and context.task.phase ~= 'final' then
+        cli:throw('due-out-of-order', context.vexid, dependency)
+    end
+    return true
 end
 
 local function childless(dependency, context)
     local target = focus.focus(dependency):get()[1]
-    if holds(target, 'children') or holds(target, 'options') then
+    if #(target.children or {}) + #(target.options or {}) > 0 then
         cli:throw('dependency-with-children', context.vexid, dependency)
     end
     return true
@@ -118,7 +122,8 @@ local function dependencies()
             schema.all {
                 schema.formatted {schema.vexlink},
                 schema.constraint {acyclic},
-                schema.constraint {childless}
+                schema.constraint {childless},
+                schema.constraint {dueinorder}
             }
         }
     }
@@ -142,7 +147,16 @@ task:task 'basetask' {
             default = function(self, instance, context) return os.time() end
         },
         vexbody = schema.maybe {schema.str},
-        due = schema.maybe {schema.formatted {schema.datetime}},
+        due = schema.default {
+            schema.maybe {schema.formatted {schema.datetime}},
+            default = function(self, instance, context)
+                local dues = func.imap(context.task.dependents, function(vexid)
+                    local dependent = vexdex:get(vexid)
+                    return dependent.phase ~= 'final' and dependent.due or nil
+                end)
+                return func.ireduce(dues, function(a, b) return math.min(a, b) end)
+            end
+        },
         cost = schema.maybe {schema.num},
         benefit = schema.maybe {schema.num},
         owner = schema.maybe {schema.any(config.taskowners)},
@@ -232,7 +246,7 @@ task:transient 'phase' {
     vextype = 'basetask',
     definition = function(t)
         local status = task:schemaof(t.vextype, 'status').specification
-        local machine = statemachine.new(status.states, t.status, status.initial)
+        local machine = statemachine.new(status.states, t.status or status.initial, status.initial)
         if machine:isinitial() then return 'initial' end
         if machine:isfinal() then return 'final' end
         return 'interim'
@@ -274,6 +288,16 @@ task:transient 'blockers' {
             unfinished[dependency.vexid] = true
         end
         return func.ifilter(t.dependencies, function(vexid) return unfinished[vexid] end)
+    end
+}
+
+task:transient 'dependents' {
+    vextype = 'basetask',
+    definition = function(t)
+        return func.ifilter(t.backlinks, function(vexid)
+            local other = vexdex:get(vexid)
+            return other and func.any(other.dependencies or {}, function(dependency) return dependency == t.vexid end)
+        end)
     end
 }
 
@@ -321,23 +345,14 @@ task:transient 'age' {
     end
 }
 
-task:transient 'implied_due' {
-    vextype = 'basetask',
-    definition = function(t)
-        local dependents = func.ifilter(focus.focus(t.vexid):step('backlinks'):get(), function(other)
-            return other.phase ~= 'final' and func.any(other.dependencies or {}, function(vexid) return vexid == t.vexid end)
-        end)
-        local dues = func.ifilter(func.imap(dependents, function(other) return other.implied_due end), function(due) return due ~= nil end)
-        table.insert(dues, t.due)
-        return func.ireduce(dues, function(a, b) return math.min(a, b) end)
-    end
-}
-
 task:transient 'urgency' {
     vextype = 'basetask',
     definition = function(t)
-        local ranked = focus.focus('final'):complement():groupby('owner'):orderby('implied_due'):rn():filter('vexid', t.vexid):get()[1]
-        return ranked and ranked.rn
+        if t.phase == 'final' then return nil end
+        local sooner = func.ifilter(focus.focus('all'):get(), function(other)
+            return other.owner == t.owner and other.due ~= nil and (t.due == nil or other.due < t.due) and other.phase ~= 'final'
+        end)
+        return #sooner + 1
     end
 }
 
