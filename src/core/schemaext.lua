@@ -1,17 +1,9 @@
 local cli = require 'lib.cli'
-local lfsext = require 'lib.lfsext'
 local statemachine = require 'lib.statemachine'
 local schema = require 'lib.schema'
 local vexdex = require 'core.vexdex'
-
-schema.register 'path' {
-    prevalidate = function(self, instance)
-        return type(instance) == "string" and lfsext.normalise(instance) or instance
-    end,
-    validate = function(self, instance)
-        return type(instance) == "string" and not lfsext.isabsolute(instance), "Expected a relative path"
-    end
-}
+local task = require 'core.task'
+local focus = require 'core.focus'
 
 schema.register 'words' {
     validate = function(self, instance, context)
@@ -48,7 +40,7 @@ schema.register 'statemachine' {
 
 schema.register 'vexlink' {
     validate = function(self, vexid)
-        return type(vexid) == "string" and require('core.task'):getsingle(vexid), "Cannot find " .. tostring(vexid) .. " in the task manager "
+        return type(vexid) == "string" and task:getsingle(vexid), "Cannot find " .. tostring(vexid) .. " in the task manager "
     end,
     isos = {
         format = {
@@ -68,7 +60,7 @@ schema.register 'vexlink' {
 
 schema.register 'acyclic' {
     validate = function(self, dependency, context)
-        for _, reachable in ipairs(require('core.focus').focus(dependency):tree('dependencies'):get()) do
+        for _, reachable in ipairs(focus.focus(dependency):tree('dependencies'):get()) do
             if reachable.vexid == context.vexid then cli:throw('dependency-cycle', context.vexid, dependency) end
         end
         return true
@@ -77,7 +69,7 @@ schema.register 'acyclic' {
 
 schema.register 'childless' {
     validate = function(self, dependency, context)
-        local target = require('core.focus').focus(dependency):get()[1]
+        local target = focus.focus(dependency):get()[1]
         for _, field in ipairs {'children', 'options'} do
             if type(target[field]) == "table" and #target[field] > 0 then
                 cli:throw('dependency-with-children', context.vexid, dependency)

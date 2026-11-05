@@ -1,5 +1,6 @@
 
 local func = require 'lib.func'
+local lfsext = require 'lib.lfsext'
 local pretty = require "lib.pretty"
 local naturaltime = require 'lib.naturaltime'
 
@@ -643,6 +644,16 @@ Schema.register 'uint' {
 Schema.register 'str' {
     validate = function(self, instance)
         return type(instance) == "string", expected("a string", instance)
+    end
+}
+
+-- a relative path, normalised
+Schema.register 'path' {
+    prevalidate = function(self, instance)
+        return type(instance) == "string" and lfsext.normalise(instance) or instance
+    end,
+    validate = function(self, instance)
+        return type(instance) == "string" and not lfsext.isabsolute(instance), "Expected a relative path"
     end
 }
 

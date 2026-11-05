@@ -4,7 +4,6 @@ local lfsext = require 'lib.lfsext'
 local schema = require 'lib.schema'
 local vexdex = require 'core.vexdex'
 local defaults = require 'core.configdefaults'
-require 'core.schemaext'
 
 local specification = schema.atleast {
     taskfolder = schema.path,

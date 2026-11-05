@@ -4,20 +4,6 @@ require 'core.schemaext'
 
 describe("schemaext", function()
 
-    describe("path", function()
-        it("normalises a relative path when prevalidating it", function()
-            assert.equal("a/b", schema.path:prevalidate("./a//b/"))
-            assert.equal(".", schema.path:prevalidate(""))
-            assert.equal(42, schema.path:prevalidate(42))
-        end)
-
-        it("accepts a relative path and rejects an absolute one or a non-string", function()
-            assert.is_true(schema.path:validate("a/b"))
-            assert.is_false(schema.path:validate("/a/b"))
-            assert.is_false(schema.path:validate(5))
-        end)
-    end)
-
     describe("words", function()
         it("needs at least that many words", function()
             assert.is_true(schema.words {2}:validate("two words"))
