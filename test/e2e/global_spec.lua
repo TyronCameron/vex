@@ -29,6 +29,7 @@ describe("vex global config and extensions (e2e, subprocess)", function()
 
   it("applies settings from the global config.lua", function()
     globally("config.lua", "return { paths = { groupby = {'status'} } }")
+    locally("config.lua", "return { taskfolder = '.' }")
     local vexid = vex(dir, "add", "Grouped", "globally")
     assert.truthy(helper.task_file(dir, vexid):find("/todo/" .. vexid .. ".md", 1, true))
   end)

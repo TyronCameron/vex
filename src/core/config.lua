@@ -1,9 +1,10 @@
-local Config = require 'lib.config'
+local cfg = require 'lib.config'
 local cli = require 'lib.cli'
 local lfsext = require 'lib.lfsext'
 local schema = require 'lib.schema'
 local vexdex = require 'core.vexdex'
 local defaults = require 'core.configdefaults'
+require 'core.schemaext'
 
 local specification = schema.atleast {
     taskfolder = schema.path,
@@ -15,7 +16,7 @@ local specification = schema.atleast {
     plugins = schema.maybe {schema.table}
 }
 
-local config = Config.new(defaults):registerpath(lfsext.globalpath('config.lua')):registerpath(vexdex:vexpath('config.lua'))
+local config = cfg.new(defaults):registerpath(lfsext.globalpath('config.lua')):registerpath(vexdex:vexpath('config.lua'))
 
 local loaded, path, err = config:loadall()
 if not loaded then cli:throw('bad-config-file', path, err) end

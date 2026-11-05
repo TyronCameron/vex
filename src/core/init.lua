@@ -3,10 +3,6 @@ local lfs = require "lib.lfs"
 local cli = require "lib.cli"
 local defaults = require "core.configdefaults"
 
-local default_config = {}
-for key, value in pairs(defaults) do default_config[key] = value end
-default_config.paths = {groupby = {"status", "lineage"}}
-
 local function setup_vex_dir(path)
     path = path or lfs.currentdir()
     if lfs.attributes(path .. "/.vex", "mode") == "directory" then
@@ -21,7 +17,7 @@ end
 
 local function create_config(path)
     local f = io.open(path .. "/config.lua", "w")
-    local str = "return " .. pretty.table(default_config)
+    local str = "return " .. pretty.table(defaults)
     f:write(str)
     f:close()
 end 

@@ -78,7 +78,7 @@ With this config, a task sits under its ancestors and then in a folder named aft
 - Characters that can't appear in a folder name (`/ \ : * ? " < > |`) become `-`.
 - Files move whenever something they depend on changes. Resolving a task resolves and re-files every task linked to it or from it, transitively: editing a parent's `children` moves its children, and finishing a dependency moves its dependents. Empty folders are removed.
 - vex owns the layout. A file moved by hand is still found, and is moved back the next time it is resolved.
-- After changing `paths.groupby`, run `vex resolve all --force` to move the existing files. Without `paths.groupby`, task files sit flat at `<vexid>.md`.
+- After changing `paths.groupby`, run `vex resolve all --force` to move the existing files. The default groups by status, then lineage; set `paths = { groupby = {} }` to keep task files flat at `<vexid>.md`.
 
 ## The global folder
 

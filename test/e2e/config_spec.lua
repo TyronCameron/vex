@@ -60,10 +60,10 @@ describe("vex config (e2e, subprocess)", function()
       fails(dir, "must return a table", "resolve", "all")
     end)
 
-    it("runs with no config settings at all", function()
+    it("runs with no config settings at all, grouping task files by status", function()
       config("return {}")
       local vexid = vex(dir, "add", "Plain", "task", "here")
-      assert.equal(dir .. "/" .. vexid .. ".md", helper.task_file(dir, vexid))
+      assert.equal(dir .. "/todo/" .. vexid .. ".md", helper.task_file(dir, vexid))
     end)
   end)
 

@@ -2,109 +2,11 @@ local task = require "core.task"
 local focus = require 'core.focus'
 local vexdex = require 'core.vexdex'
 local config = require 'core.config'
-local cli = require 'lib.cli'
 local func = require 'lib.func'
 local pretty = require 'lib.pretty'
 local statemachine = require 'lib.statemachine'
 local schema = require 'lib.schema'
-
-schema.register 'words' {
-    validate = function(self, instance, context)
-        local count = 0
-        for _ in tostring(type(instance) == "string" and instance or ""):gmatch("%S+") do
-            count = count + 1
-            if count >= self.specification[1] then return true end 
-        end
-        return false, "Expected at least " .. self.specification[1] .. " words"
-    end
-}
-
-schema.register 'vextype' {
-    validate = function(self, instance, context)
-        return not not context.taskmanager.tasktypes[instance], "Task type of " .. tostring(instance) .. " does not exist in the taskmanager"
-    end
-}
-
-schema.register 'statemachine' {
-    prevalidate = function(self, instance, context)
-        local previous = context.previous
-        for _, key in ipairs(context.path) do previous = previous and previous[key] end
-        self.extra.statemachine = statemachine.new(self.specification.states, previous, self.specification.initial)
-        return instance or self.specification.initial
-    end,
-    validate = function(self, instance, context)
-        return self.extra.statemachine:isvalid(instance), "Cannot transition status from " .. tostring(self.extra.statemachine.current) .. " to " .. tostring(instance)
-    end,
-    postvalidate = function(self, instance, context)
-        self.extra.statemachine:transition(instance)
-        return instance
-    end
-}
-
-schema.register 'vexlink' {
-    validate = function(self, vexid)
-        return type(vexid) == "string" and task:getsingle(vexid), "Cannot find " .. tostring(vexid) .. " in the task manager "
-    end,
-    isos = {
-        format = {
-            backward = function(self, vexlink)
-                return vexlink:match("%[%[(.-)%]%]") or vexlink
-            end,
-            forward = function(self, vexid)
-                return "[[" .. vexid .. "]]"
-            end,
-        }
-    },
-    postvalidate = function(self, vexid, context)
-        table.insert(context.links, vexid)
-        return vexid
-    end
-}
-
-local function acyclic(dependency, context)
-    for _, reachable in ipairs(focus.focus(dependency):tree('dependencies'):get()) do
-        if reachable.vexid == context.vexid then cli:throw('dependency-cycle', context.vexid, dependency) end
-    end
-    return true
-end
-
-local function holds(task, field)
-    return type(task[field]) == "table" and #task[field] > 0
-end
-
-local function childless(dependency, context)
-    local target = focus.focus(dependency):get()[1]
-    if holds(target, 'children') or holds(target, 'options') then
-        cli:throw('dependency-with-children', context.vexid, dependency)
-    end
-    return true
-end
-
-local function status()
-    return schema.statemachine {
-        states = {
-            todo = {
-                valid = {"done"},
-            },
-            done = {
-                valid = {}
-            }
-        },
-        initial = 'todo'
-    }
-end
-
-local function dependencies()
-    return schema.maybe {
-        schema.unique {
-            schema.all {
-                schema.formatted {schema.vexlink},
-                schema.constraint {acyclic},
-                schema.constraint {childless}
-            }
-        }
-    }
-end
+require 'core.schemaext'
 
 task:task 'basetask' {
     schema = schema.atleast {
@@ -133,8 +35,8 @@ task:task 'basetask' {
 
 task:task 'task':extends 'basetask' {
     schema = schema.atleast {
-        status = status(),
-        dependencies = dependencies()
+        status = schema.status,
+        dependencies = schema.dependencies
     }
 }
 
@@ -268,5 +170,3 @@ task:transient 'urgency' {
 --         return statemachine.new(statuses, context.task.status or 'todo')
 --     end
 -- }
-
-return {status = status, dependencies = dependencies}

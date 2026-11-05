@@ -4,7 +4,7 @@ return {
         tasktype = 'task'
     },
     paths = {
-        groupby = {}
+        groupby = {'status', 'lineage'}
     },
     taskowners = {},
     loglimit = 100,

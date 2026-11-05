@@ -1,52 +1,22 @@
 local task = require 'core.task'
 local recipe = require 'core.recipe'
 local focus = require 'core.focus'
-local vexdex = require 'core.vexdex'
-local cli = require 'lib.cli'
 local func = require 'lib.func'
 local schema = require 'lib.schema'
-local definitions = require 'core.taskdefinitions'
-
-local status, dependencies = definitions.status, definitions.dependencies
-
-local function singleparent(child, context)
-    for _, vexid in ipairs(vexdex:linksto(child)) do
-        local parent = vexdex:get(vexid)
-        if vexid ~= context.vexid and parent and type(parent.children) == "table" then
-            for _, other in ipairs(parent.children) do
-                if other == child then cli:throw('multiple-parents', child, context.vexid, parent.vexid) end
-            end
-        end
-    end
-    return true
-end
-
-local function notself(child, context)
-    if child == context.vexid then cli:throw('self-child', child) end
-    return true
-end
+require 'core.schemaext'
 
 task:task 'abstract':extends 'basetask' {
     schema = schema.atleast {
         vexbody = schema.maybe {schema.empty},
         options = schema.none,
         dependencies = schema.none,
-        children = schema.default {
-            schema.unique {
-                schema.all {
-                    schema.formatted {schema.vexlink},
-                    schema.constraint {notself},
-                    schema.constraint {singleparent}
-                }
-            },
-            default = function() return {} end 
-        }
+        children = schema.children
     }
 }
 
 task:task 'decision':extends 'basetask' {
     schema = schema.atleast {
-        status = status(),
+        status = schema.status,
         options = schema.vec {
             schema.formatted {schema.vexlink}
         },
@@ -67,8 +37,8 @@ task:task 'decision':extends 'basetask' {
 
 task:task 'exploration':extends 'basetask' {
     schema = schema.atleast {
-        status = status(),
-        dependencies = dependencies(),
+        status = schema.status,
+        dependencies = schema.dependencies,
         vexbody = schema.empty,
         children = schema.none,
         options = schema.none,
@@ -77,8 +47,8 @@ task:task 'exploration':extends 'basetask' {
 
 task:task 'atom':extends 'basetask' {
     schema = schema.atleast {
-        status = status(),
-        dependencies = dependencies(),
+        status = schema.status,
+        dependencies = schema.dependencies,
         children = schema.none,
         options = schema.none,
     }
