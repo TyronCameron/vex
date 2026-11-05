@@ -198,13 +198,10 @@ cli:error 'dependency-cycle' {
 }
 
 cli:error 'due-out-of-order' {
-    function(vexid, other, relation)
-        if relation == 'dependency' then
-            return 'Task `' .. tostring(vexid) .. '` is due earlier than `' .. tostring(other) .. '`, which it depends on.'
-        end
-        return 'Task `' .. tostring(vexid) .. '` is due later than `' .. tostring(other) .. '`, which depends on it.'
+    function(vexid, dependency)
+        return 'Task `' .. tostring(vexid) .. '` is due earlier than `' .. tostring(dependency) .. '`, which it depends on.'
     end,
-    hint = "A task must be due no earlier than the tasks it depends on and no later than the tasks that depend on it. Change one of the due dates."
+    hint = "A task must be due no earlier than the tasks it depends on. Change one of the due dates."
 }
 
 cli:error 'dependency-with-children' {

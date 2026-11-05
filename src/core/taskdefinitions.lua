@@ -86,35 +86,17 @@ local function acyclic(dependency, context)
     return true
 end
 
-local function openwithdue(vexids)
-    local neighbours = func.imap(type(vexids) == "table" and vexids or {vexids}, function(vexid) return vexdex:get(vexid) end)
-    return func.ifilter(neighbours, function(other) return other.due ~= nil and other.phase ~= 'final' end)
-end
-
-local function duefromdependents(self, instance, context)
-    if context.previous.phase == 'final' then return nil end
-    local dues = func.imap(openwithdue(context.task.dependents), function(other) return other.due end)
-    return func.ireduce(dues, function(a, b) return math.min(a, b) end)
-end
-
-local function dueinorder(due, context)
-    if context.previous.phase == 'final' then return true end
-    for _, dependency in ipairs(openwithdue(context.task.dependencies)) do
-        if dependency.due > due then cli:throw('due-out-of-order', context.vexid, dependency.vexid, 'dependency') end
-    end
-    for _, dependent in ipairs(openwithdue(context.task.dependents)) do
-        if dependent.due < due then cli:throw('due-out-of-order', context.vexid, dependent.vexid, 'dependent') end
+local function dueinorder(dependency, context)
+    local needed = vexdex:get(dependency)
+    if needed.due and context.task.due and needed.due > context.task.due and needed.phase ~= 'final' and context.task.phase ~= 'final' then
+        cli:throw('due-out-of-order', context.vexid, dependency)
     end
     return true
 end
 
-local function holds(task, field)
-    return type(task[field]) == "table" and #task[field] > 0
-end
-
 local function childless(dependency, context)
     local target = focus.focus(dependency):get()[1]
-    if holds(target, 'children') or holds(target, 'options') then
+    if #(target.children or {}) + #(target.options or {}) > 0 then
         cli:throw('dependency-with-children', context.vexid, dependency)
     end
     return true
@@ -140,7 +122,8 @@ local function dependencies()
             schema.all {
                 schema.formatted {schema.vexlink},
                 schema.constraint {acyclic},
-                schema.constraint {childless}
+                schema.constraint {childless},
+                schema.constraint {dueinorder}
             }
         }
     }
@@ -165,8 +148,14 @@ task:task 'basetask' {
         },
         vexbody = schema.maybe {schema.str},
         due = schema.default {
-            schema.maybe {schema.all {schema.formatted {schema.datetime}, schema.constraint {dueinorder}}},
-            default = duefromdependents
+            schema.maybe {schema.formatted {schema.datetime}},
+            default = function(self, instance, context)
+                local dues = func.imap(context.task.dependents, function(vexid)
+                    local dependent = vexdex:get(vexid)
+                    return dependent.phase ~= 'final' and dependent.due or nil
+                end)
+                return func.ireduce(dues, function(a, b) return math.min(a, b) end)
+            end
         },
         cost = schema.maybe {schema.num},
         benefit = schema.maybe {schema.num},
