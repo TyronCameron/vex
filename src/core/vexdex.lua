@@ -25,7 +25,6 @@ function VexDex.new(path)
         fingerprints = {},
         mtimes = {},
         logs = {},
-        dirty = false
     }, VexDex)
     return this:ensureindex()
 end
@@ -37,7 +36,6 @@ end
 function VexDex:unsafe_add(vexid, task)
     self.index[vexid] = task
     self.fingerprints[vexid] = {whole = self:fingerprint(task), content = self:fingerprint(task, excluded())}
-    self.dirty = true
     return self
 end
 
@@ -52,7 +50,6 @@ function VexDex:unsafe_remove(vexid, previous)
     self.paths[vexid] = nil
     self.fingerprints[vexid] = nil
     self.mtimes[vexid] = nil
-    self.dirty = true
     return self:unsafe_link(vexid, {}, previous)
 end
 
@@ -68,7 +65,6 @@ function VexDex:linksto(vexid)
 end
 
 function VexDex:unsafe_link(vexid, links, previous)
-    self.dirty = true
     for _, target in ipairs(previous or {}) do
         local sources = self.backlinks[target]
         if sources then
@@ -89,7 +85,6 @@ function VexDex:link(vexid, links, previous)
 end
 
 function VexDex:unsafe_locate(vexid, path)
-    if self.paths[vexid] ~= path then self.dirty = true end
     self.paths[vexid] = path
     return self
 end
@@ -97,9 +92,7 @@ end
 -- records the mtime of a task's file as vex last saw it
 function VexDex:unsafe_stamp(vexid, path)
     self.listed = self.listed or lfsext.mtimes(self:taskroot())
-    local mtime = self.listed[path] or lfsext.mtime(path)
-    if self.mtimes[vexid] ~= mtime then self.dirty = true end
-    self.mtimes[vexid] = mtime
+    self.mtimes[vexid] = self.listed[path] or lfsext.mtime(path)
     return self
 end
 
@@ -195,7 +188,6 @@ function VexDex:writeindex()
     self:atomic(self:vexpath("vexdex/mtimes.bin"), function(path)
         binser.writeFile(path, self.mtimes)
     end)
-    self.dirty = false
     return self 
 end
 
@@ -203,13 +195,7 @@ function VexDex:ensureindex()
     if lfs.attributes(self:vexpath("vexdex"), "mode") ~= "directory" then
         lfs.mkdir(self:vexpath("vexdex"))
     end
-    local path = self:vexpath("vexdex/index.bin")
-    if lfs.attributes(path, "mode") ~= "file" then
-        self.index = {}
-        self:writeindex()
-    else
-        self:readindex()
-    end
+    if lfs.attributes(self:vexpath("vexdex/index.bin"), "mode") == "file" then self:readindex() end
     return self
 end
 
@@ -308,7 +294,6 @@ event:register('*', 'vexdex', function(name, ...)
     vexdex:log("event-log.txt", time .. "\t" .. name .. "\t" .. table.concat(shown, " "):gsub("\n%s*", " "))
     local first = args[1]
     if name:match("^post%-verb%-") then
-        if vexdex.dirty then vexdex:writeindex() end
         vexdex:trimlog("event-log.txt", limit)
     end
     if name:match("^pre%-verb%-") and type(first) == "table" and first.raw then

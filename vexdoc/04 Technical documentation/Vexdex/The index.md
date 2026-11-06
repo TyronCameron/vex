@@ -4,7 +4,7 @@ The vexdex (`src/core/vexdex.lua`) is vex's index: a map from each vexid to its 
 
 | File | Holds |
 | --- | --- |
-| `index.bin` | Every task's fields except the body, unformatted: timestamps as numbers, links as bare vexids. The body lives only in the task file, and a query on `vexbody` (or the overview's body count) reads it from there. |
+| `index.bin` | Every task's fields except the body, unformatted: timestamps as numbers, links as bare vexids. The body lives only in the task file, and `vex show` is the only command that prints it. |
 | `backlinks.bin` | For every task, the tasks that link to it. |
 | `paths.bin` | Where each task file is, relative to `taskfolder`. |
 | `fingerprints.bin` | For every task, hashes of what it held when it was last indexed, body included: one of everything, one without the fields in `fingerprint.exclude` ([[Resolution pipeline#Fingerprints and `modified`]]). |
@@ -21,11 +21,11 @@ Every write goes through `VexDex:atomic`. The data is written to a new file in `
 
 ## When the index is saved
 
-Commands change the index in memory as they go and save it once, when the command finishes successfully. A command that fails, because a task doesn't validate or a file can't be read, saves nothing, so the index on disk is never left half-updated. A command that reads a focus first resolves the tasks in it whose files changed on disk, so a file you edited by hand reaches the index the next time a command reads it.
+Commands that change tasks change the index in memory as they go and save it once, together with the task files, when they finish successfully (`TaskManager:writeall`). A command that fails, because a task doesn't validate or a file can't be read, saves nothing, so the index on disk is never left half-updated. Commands that only read (`show`, `get`, `view`, `focus`) never save the index. A file you edited by hand reaches the index when a command that changes tasks takes in its focus, or when you run `vex resolve all`; until then, the reading commands warn that it changed.
 
 ## Loading and rebuilding
 
-When a command starts, vex loads the index from `.vex/vexdex`. If the folder or the index doesn't exist yet, as in a fresh clone, vex creates it, starting empty.
+When a command starts, vex loads the index from `.vex/vexdex`. If the index doesn't exist yet, as in a fresh clone, vex starts with an empty one, which the first command that changes tasks saves.
 
 `add`, `set`, `remove` and `resolve` update the index for the tasks they touch. To pick up every change made outside vex, such as files edited, added or deleted by hand, a script or an AI agent, run:
 

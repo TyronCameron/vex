@@ -10,21 +10,24 @@
 
 ## Commands
 
-| Command | Description |
-| --- | --- |
-| `vex help [command]` | Lists every command, or describes one. |
-| `vex init` | Creates a `.vex` folder in the current folder. |
-| `vex add Description [--fields...]` | Creates and resolves a task, prints its vexid and focuses on it. |
-| `vex show [focus]` | Prints each task's frontmatter and body. |
-| `vex get [focus] [row_sep] [col_sep] [--fields...]` | Prints one tab-separated line per task. `--select a,b` names the fields as a list. Defaults to `vexid`. A row separator and a column separator replace the newline and tab (see [[01 CLI reference#Feeding a focus into a list field]]). |
-| `vex set [focus] [--fields...]` | Sets fields on every task in the focus, then resolves them. |
-| `vex remove [focus]` | Deletes every task in the focus, removes links to them from other tasks, and clears the focus. |
-| `vex focus [focus] [--flags...]` | Builds and saves a focus. With no arguments, prints the saved focus. |
-| `vex view [focus] [view] [--flags...]` | Renders the focus with a view. With no arguments, lists the views. See [[04 Views]]. |
-| `vex resolve [focus] [--force]` | Resolves the tasks in the focus whose files changed since vex last saw them, and writes back what changes. `vex resolve all` also takes in new task files and drops deleted ones. `--force` resolves every task in the focus; `vex resolve all --force` rebuilds the whole index from disk. |
-| `vex recipe [recipe] Description [--fields...]` | Creates tasks from a recipe and focuses on them. With no recipe, lists the recipes. |
-| `vex autocomplete shell` | Prints a completion script for `bash`, `zsh`, `fish` or `powershell`. |
-| `vex suggest position words...` | Returns completions. The completion script calls it. |
+| Command | Description | Reads task files | Updates index | Updates focus | Writes task files |
+| --- | --- | :-: | :-: | :-: | :-: |
+| `vex help [command]` | Lists every command, or describes one. | | | | |
+| `vex version` | Prints the installed version. | | | | |
+| `vex init` | Creates a `.vex` folder in the current folder. | | | | |
+| `vex show [focus]` | Prints each task's file as it is on disk, frontmatter and body highlighted. The only command that shows the body. | ● | | | |
+| `vex get [focus] [row_sep] [col_sep] [--fields...]` | Prints one tab-separated line per task. `--select a,b` names the fields as a list. Defaults to `vexid`. A row separator and a column separator replace the newline and tab (see [[01 CLI reference#Feeding a focus into a list field]]). | | | | |
+| `vex view [focus] [view] [--flags...]` | Renders the focus with a view. With no arguments, lists the views. See [[04 Views]]. | | | | |
+| `vex focus [focus] [--flags...]` | Builds and saves a focus. With no arguments, prints the saved focus and saves nothing. | | | ● | |
+| `vex add Description [--fields...]` | Creates and resolves a task, prints its vexid and focuses on it. | ● | ● | ● | ● |
+| `vex set [focus] [--fields...]` | Sets fields on every task in the focus, then resolves them. | ● | ● | | ● |
+| `vex remove [focus]` | Deletes every task in the focus, removes links to them from other tasks, and clears the focus. | ● | ● | ● | ● |
+| `vex resolve [focus] [--force]` | Resolves the tasks in the focus whose files changed since vex last saw them, and writes back what changes. `vex resolve all` also takes in new task files and drops deleted ones. `--force` resolves every task in the focus; `vex resolve all --force` rebuilds the whole index from disk. | ● | ● | | ● |
+| `vex recipe [recipe] Description [--fields...]` | Creates tasks from a recipe and focuses on them. With no recipe, lists the recipes. | ● | ● | ● | ● |
+| `vex autocomplete shell` | Prints a completion script for `bash`, `zsh`, `fish` or `powershell`. | | | | |
+| `vex suggest position words...` | Returns completions. The completion script calls it. | | | | |
+
+`show`, `get`, `view` and `focus` only read. `get`, `view` and `focus` read the index as last committed and never open a task file. When a task file was edited, moved or deleted by hand since vex last saw it, they print a warning on stderr and still show what the index holds; `vex resolve all` takes the change in. `show` prints the file itself, so it shows a hand edit straight away, unresolved. Commands that change tasks (`add`, `set`, `remove`, `resolve`, `recipe`) first take in hand edits to the tasks in their focus, then write every change and the index together when they finish. Every command appends to the logs in `.vex/vexdex`; those are a record, not state.
 
 Every user mistake, such as an unknown focus or an invalid field, fails with a named error and a hint.
 
@@ -211,7 +214,7 @@ A saved focus is read again each time it is used, so "next tuesday" always means
 
 ## Resolution
 
-Resolution keeps every task valid. `add`, `set`, `remove` and `recipe` resolve the tasks they touch, `show`, `get`, `view`, `set` and `remove` first resolve the tasks in their focus whose files changed on disk, and `vex resolve` resolves a focus on demand. For each task, vex runs the schema of its type and of every type it extends:
+Resolution keeps every task valid. `add`, `set`, `remove` and `recipe` resolve the tasks they touch, `set`, `remove` and `resolve` first resolve the tasks in their focus whose files changed on disk, and `vex resolve` resolves a focus on demand. Commands that only read never resolve. For each task, vex runs the schema of its type and of every type it extends:
 
 1. **Normalise.** Fill defaults (`vextype`, `status`, `created`, `modified`) and convert values: `"15"` to `15`, `"2026-08-01 09:00:00"` to a timestamp, `[[vexid]]` to `vexid`.
 2. **Validate.** Check every field against its schema. Links must point at existing tasks, `status` must follow its state machine, `owner` must be a configured user, dependencies must not form a cycle, and a child can have only one parent.

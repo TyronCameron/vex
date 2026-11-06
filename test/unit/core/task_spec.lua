@@ -108,8 +108,12 @@ describe("task", function()
 
         it("shows lists as the YAML written to the file", function()
             task:set(parent, {children = {first, second}})
+            task:resolve(parent)
+            task:writeall()
             assert.truthy(task:show(parent):find('\n  - "[[' .. first .. ']]"\n  - "[[' .. second .. ']]"\n', 1, true))
             task:set(parent, {children = {}})
+            task:resolve(parent)
+            task:writeall()
             assert.truthy(task:show(parent):find('[]\n', 1, true))
         end)
 
@@ -416,7 +420,10 @@ describe("task", function()
             local vexid = backdated({description = "untouched backdated task"})
             local writes = 0
             local atomic = vexdex.atomic
-            vexdex.atomic = function(...) writes = writes + 1 return atomic(...) end
+            vexdex.atomic = function(self, path, ...)
+                if path == task:getcurrentpath(vexid) then writes = writes + 1 end
+                return atomic(self, path, ...)
+            end
             task:resolve(vexid)
             task:writeall()
             vexdex.atomic = atomic
@@ -661,26 +668,40 @@ describe("task", function()
 
     end)
 
-    describe("body", function()
+    describe("reading", function()
 
-        local function reloaded(vexid)
-            local plain = {}
-            for field, value in pairs(vexdex:get(vexid)) do
-                if field ~= 'vexbody' then plain[field] = value end
-            end
-            local entry = setmetatable(plain, getmetatable(vexdex:get(vexid)))
-            task.tasks[vexid] = nil
-            return entry
+        local function plain(s)
+            return (s:gsub("\27%[[%d;]*m", ""):gsub("\27%]8;;.-\27\\", ""))
         end
 
-        it("is read from the task file when the index entry holds none", function()
+        it("commits no body to the index", function()
             local vexid = create({description = "body kept in file task", vexbody = "kept in the file"})
-            assert.equal("kept in the file", reloaded(vexid).vexbody)
+            assert.is_nil(vexdex.new(vexdex.path):get(vexid).vexbody)
         end)
 
-        it("is empty for a task whose file has no body", function()
-            local vexid = create({description = "no body in file task"})
-            assert.equal("", reloaded(vexid).vexbody or "")
+        it("shows the task file as it is on disk", function()
+            local vexid = create({description = "shown from file task", vexbody = "kept in the file"})
+            local path = task:getcurrentpath(vexid)
+            local f = assert(io.open(path, "a"))
+            f:write("\nhand written line\n")
+            f:close()
+            local shown = plain(task:show(vexid))
+            assert.truthy(shown:find("kept in the file\nhand written line\n", 1, true), shown)
+            assert.truthy(shown:find("vexid: " .. vexid, 1, true))
+        end)
+
+        it("gets the task as last committed to the index, not as set in memory", function()
+            local vexid = create({description = "committed cost task", cost = 3})
+            task:set(vexid, {cost = 9})
+            assert.equal("3", task:get(vexid, {'cost'}))
+            task:resolve(vexid)
+            task:writeall()
+            assert.equal("9", task:get(vexid, {'cost'}))
+        end)
+
+        it("commits the index with the files in writeall", function()
+            local vexid = create({description = "committed index task", cost = 4})
+            assert.equal(4, vexdex.new(vexdex.path):get(vexid).cost)
         end)
 
     end)

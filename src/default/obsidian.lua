@@ -1,3 +1,5 @@
+local pretty = require 'lib.pretty'
+
 local escapes = {["\\"] = "\\\\", ['"'] = '\\"', ["\n"] = "\\n", ["\r"] = "\\r", ["\t"] = "\\t"}
 local unescapes = {["\\"] = "\\", ['"'] = '"', n = "\n", r = "\r", t = "\t"}
 setmetatable(unescapes, {__index = function(_, c) return "\\" .. c end})
@@ -100,6 +102,22 @@ local function to_yaml_value(v, indent)
 end
 
 return {
+    show = function(text)
+        local fences, shown = 0, {}
+        for line, ending in text:gmatch("([^\n]*)(\n?)") do
+            if line == "---" and (#shown == 0 or fences == 1) then
+                fences = fences + 1
+                line = pretty.string(line, 'cyan')
+            elseif fences == 1 then
+                local lead, rest = line:match("^(%s*%-?%s*)(.*)$")
+                local key = not rest:match("^#") and keyvalue(rest)
+                if key then line = lead .. pretty.string(key .. ":", 'green') .. rest:sub(#key + 2) end
+            end
+            table.insert(shown, line .. ending)
+        end
+        return table.concat(shown)
+    end,
+
     read = function(path)
         local f = assert(io.open(path, "r"))
         local content = f:read("*a")
@@ -139,6 +157,4 @@ return {
 
         f:close()
     end,
-
-    value = to_yaml_value
 }

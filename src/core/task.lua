@@ -26,10 +26,6 @@ local Task = {}
 
 function Task:__index(key)
     if Task[key] then return Task[key] end
-    if key == 'vexbody' then
-        local held = taskmanager:getsingle(rawget(self, 'vexid'))
-        return held and rawget(held, 'vexbody')
-    end
     local transient = taskmanager:transientof(rawget(self, 'vextype'), key)
     return transient and transient.definition(self)
 end
@@ -48,18 +44,6 @@ function Task:tostring(fields, colsep)
         if value == nil then return "" end
         return type(value) == "table" and table.concat(value, ",") or tostring(value)
     end), colsep or "\t")
-end
-
--- show 
-function Task:show(path)
-    local final_str = pretty.string('# ' .. string.upper(tostring(self.vexid)) .. '\n', 'cyan', 'underline', 'bold', {filelink = tostring(path)})
-    final_str = final_str .. pretty.string("---\n", 'cyan')
-    for k, v in sortdata(frontmatter(self)) do 
-        final_str = final_str .. pretty.string(tostring(k) .. ": ", 'green') .. pretty.string(taskformat.value(v) ..  '\n')
-    end 
-    final_str = final_str .. pretty.string("---\n", 'cyan')
-    final_str = final_str .. pretty.string(tostring(body(self) or '') .. "\n\n")
-    return final_str
 end
 
 ------------------------------------------------
@@ -248,7 +232,7 @@ function TaskManager:remove(vexid)
     return vexid
 end
 
--- gets data from a task and returns it as a string for the command line
+-- gets data from a task as last committed to the index and returns it as a string for the command line
 function TaskManager:get(vexid, fields, colsep)
     event:trigger('pre-task-get', vexid, fields)
     local result = self:format(vexid):tostring(fields, colsep)
@@ -304,11 +288,17 @@ function TaskManager:set(vexid, tab, modifiers)
     return self.tasks[vexid] 
 end
 
--- shows task, basically cat 'filename'
+-- shows a task's file as it is on disk
 function TaskManager:show(vexid)
     assert(vexid, "show() requires an vexid")
     event:trigger('pre-task-show', vexid)
-    local result = self:format(vexid):show(self:getcurrentpath(vexid))
+    local path = self:getcurrentpath(vexid)
+    if lfs.attributes(path, 'mode') ~= 'file' then path = self:find(vexid) or path end
+    local file = io.open(path, "r")
+    if not file then cli:throw('file', path) end
+    local text = file:read("*a")
+    file:close()
+    local result = pretty.string('# ' .. string.upper(vexid) .. '\n', 'cyan', 'underline', 'bold', {filelink = path}) .. taskformat.show(text)
     event:trigger('post-task-show', vexid, result)
     return result
 end
@@ -452,11 +442,14 @@ end
 -- File I/O
 ---------------------------------------------------
 
--- format a task 
-function TaskManager:format(vexid)
-    local task = self:getsingle(vexid)
-    local formatted = self.tasktypes[task.vextype].schema:apply('format', task)
+local function format(tasktypes, task)
+    local formatted = tasktypes[task.vextype].schema:apply('format', task)
     return setmetatable(formatted, {__index = task})
+end
+
+-- formats a task as last committed to the index
+function TaskManager:format(vexid)
+    return format(self.tasktypes, vexdex:get(vexid))
 end
 
 function TaskManager:unformat(task)
@@ -528,7 +521,7 @@ end
 -- writes a file from disk
 function TaskManager:write(vexid)
     event:trigger('pre-task-write', vexid)
-    local task = self:format(vexid)
+    local task = format(self.tasktypes, self:getsingle(vexid))
     local path = self:getcurrentpath(vexid)
     lfsext.mkdirs(dirname(path))
     vexdex:atomic(path, function(path)
@@ -570,7 +563,7 @@ function TaskManager:delete(vexid)
     return vexid
 end
 
--- writes the resolved tasks that changed, moves every resolved file to where it belongs, then removes the deleted files
+-- commits: writes the resolved tasks that changed, moves every resolved file to where it belongs, removes the deleted files, then saves the index
 function TaskManager:writeall()
     for vexid, changed in pairs(self.unwritten) do
         if vexdex:get(vexid) then
@@ -583,6 +576,7 @@ function TaskManager:writeall()
         tidy(path)
     end
     self.deleted, self.unwritten = {}, {}
+    vexdex:writeindex()
 end
 
 ---------------------------------------------------

@@ -84,14 +84,6 @@ describe("obsidian", function()
         os.remove(tmp)
     end)
 
-    it("renders a value the way write puts it after the key", function()
-        assert.equal("todo", obsidian.value("todo"))
-        assert.equal("3", obsidian.value(3))
-        assert.equal('"has: colon"', obsidian.value("has: colon"))
-        assert.equal("[]", obsidian.value({}))
-        assert.equal("\n  - a\n  - b", obsidian.value({"a", "b"}))
-    end)
-
     -- ==================== List fields (fix-list-field-roundtrip-1) ====================
 
     it("round-trips a non-empty list field", function()
@@ -217,6 +209,26 @@ describe("obsidian", function()
             writefile(tmp, "---\ndescription: 'it''s here'\n---\n")
             assert.equal("it's here", obsidian.read(tmp).description)
             os.remove(tmp)
+        end)
+
+    end)
+
+    describe("show", function()
+
+        local function plain(s)
+            return (s:gsub("\27%[[%d;]*m", ""))
+        end
+
+        it("keeps a file's text exactly as written", function()
+            local text = '---\nstatus: todo\ndue: tomorrow 8am\nchildren:\n  - "[[a-1]]"\n---\nSome notes\n'
+            assert.equal(text, plain(obsidian.show(text)))
+        end)
+
+        it("marks each frontmatter key and the fences, and leaves the body plain", function()
+            local shown = obsidian.show('---\nstatus: todo\n---\nstatus: not a key\n')
+            assert.truthy(shown:find("\27%[[%d;]*m%-%-%-"))
+            assert.truthy(shown:find("\27%[[%d;]*mstatus:"))
+            assert.truthy(shown:find("\nstatus: not a key\n", 1, true))
         end)
 
     end)
