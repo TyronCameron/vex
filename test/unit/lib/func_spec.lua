@@ -110,6 +110,24 @@ describe("func", function()
         assert.equal(4, result[4])
     end)
 
+    -- ==================== merge ====================
+
+    it("`func.merge` combines two tables, the second winning on a shared key", function()
+        assert.same({a = 1, b = 3, c = 4}, func.merge({a = 1, b = 2}, {b = 3, c = 4}))
+    end)
+
+    it("`func.merge` leaves both tables untouched", function()
+        local a, b = {a = 1}, {a = 2}
+        func.merge(a, b)
+        assert.same({a = 1}, a)
+        assert.same({a = 2}, b)
+    end)
+
+    it("`func.merge` of empty tables is empty", function()
+        assert.same({}, func.merge({}, {}))
+        assert.same({a = 1}, func.merge({a = 1}, {}))
+    end)
+
     -- ==================== map ====================
 
     it("`func.map` maps every value, keeping its key", function()

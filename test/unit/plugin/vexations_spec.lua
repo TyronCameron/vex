@@ -16,14 +16,14 @@ describe("vexations", function()
     local function create(properties)
         local vexid = task:add(properties)
         task:resolve(vexid)
-        task:write(vexid)
+        task:writeall()
         return vexid
     end
 
     local function setstatus(vexid, status)
         task:set(vexid, {status = status})
         task:resolve(vexid)
-        task:write(vexid)
+        task:writeall()
     end
 
     describe("links", function()

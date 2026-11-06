@@ -71,7 +71,7 @@ Focus.register_focus('ready', function()
     local unblocked = Focus.new('unblocked', function()
         return func.ifilter(Focus.getalltasks(), function(task) return task.phase ~= 'final' and #task.blockers == 0 end)
     end)
-    return unblocked:orderby('implied_due'):get()
+    return unblocked:orderby('due'):get()
 end)
 
 -----------------------------------------
@@ -334,6 +334,19 @@ Focus['nil'] = function(self, field)
     end, field)
 end
 
+-- contains field:value, keeping tasks whose field holds value as a key or as an element of its list
+function Focus:contains(field, value)
+    if field == nil or value == nil then
+        cli:throw('usage', 'You need to provide a field and value to check with contains. We saw field = ' .. tostring(field) .. ' and value ' .. tostring(value))
+    end
+    return self:chain('contains', function(tasks)
+        return func.ifilter(tasks, function(task)
+            local collection = task[field]
+            return type(collection) == "table" and (collection[value] ~= nil or func.any(collection, function(element) return element == value end))
+        end)
+    end, field, value)
+end
+
 -- fuzzy key:value 
 local function levenshtein(a, b)
     local la, lb = #a, #b
@@ -438,10 +451,10 @@ local function orderings(...)
     return orders
 end
 
--- -1, 0 or 1 as task a sorts before, with or after task b
+-- -1, 0 or 1 as the values of a sort before, with or after the values of b
 local function order(a, b, orders)
-    for _, o in ipairs(orders) do
-        local comparison = compare(a[o.field], b[o.field], o.descending)
+    for i, o in ipairs(orders) do
+        local comparison = compare(a[i], b[i], o.descending)
         if comparison ~= 0 then return comparison end
     end
     return 0
@@ -451,11 +464,15 @@ end
 function Focus:orderby(...)
     local orders = orderings(...)
     return self:chain('orderby', function(tasks)
-        local positions = {}
-        for i, task in ipairs(tasks) do positions[task] = i end
+        local positions, values = {}, {}
+        for i, task in ipairs(tasks) do
+            positions[task] = i
+            values[task] = {}
+            for j, o in ipairs(orders) do values[task][j] = task[o.field] end
+        end
         local ordered = func.imap(tasks, function(task) return task end)
         table.sort(ordered, function(a, b)
-            local comparison = order(a, b, orders)
+            local comparison = order(values[a], values[b], orders)
             if comparison ~= 0 then return comparison < 0 end
             return positions[a] < positions[b]
         end)

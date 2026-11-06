@@ -11,12 +11,34 @@ Every task is validated against the schema of its `vextype` and of each type tha
 | `created` | datetime | Set when the task is added. |
 | `modified` | datetime | Set on add, and moved to now whenever the task's content changes: a `set` that changes a field, a hand edit, or a value resolution normalises or derives. A `set` that changes nothing, or resolving an unchanged task, leaves it alone. |
 | `vexbody` | text | Optional. The markdown body below the frontmatter. |
-| `due` | datetime | Optional. |
+| `due` | datetime | Optional. When a task has none, vex fills in the earliest `due` of the open tasks that depend on it, the date it is needed by; it stays empty if none of them has one. Once set it is an ordinary date: it doesn't change again unless you change it (`vex set <id> --clear --due` lets it be filled in afresh). A task can't be due before one of its open dependencies (equal dates are fine; tasks without a `due`, and finished tasks, don't count), otherwise vex fails with `due-out-of-order`. |
 | `cost`, `benefit` | number | Optional. |
 | `owner` | text | Optional. Must be one of the `taskowners` in `.vex/config.lua`. |
 | `dependencies` | list of links | Optional. Each entry must be an existing task without `children` or `options`, and dependencies can't form a cycle. |
+| `manualtags` | list of tags | Optional. Your own tags, which override the tag rules: `#pinned` always tags the task, `-#review` never does. vex adds a missing `#`. If a tag is both pinned and suppressed, suppressed wins (see below). |
+| `tags` | list of tags | Worked out on every resolve from the tag rules and `manualtags`, and stored so Obsidian and other tools see it. Edits to it are overwritten. Edit `manualtags` instead. |
 
 Datetimes are stored as timestamps and written as `YYYY-MM-DD HH:MM:SS`. vex reads `YYYY-MM-DD HH:MM:SS` (a `T` may replace the space, the seconds may be left out, and a `Z` or `+HH:MM` zone may follow), `YYYY-MM-DD`, or a phrase such as `tomorrow 8am`, relative to the moment the task is resolved ([[01 CLI reference#Interpreting times]]). A value it can't read fails resolution with an error naming the unknown words, and the task file is left as it was. Links are written as `[[vexid]]`, so the task files form an Obsidian vault.
+
+## Tags
+
+A tag is a `#` and then a word without spaces: `#ThisIsATag`, `#this_is_a_tag` and `#tags/this` are all valid. Each tag on a task is in one of three states:
+
+| State | How | Result |
+| --- | --- | --- |
+| always | `#x` in `manualtags` | `#x` is in `tags` whatever the rules say. |
+| never | `-#x` in `manualtags` | `#x` is not in `tags` whatever the rules say, even if `#x` is pinned too. |
+| automatic | not in `manualtags` | `#x` is in `tags` while its rule holds (the `autotags` setting, [[01 Configuring vex (config.lua)#Tagging tasks automatically]]). |
+
+So `tags` is always the rules' tags plus the pinned ones, less the suppressed ones, worked out afresh each time. Changing a rule never loses a tag you set by hand, and `vex resolve all --force` brings every task in line with the new rules.
+
+```console
+$ vex set fix-login-1 --insert --manualtags pinned,-review
+$ vex set fix-login-1 --remove --manualtags "-#review"
+$ vex focus all --contains "tags:#pinned"
+```
+
+The first command pins `#pinned` and suppresses `#review`. The second hands `#review` back to the rules: `--remove` takes the entry as it is stored, `#` included. The third focuses on the tasks tagged `#pinned`. Quote anything with a `#` on the command line, since an unquoted `#` starts a comment in the shell; `--insert` adds the `#` itself, so it can be left out there.
 
 ## Fields by type
 
@@ -39,11 +61,12 @@ Transients are fields vex works out each time they are read. They are never stor
 | `blockers` | The vexids of the task's `dependencies` that are not `final` yet. |
 | `lineage` | The vexids of the abstracts above the task, root first. |
 | `backlinks` | The vexids of the tasks that link to the task. |
+| `dependents` | The vexids of the tasks that depend on the task (list it in their `dependencies`). |
 | `forwardlinks` | The vexids of the tasks the task links to. |
 | `path` | Where the task file is. |
 | `age` | Whole days since `created`. |
-| `implied_due` | The earliest `due` among the task and the open tasks that depend on it, directly or not: a task is needed by the time its soonest dependent is due. Empty when none of them has a due date. |
-| `urgency` | The task's rank among its owner's open tasks by `implied_due`, 1 being the most urgent. Tasks without one rank last, and finished tasks have none. |
+| `urgency` | The task's rank among its owner's open tasks by `due`, 1 being the most urgent. Tasks with the same `due` share a rank, tasks without one rank after all that have one, and finished tasks have none. |
+| `autotags` | The tags whose rule in the `autotags` setting holds for the task. |
 
 Add your own in `.vex/tasks` ([[03 Configuring task types]]).
 

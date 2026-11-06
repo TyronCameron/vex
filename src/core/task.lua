@@ -76,7 +76,9 @@ function TaskManager.new()
         transients = {},
         tasktypes = {},
         modifiers = {},
-        tasks = {}
+        tasks = {},
+        unwritten = {},
+        deleted = {}
     }, TaskManager)
 end
 
@@ -116,7 +118,7 @@ function TaskManager:registertask(name, parent, tab)
     self.tasktypes[name] = {
         parent = parent,
         name = name,
-        schema = tab.schema,
+        schema = parent and self.tasktypes[parent].schema:merge(tab.schema) or tab.schema,
         fields = tab.fields
     }
     if type(tab.schema.specification) == "table" then 
@@ -161,11 +163,7 @@ end
 
 function TaskManager:schemaof(vextype, field)
     local tasktype = self.tasktypes[vextype]
-    while tasktype do
-        local _, fieldschema = tasktype.schema:get({}, {field})
-        if fieldschema then return fieldschema end
-        tasktype = self.tasktypes[tasktype.parent]
-    end
+    return tasktype and select(2, tasktype.schema:get({}, {field}))
 end
 
 function TaskManager:transientof(vextype, name)
@@ -177,18 +175,14 @@ function TaskManager:transientof(vextype, name)
     end
 end
 
--- the vexids a task links to, held in any field its type's schemas validate as a vexlink
+-- the vexids a task links to, held in any field its type's schema validates as a vexlink
 function TaskManager:forwardlinks(task)
     local linked, seen = {}, {}
-    local tasktype = self.tasktypes[task.vextype]
-    while tasktype do
-        for _, vexid in ipairs(tasktype.schema:collect('vexlink', task)) do
-            if not seen[vexid] then
-                seen[vexid] = true
-                table.insert(linked, vexid)
-            end
+    for _, vexid in ipairs(self.tasktypes[task.vextype].schema:collect('vexlink', task)) do
+        if not seen[vexid] then
+            seen[vexid] = true
+            table.insert(linked, vexid)
         end
-        tasktype = self.tasktypes[tasktype.parent]
     end
     table.sort(linked)
     return linked
@@ -410,17 +404,10 @@ function TaskManager:resolvesingle(vexid)
         links = {},
     }
 
-    local parents = {vextype} 
-    while parents[1].parent do
-        table.insert(parents, 1, self.tasktypes[parents[1].parent])
-    end 
-
-    for _, parent in ipairs(parents) do 
-        if not normalise(parent, task, context) then cli:throw('resolution-failed-normalisation', vexid) end 
-        local isvalid, err = validate(parent, task, context)
-        if not isvalid then cli:throw('resolution-failed-validation', vexid, err, taskfile(context)) end 
-        if not derive(parent, task, context) then cli:throw('resolution-failed-derivation', vexid) end 
-    end 
+    if not normalise(vextype, task, context) then cli:throw('resolution-failed-normalisation', vexid) end 
+    local isvalid, err = validate(vextype, task, context)
+    if not isvalid then cli:throw('resolution-failed-validation', vexid, err, taskfile(context)) end 
+    if not derive(vextype, task, context) then cli:throw('resolution-failed-derivation', vexid) end 
 
     local unlinked = func.ifilter(previouslinks, function(target)
         return not func.any(context.links, function(link) return link == target end)
@@ -435,7 +422,7 @@ function TaskManager:resolvesingle(vexid)
     return func.imerge(unlinked, func.imerge(task.forwardlinks, task.backlinks)), changed
 end
 
--- resolves the given tasks and the tasks linked to each one that changed, each once, writes those that changed and moves every file to where it belongs; a task whose file is gone or unreadable leaves the index
+-- resolves the given tasks and the tasks linked to each one that changed, each once, in memory, keeping them for writeall; a task whose file is gone or unreadable leaves the index
 function TaskManager:resolveall(vexids)
     local resolved, requested, pending, changed = {}, {}, {}, {}
     for _, vexid in ipairs(vexids) do
@@ -453,10 +440,7 @@ function TaskManager:resolveall(vexids)
         end
     end
     for vexid in pairs(resolved) do
-        if vexdex:get(vexid) then
-            if changed[vexid] then self:write(vexid) else vexdex:unsafe_stamp(vexid, self:getcurrentpath(vexid)) end
-            self:move(vexid)
-        end
+        self.unwritten[vexid] = self.unwritten[vexid] or changed[vexid]
     end
 end
 
@@ -471,34 +455,14 @@ end
 -- format a task 
 function TaskManager:format(vexid)
     local task = self:getsingle(vexid)
-    local vextype = self.tasktypes[task.vextype]
-
-    local parents = {vextype}
-    while parents[1].parent do
-        table.insert(parents, 1, self.tasktypes[parents[1].parent])
-    end
-
-    local formatted = task
-    for _, parent in ipairs(parents) do
-        formatted = parent.schema:apply('format', formatted)
-    end
+    local formatted = self.tasktypes[task.vextype].schema:apply('format', task)
     return setmetatable(formatted, {__index = task})
 end
 
 function TaskManager:unformat(task)
     local vextype = self.tasktypes[task.vextype]
     if not vextype then return task end
-
-    local parents = {vextype}
-    while parents[1].parent do
-        table.insert(parents, 1, self.tasktypes[parents[1].parent])
-    end
-
-    local unformatted = task
-    for _, parent in ipairs(parents) do
-        unformatted = parent.schema:unapply('format', unformatted)
-    end
-    return unformatted
+    return vextype.schema:unapply('format', task)
 end
 
 local function relative(path)
@@ -599,12 +563,26 @@ function TaskManager:delete(vexid)
     event:trigger('pre-task-delete', vexid)
     local linked = focus.focus(vexid):step('forwardlinks', 'backlinks'):get()
     local path = self:getcurrentpath(vexid)
-    os.remove(path)
+    table.insert(self.deleted, path)
     vexdex:unsafe_remove(vexid, vexdex:get(vexid).forwardlinks)
-    tidy(path)
     self:resolveall(func.imap(linked, function(task) return task.vexid end))
     event:trigger('post-task-delete', vexid, path)
     return vexid
+end
+
+-- writes the resolved tasks that changed, moves every resolved file to where it belongs, then removes the deleted files
+function TaskManager:writeall()
+    for vexid, changed in pairs(self.unwritten) do
+        if vexdex:get(vexid) then
+            if changed then self:write(vexid) else vexdex:unsafe_stamp(vexid, self:getcurrentpath(vexid)) end
+            self:move(vexid)
+        end
+    end
+    for _, path in ipairs(self.deleted) do
+        os.remove(path)
+        tidy(path)
+    end
+    self.deleted, self.unwritten = {}, {}
 end
 
 ---------------------------------------------------

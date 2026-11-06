@@ -112,6 +112,17 @@ end
 ---
 
 
+function func.merge(a, b)
+	local tab = {}
+	for key, value in pairs(a) do
+		tab[key] = value
+	end
+	for key, value in pairs(b) do
+		tab[key] = value
+	end
+	return tab
+end
+
 function func.sum(tab)
 	return func.reduce(tab, function(a,b) return a + b end)
 end

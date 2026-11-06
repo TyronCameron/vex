@@ -313,6 +313,12 @@ function Schema:set(data, path, isoname, context)
     return self 
 end
 
+function Schema:merge(other)
+    assert(self._name == other._name, "Cannot merge a `" .. tostring(self._name) .. "` schema with a `" .. tostring(other._name) .. "` schema")
+    local mergeable = type(self.specification) == "table" and type(other.specification) == "table"
+    return Schema.instantiate(self._name, mergeable and func.merge(self.specification, other.specification) or other.specification)
+end
+
 function Schema:iterate(instance, context)
     context = Context.new(self, instance, context)
     return coroutine.wrap(function()
@@ -369,7 +375,6 @@ local function prevalidate_children(self, instance, context)
 end 
 
 local function validate_children(self, instance, context)
-    if instance == nil then return false, "Found nil instance when expecting to iterate through subschemas" end 
     for childschema, childinstance in self:iterate(instance, context) do 
         local valid, err = childschema:validate(childinstance, context)
         if not valid then return false, err end 

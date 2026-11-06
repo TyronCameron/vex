@@ -1,4 +1,5 @@
 local lfs = require 'lib.lfs'
+local func = require 'lib.func'
 
 local Config = {}
 Config.__index = function(tab, key)
@@ -6,9 +7,7 @@ Config.__index = function(tab, key)
 end
 
 function Config.new(defaults)
-    local properties = {}
-    for key, value in pairs(defaults or {}) do properties[key] = value end
-    return setmetatable({files = {}, properties = properties}, Config)
+    return setmetatable({files = {}, properties = func.merge({}, defaults or {})}, Config)
 end
 
 function Config:registerpath(path)
@@ -24,9 +23,7 @@ function Config:loadall()
             if not ok or type(cfg) ~= 'table' then
                 return nil, path, ok and 'it must return a table, not ' .. type(cfg) or cfg
             end
-            for key, value in pairs(cfg) do
-                self.properties[key] = value
-            end
+            self.properties = func.merge(self.properties, cfg)
         end
     end
     return self

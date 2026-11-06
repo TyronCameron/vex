@@ -108,6 +108,42 @@ describe("taskdefinitions", function()
             assert.stub(cli.throw).was.called_with(cli, 'dependency-cycle', first, second)
         end)
 
+        it("allows a due date from the latest dependency's to the earliest dependent's, equal dates included", function()
+            local base = os.time() + 10 * 86400
+            local needed = create({description = "bounded needed task", due = base})
+            local task_ = create({description = "bounded middle task", due = base + 86400, dependencies = {needed}})
+            create({description = "bounded needing task", due = base + 86400, dependencies = {task_}})
+            task:set(task_, {due = base + 86400 / 2})
+            task:resolve(task_)
+            assert.stub(cli.throw).was_not.called_with(cli, 'due-out-of-order', match._, match._)
+        end)
+
+        it("rejects a due date earlier than a dependency's", function()
+            local base = os.time() + 10 * 86400
+            local needed = create({description = "early needed task", due = base})
+            local dependent = task:add({description = "too early dependent", due = base - 86400, dependencies = {needed}})
+            assert.has_error(function() task:resolve(dependent) end)
+            assert.stub(cli.throw).was.called_with(cli, 'due-out-of-order', dependent, needed)
+        end)
+
+        it("rejects a due date later than a dependent's", function()
+            local base = os.time() + 10 * 86400
+            local needed = create({description = "late needed task", due = base})
+            local dependent = create({description = "late needing task", due = base + 86400, dependencies = {needed}})
+            task:set(needed, {due = base + 2 * 86400})
+            assert.has_error(function() task:resolve(needed) end)
+            assert.stub(cli.throw).was.called_with(cli, 'due-out-of-order', dependent, needed)
+        end)
+
+        it("ignores undated and finished neighbours when checking a due date", function()
+            local base = os.time() + 10 * 86400
+            local finished = create({description = "finished late task", due = base + 5 * 86400})
+            setstatus(finished, "done")
+            local undated = create({description = "undated neighbour task"})
+            local checked = create({description = "checked neighbour task", due = base, dependencies = {finished, undated}})
+            assert.truthy(task.tasks[checked])
+        end)
+
     end)
 
     describe("transients", function()
@@ -179,6 +215,20 @@ describe("taskdefinitions", function()
             assert.same({option}, task.tasks[decision].forwardlinks)
         end)
 
+        it("lists the tasks that depend on a task as its dependents, and not the ones that only parent it", function()
+            local needed = create({description = "depended needed task"})
+            local dependent = create({description = "depended dependent task", dependencies = {needed}})
+            create({description = "depended parent abstract", vextype = 'abstract', children = {needed}})
+            assert.same({dependent}, task.tasks[needed].dependents)
+            assert.same({}, task.tasks[dependent].dependents)
+        end)
+
+        it("puts a task that has no status yet in the initial phase", function()
+            local fresh = task:add({description = "statusless fresh task"})
+            assert.equal('initial', task.tasks[fresh].phase)
+            task:remove(fresh)
+        end)
+
         it("gives the path of the task file", function()
             local vexid = create({description = "located task"})
             assert.equal(task:getcurrentpath(vexid), task.tasks[vexid].path)
@@ -204,13 +254,43 @@ describe("taskdefinitions", function()
             assert.is_nil(task.tasks[finished].urgency)
         end)
 
-        it("ranks a dependency by the due date of the open tasks that depend on it", function()
-            local base = os.time() + 30 * 86400
-            local needed = create({description = "pulled needed task", due = base + 20 * 86400})
-            local unrelated = create({description = "pulled unrelated task", due = base + 10 * 86400})
-            create({description = "pulled dependent task", due = base, dependencies = {needed}})
-            assert.equal(base, task.tasks[needed].implied_due)
-            assert.truthy(task.tasks[needed].urgency < task.tasks[unrelated].urgency)
+        it("keeps a dated task's own due date", function()
+            local due = os.time() + 3 * 86400
+            local dated = create({description = "kept dated task", due = due})
+            create({description = "kept later dependent", due = due + 86400, dependencies = {dated}})
+            assert.equal(due, task.tasks[dated].due)
+        end)
+
+        it("defaults an undated task's due to the earliest due of the open tasks that depend on it", function()
+            local due = os.time() + 3 * 86400
+            local needed = create({description = "defaulted needed task"})
+            local sooner = create({description = "defaulted sooner needing task", due = due})
+            local later = create({description = "defaulted later needing task", due = due + 86400})
+            task:set(sooner, {dependencies = {needed}})
+            task:resolve(sooner)
+            task:set(later, {dependencies = {needed}})
+            task:resolve(later)
+            assert.equal(due, task.tasks[needed].due)
+        end)
+
+        it("carries a due date down a chain of undated dependencies", function()
+            local due = os.time() + 3 * 86400
+            local bottom = create({description = "chained bottom task"})
+            local middle = create({description = "chained middle task", dependencies = {bottom}})
+            create({description = "chained top task", due = due, dependencies = {middle}})
+            assert.equal(due, task.tasks[middle].due)
+            assert.equal(due, task.tasks[bottom].due)
+        end)
+
+        it("leaves due empty when no open dependent has one", function()
+            local finished = create({description = "empty finished dependent", due = os.time() + 86400})
+            setstatus(finished, "done")
+            local needed = create({description = "empty needed task"})
+            task:set(finished, {dependencies = {needed}})
+            task:resolve(finished)
+            assert.is_nil(task.tasks[needed].due)
+            local lonely = create({description = "empty lonely task"})
+            assert.is_nil(task.tasks[lonely].due)
         end)
 
         it("ranks an undated dependency ahead of an unrelated dated task when a dated task needs it", function()
@@ -220,20 +300,96 @@ describe("taskdefinitions", function()
             assert.truthy(task.tasks[needed].urgency < task.tasks[unrelated].urgency)
         end)
 
-        it("carries a due date down a chain of dependents", function()
-            local due = os.time() + 3 * 86400
-            local bottom = create({description = "chained bottom task"})
-            local middle = create({description = "chained middle task", dependencies = {bottom}})
-            create({description = "chained top task", due = due, dependencies = {middle}})
-            assert.equal(due, task.tasks[middle].implied_due)
-            assert.equal(due, task.tasks[bottom].implied_due)
+        it("gives tasks with the same due the same urgency", function()
+            local due = os.time() + 5 * 86400
+            local first = create({description = "tied first task", due = due})
+            local second = create({description = "tied second task", due = due})
+            local later = create({description = "tied later task", due = due + 86400})
+            assert.equal(task.tasks[first].urgency, task.tasks[second].urgency)
+            assert.equal(task.tasks[first].urgency + 2, task.tasks[later].urgency)
         end)
 
-        it("ignores finished dependents when working out its implied due date", function()
-            local needed = create({description = "ignored needed task", due = os.time() + 40 * 86400})
-            local dependent = create({description = "ignored dependent task", due = os.time() + 86400, dependencies = {needed}})
-            setstatus(dependent, "done")
-            assert.equal(task.tasks[needed].due, task.tasks[needed].implied_due)
+    end)
+
+    describe("tags", function()
+        local config = require 'core.config'
+
+        after_each(function()
+            config.properties.autotags = nil
+        end)
+
+        it("leaves tags unset without rules or manual tags", function()
+            local vexid = create({description = "untagged plain task"})
+            assert.is_nil(rawget(task.tasks[vexid], 'tags'))
+            assert.is_nil(rawget(task.tasks[vexid], 'manualtags'))
+        end)
+
+        it("adds a hash to manual tags", function()
+            local vexid = create({description = "manual tagged task", manualtags = {"pinned", "+#kept", "-urgent"}})
+            assert.same({"#pinned", "#kept", "-#urgent"}, task.tasks[vexid].manualtags)
+        end)
+
+        it("lets a suppressed tag win over the same tag pinned", function()
+            local vexid = create({description = "contradicted tagged task", manualtags = {"-pinned", "kept", "pinned"}})
+            assert.same({"#kept"}, task.tasks[vexid].tags)
+        end)
+
+        it("rejects a manual tag with a space", function()
+            local vexid = task:add({description = "spaced tag task", manualtags = {"two words"}})
+            assert.has_error(function() task:resolve(vexid) end)
+        end)
+
+        it("names each tag whose rule holds, with a hash", function()
+            config.properties.autotags = {
+                open = function(t) return t.phase ~= 'final' end,
+                ['#costly'] = function(t) return (t.cost or 0) > 5 end,
+                ['area/build'] = function(t) return true end,
+            }
+            local vexid = create({description = "ruled tagged task", cost = 9})
+            assert.same({"#area/build", "#costly", "#open"}, task.tasks[vexid].tags)
+        end)
+
+        it("sees the resolved task in its rules", function()
+            config.properties.autotags = {todo = function(t) return t.status == 'todo' end}
+            local vexid = create({vextype = "atom", description = "fresh atom tagged task"})
+            assert.same({"#todo"}, task.tasks[vexid].tags)
+        end)
+
+        it("follows the rules as the task changes", function()
+            config.properties.autotags = {open = function(t) return t.phase ~= 'final' end}
+            local vexid = create({description = "following tagged task"})
+            setstatus(vexid, "done")
+            assert.is_nil(rawget(task.tasks[vexid], 'tags'))
+        end)
+
+        it("unions manual tags with the rules' and drops the suppressed ones", function()
+            config.properties.autotags = {open = function() return true end, review = function() return true end}
+            local vexid = create({description = "overridden tagged task", manualtags = {"pinned", "-review"}})
+            assert.same({"#open", "#pinned"}, task.tasks[vexid].tags)
+        end)
+
+        it("recomputes tags over a hand edit to them", function()
+            config.properties.autotags = {open = function() return true end}
+            local vexid = create({description = "hand edited tags task"})
+            task:set(vexid, {tags = {"#bogus"}})
+            task:resolve(vexid)
+            assert.same({"#open"}, task.tasks[vexid].tags)
+        end)
+
+        it("throws tag-rule-failed when a rule errors", function()
+            config.properties.autotags = {broken = function() error("boom") end}
+            local vexid = task:add({description = "broken rule task"})
+            assert.is_false(pcall(function() task:resolve(vexid) end))
+            assert.stub(cli.throw).was_called_with(cli, 'tag-rule-failed', '#broken', vexid, match._)
+        end)
+
+        it("throws bad-autotags when the rules are not tag names mapped to functions", function()
+            for _, rules in ipairs({"done", {done = true}, {"done"}, {['two words'] = function() end}}) do
+                config.properties.autotags = rules
+                local vexid = task:add({description = "badly ruled task " .. _})
+                assert.is_false(pcall(function() task:resolve(vexid) end))
+                assert.stub(cli.throw).was_called_with(cli, 'bad-autotags', match._)
+            end
         end)
 
     end)

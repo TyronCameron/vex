@@ -20,6 +20,25 @@ describe("schemaext", function()
         end)
     end)
 
+    describe("tag", function()
+        it("puts a # in front of a word and accepts only a word without spaces", function()
+            assert.equal("#urgent", schema.tag:prevalidate("urgent"))
+            assert.equal("#urgent", schema.tag:prevalidate("#urgent"))
+            assert.is_true(schema.tag:validate("#urgent"))
+            assert.is_false(schema.tag:validate("#two words"))
+            assert.is_false(schema.tag:validate("urgent"))
+        end)
+    end)
+
+    describe("tagoverride", function()
+        it("is a tag, or a tag with a - in front to suppress it", function()
+            assert.equal("-#urgent", schema.tagoverride:prevalidate("-urgent"))
+            assert.equal("#urgent", schema.tagoverride:prevalidate("+urgent"))
+            assert.is_true(schema.tagoverride:validate("-#urgent"))
+            assert.is_false(schema.tagoverride:validate("-#two words"))
+        end)
+    end)
+
     describe("status", function()
         local s = schema.atleast {status = schema.status}
 

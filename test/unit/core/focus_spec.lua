@@ -149,6 +149,55 @@ describe("Focus", function()
         assert.same({tasks[2]}, f['nil'](f, "cost"):get(tasks))
     end)
 
+    describe("contains", function()
+        local tasks = {
+            {vexid = "a", children = {"x", "y"}},
+            {vexid = "b", children = {"y"}},
+            {vexid = "c", seen = {x = true, y = false}},
+            {vexid = "d", children = "x"},
+            {vexid = "e"},
+        }
+        local f = Focus.new("all", function(t) return t end)
+
+        it("searches a list for the value", function()
+            assert.same({tasks[1], tasks[2]}, f:contains("children", "y"):get(tasks))
+            assert.same({tasks[1]}, f:contains("children", "x"):get(tasks))
+        end)
+
+        it("looks a value up as a key of a set", function()
+            assert.same({tasks[3]}, f:contains("seen", "y"):get(tasks))
+            assert.same({}, f:contains("seen", "z"):get(tasks))
+        end)
+
+        it("skips tasks whose field holds no collection", function()
+            assert.same({}, f:contains("children", "x"):get({tasks[4], tasks[5]}))
+        end)
+
+        it("replays from the saved focus", function()
+            local config = require 'core.config'
+            local task = require 'core.task'
+            config.properties.autotags = {contained = function(t) return t.description:find('^contained') ~= nil end}
+            for _, description in ipairs({"contained tagged task", "uncontained tagged task"}) do
+                local vexid = task:add({description = description})
+                task:resolve(vexid)
+                task:write(vexid)
+            end
+            config.properties.autotags = nil
+            Focus.focus('all'):contains('tags', '#contained'):write()
+            local result = Focus.read():get()
+            assert.equal(1, #result)
+            assert.equal("contained tagged task", result[1].description)
+        end)
+
+        it("needs a field and a value", function()
+            stub(cli, 'throw', function(self, name) error(name) end)
+            local ok, err = pcall(function() f:contains("children") end)
+            cli.throw:revert()
+            assert.is_false(ok)
+            assert.truthy(err:find('usage', 1, true))
+        end)
+    end)
+
     it("between keeps tasks whose field lies within the bounds", function()
         local tasks = {{vexid = "a", cost = 1}, {vexid = "b", cost = 5}, {vexid = "c", cost = 9}}
         local f = Focus.new("all", function(t) return t end)
@@ -232,6 +281,19 @@ describe("Focus", function()
         local function vexids(list)
             return func.imap(list, function(t) return t.vexid end)
         end
+
+        it("orderby reads each task's field once, however many comparisons the sort makes", function()
+            local reads = 0
+            local counted = {}
+            for i = 1, 20 do
+                counted[i] = setmetatable({vexid = "c" .. i}, {__index = function(_, field)
+                    if field == 'lazy' then reads = reads + 1 return 21 - i end
+                end})
+            end
+            local ordered = f:orderby('lazy'):get(counted)
+            assert.equal("c20", ordered[1].vexid)
+            assert.equal(20, reads)
+        end)
 
         it("orderby sorts by a field, keeping ties in order and missing values last", function()
             assert.same({"b", "e", "c", "a", "d"}, vexids(f:orderby('cost'):get(tasks)))

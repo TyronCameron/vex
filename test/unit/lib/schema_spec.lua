@@ -379,6 +379,25 @@ describe("schema", function()
         assert.equal(99, result)
     end)
 
+    local wrappers = {
+        all = function(child) return schema.all { child } end,
+        formatted = function(child) return schema.formatted { child } end,
+        derive = function(child) return schema.derive { child, derive = function() return nil end } end,
+        default = function(child) return schema.default { child, default = function() return nil end } end,
+    }
+
+    for name, wrap in pairs(wrappers) do
+        it("`schema." .. name .. "` leaves a nil instance to its child, which may allow it", function()
+            local valid = wrap(schema.maybe { 'num' }):validate(nil)
+            assert.is_true(valid)
+        end)
+
+        it("`schema." .. name .. "` rejects a nil instance when its child needs a value", function()
+            local valid = wrap(schema.num):validate(nil)
+            assert.is_false(valid)
+        end)
+    end
+
     -- ==================== CLI input coercion (fix-typed-field-cli-input-1) ====================
 
     it("`schema.num` coerces a numeric string on prevalidate", function()
@@ -534,6 +553,37 @@ describe("schema", function()
         assert.equal(4, schema.formatted { schema.__spec_double }:postvalidate(2))
         assert.equal(4, schema.all { schema.__spec_double, schema.num }:postvalidate(2))
         assert.same({4}, schema.vec { schema.formatted { schema.__spec_double } }:postvalidate({2}))
+    end)
+
+    describe("merge", function()
+
+        it("replaces the first schema's fields with the second's and keeps the rest", function()
+            local parent = schema.atleast {name = schema.str, size = schema.num}
+            local child = schema.atleast {size = schema.str}
+            local merged = parent:merge(child)
+            assert.is_true(merged:validate({name = "x", size = "big"}))
+            assert.is_false(merged:validate({name = "x", size = 3}))
+            assert.is_false(merged:validate({name = 1, size = "big"}))
+        end)
+
+        it("leaves both schemas untouched", function()
+            local parent = schema.atleast {size = schema.num}
+            local child = schema.atleast {size = schema.str}
+            parent:merge(child)
+            assert.is_true(parent:validate({size = 3}))
+            assert.is_true(child:validate({size = "big"}))
+        end)
+
+        it("takes the second schema's specification when it is not a table", function()
+            local merged = schema.constant(1):merge(schema.constant(2))
+            assert.is_true(merged:validate(2))
+            assert.is_false(merged:validate(1))
+        end)
+
+        it("refuses schemas of different types", function()
+            assert.has_error(function() schema.atleast {}:merge(schema.exactly {}) end)
+        end)
+
     end)
 
     describe("failures", function()

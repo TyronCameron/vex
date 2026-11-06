@@ -1,4 +1,5 @@
 local cli = require 'lib.cli'
+local func = require 'lib.func'
 local statemachine = require 'lib.statemachine'
 local schema = require 'lib.schema'
 local vexdex = require 'core.vexdex'
@@ -58,6 +59,56 @@ schema.register 'vexlink' {
     end
 }
 
+local tagpattern = '^#[^%s#]+$'
+
+local function unsigned(override)
+    return (override:gsub('^%-', '', 1))
+end
+
+schema.register 'tag' {
+    prevalidate = function(self, instance)
+        return type(instance) == "string" and (instance:gsub('^#?', '#', 1)) or instance
+    end,
+    validate = function(self, instance)
+        return type(instance) == "string" and instance:match(tagpattern) ~= nil, "Expected a tag, a # and then a word without spaces, got `" .. tostring(instance) .. "`"
+    end
+}
+
+schema.register 'tagoverride' {
+    prevalidate = function(self, instance)
+        if type(instance) ~= "string" then return instance end
+        local sign, word = instance:match('^([+-]?)(.*)$')
+        return (sign == '-' and '-' or '') .. schema.tag:prevalidate(word)
+    end,
+    validate = function(self, instance)
+        return type(instance) == "string" and unsigned(instance):match(tagpattern) ~= nil, "Expected a tag, a # and then a word without spaces, with a - in front to suppress it, got `" .. tostring(instance) .. "`"
+    end
+}
+
+local taglist = schema.maybe {schema.vec {schema.tag}}
+
+schema.register 'autotagged' {
+    prevalidate = function(self, instance)
+        return taglist:prevalidate(instance)
+    end,
+    validate = function(self, instance)
+        return taglist:validate(instance)
+    end,
+    postvalidate = function(self, instance, context)
+        local manual = context.root.manualtags or {}
+        local wanted = {}
+        for _, tag in ipairs(context.root.autotags or {}) do wanted[tag] = true end
+        for _, override in ipairs(manual) do
+            if override:sub(1, 1) ~= '-' then wanted[override] = true end
+        end
+        for _, override in ipairs(manual) do
+            if override:sub(1, 1) == '-' then wanted[unsigned(override)] = nil end
+        end
+        local tags = func.sortedkeys(wanted)
+        return #tags > 0 and tags or nil
+    end
+}
+
 schema.register 'acyclic' {
     validate = function(self, dependency, context)
         for _, reachable in ipairs(focus.focus(dependency):tree('dependencies'):get()) do
@@ -70,10 +121,18 @@ schema.register 'acyclic' {
 schema.register 'childless' {
     validate = function(self, dependency, context)
         local target = focus.focus(dependency):get()[1]
-        for _, field in ipairs {'children', 'options'} do
-            if type(target[field]) == "table" and #target[field] > 0 then
-                cli:throw('dependency-with-children', context.vexid, dependency)
-            end
+        if #(target.children or {}) + #(target.options or {}) > 0 then
+            cli:throw('dependency-with-children', context.vexid, dependency)
+        end
+        return true
+    end
+}
+
+schema.register 'dueinorder' {
+    validate = function(self, dependency, context)
+        local needed = vexdex:get(dependency)
+        if needed.due and context.task.due and needed.due > context.task.due and needed.phase ~= 'final' and context.task.phase ~= 'final' then
+            cli:throw('due-out-of-order', context.vexid, dependency)
         end
         return true
     end
@@ -117,7 +176,8 @@ schema.register 'dependencies' (schema.maybe {
         schema.all {
             schema.formatted {schema.vexlink},
             schema.acyclic,
-            schema.childless
+            schema.childless,
+            schema.dueinorder
         }
     }
 })

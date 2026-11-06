@@ -26,6 +26,8 @@ describe("vex user-facing errors (e2e, subprocess)", function()
     {"an unknown shell", "is not known", {"autocomplete", "nosuchshell"}},
     {"a malformed match", "Bad pattern `[a`", {"focus", "all", "--match", "description:[a"}},
     {"an unknown focus operation", "Unknown focus operation `bogus`", {"focus", "all", "--bogus", "x"}},
+    {"contains without a value", "You need to provide a field and value", {"focus", "all", "--contains", "tags"}},
+    {"a manual tag with a space", "Expected a tag", {"add", "Spaced", "tag", "task", "--manualtags", "two words"}},
   }
 
   it("rejects a set flag without a value", function()
@@ -151,6 +153,11 @@ describe("vex user-facing errors (e2e, subprocess)", function()
     fails(dir, "already depends on it", "resolve", "all")
   end)
 
+  it("rejects a due date earlier than a dependency's", function()
+    local needed = vex(dir, "add", "Needed", "first", "task", "--due", "2026-12-10 09:00:00")
+    fails(dir, "due earlier than", "add", "Needy", "second", "task", "--dependencies", needed, "--due", "2026-12-01 09:00:00")
+  end)
+
   it("rejects a dependency on a task with children", function()
     local leaf = vex(dir, "add", "Grouped", "leaf", "task")
     local parent = vex(dir, "add", "Grouping", "parent", "--vextype", "abstract")
@@ -164,5 +171,19 @@ describe("vex user-facing errors (e2e, subprocess)", function()
     local leaf = vex(dir, "add", "Plain", "leaf", "task")
     local parent = vex(dir, "add", "Needy", "parent", "--vextype", "abstract")
     fails(dir, "validation step failed", "set", parent, "--dependencies", leaf)
+  end)
+  local function autotags(source)
+    local config = dir .. "/.vex/config.lua"
+    helper.write_file(config, (helper.read_file(config):gsub("^return {", "return {\n  autotags = {" .. source .. "},", 1)))
+  end
+
+  it("names a tag rule that errors", function()
+    autotags("broken = function() error('boom') end")
+    fails(dir, "The rule for the tag `#broken` failed", "add", "Broken", "rule", "task")
+  end)
+
+  it("rejects tag rules that are not tag names mapped to functions", function()
+    autotags("broken = true")
+    fails(dir, "The `autotags` setting in your config", "add", "Badly", "ruled", "task")
   end)
 end)
