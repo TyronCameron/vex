@@ -41,6 +41,20 @@ function lfsext.globalpath(name, getenv)
     return path and lfs.attributes(path, 'mode') and path
 end
 
+function lfsext.isabsolute(path)
+    return path:match("^[/\\]") ~= nil or path:match("^%a:") ~= nil
+end
+
+function lfsext.normalise(path)
+    local parts = {}
+    for part in (path:gsub("\\", "/")):gmatch("[^/]+") do
+        if part ~= "." then table.insert(parts, part) end
+    end
+    local root = path:match("^[/\\]") and "/" or ""
+    local joined = root .. table.concat(parts, "/")
+    return joined == "" and "." or joined
+end
+
 function lfsext.mkdirs(path)
     if lfs.attributes(path, "mode") == "directory" then return true end
     local parent = path:match("(.+)[\\/][^\\/]+$")

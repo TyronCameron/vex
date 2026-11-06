@@ -1,4 +1,4 @@
-`.vex/config.lua` returns a Lua table and is read on every command. `vex init` writes this one:
+`.vex/config.lua` returns a Lua table and is read on every command, after the global folder's `config.lua` (see [[01 Configuring vex (config.lua)#The global folder]]). Settings you leave out take the defaults. `vex init` writes this one into `.vex/config.lua`:
 
 ```lua
 return {
@@ -28,6 +28,7 @@ This repository's own config sets `taskfolder = "vexdoc/vex"`: its backlog is th
 | `default.tasktype` | The `vextype` of a task added without one. |
 | `paths.groupby` | Nests task files in folders by their fields (see below). |
 | `loglimit` | How many lines the verb and event logs in `.vex/vexdex` keep (see [[Events and hooks]]). Defaults to 100. |
+| `plugins` | Chooses what fills each plugin slot and switches standalone plugins off (see [[01 Configuring vex (config.lua)#Plugins]]). |
 | `autotags` | Rules that tag tasks automatically (see below). Unset by default: no rules. |
 | `fingerprint.exclude` | Fields whose changes don't count as a change to the task, so they never move `modified` on their own (see [[Resolution pipeline#Fingerprints and `modified`]]). They are still written to the file. `vex init` sets it to `{'modified'}`. |
 
@@ -39,6 +40,25 @@ return {
     taskowners = {'alice', 'bob'},
 }
 ```
+
+`taskfolder` is a path relative to the project, and vex tidies it: backslashes become `/`, and `./`, repeated slashes and a trailing slash are dropped, so `'ehvilee/tasks/'`, `'./ehvilee//tasks'` and `'ehvilee\\tasks'` all mean `ehvilee/tasks`. An absolute path is refused. A setting of the wrong kind, such as `loglimit = 'lots'`, stops the command with a message naming the setting, and so does a config file that isn't valid Lua or doesn't return a table.
+
+## Plugins
+
+`plugins` chooses which plugin does each job and switches standalone plugins off (see [[Plugin architecture]]):
+
+```lua
+return {
+    plugins = {
+        tagger = 'shorttag',
+        vexcomplete = false,
+    },
+}
+```
+
+- `slot = 'name'` makes `name` the active member of a slot (`tagger`, `taskpath`, `taskformat`, `sortdata`, `frontmatter` or `body`). The plugin can be one of vex's own or a file of that name in a `plugin` folder: `.vex/plugin/shorttag.lua` here.
+- `name = false` switches a standalone plugin off, so its verbs and task types aren't registered, and `name = true` leaves it on. `vexcomplete` provides the shell completion verbs, and `vexations` the `abstract`, `decision`, `exploration` and `atom` task types, so `vexations = false` leaves you with plain `task`s. Tasks that already use a type that is switched off fail to resolve with an unknown task type error.
+- A name that isn't a plugin or slot, or switching off a plugin that fills a slot, stops the command with the `bad-plugin-setting` error.
 
 ## Grouping task files into folders
 
@@ -59,7 +79,7 @@ With this config, a task sits under its ancestors and then in a folder named aft
 - Characters that can't appear in a folder name (`/ \ : * ? " < > |`) become `-`.
 - Files move whenever something they depend on changes. Resolving a task resolves and re-files every task linked to it or from it, transitively: editing a parent's `children` moves its children, and finishing a dependency moves its dependents. Empty folders are removed.
 - vex owns the layout. A file moved by hand is still found, and is moved back the next time it is resolved.
-- After changing `paths.groupby`, run `vex resolve all --force` to move the existing files. Without `paths.groupby`, task files sit flat at `<vexid>.md`.
+- After changing `paths.groupby`, run `vex resolve all --force` to move the existing files. The default groups by status, then lineage; set `paths = { groupby = {} }` to keep task files flat at `<vexid>.md`.
 
 ## Tagging tasks automatically
 
@@ -98,5 +118,5 @@ Nothing creates it; make it when you want it. It holds the same things as `.vex`
 | --- | --- |
 | `config.lua` | Read before the project's `config.lua`; the project's value wins for any setting both define. Useful for settings you want in every project. |
 | `tasks/`, `recipes/`, `focuses/`, `views/`, `events/` | Loaded before the same folder in `.vex`, so project extensions can build on them (a task type cannot be defined twice). |
-| `plugin/` | Plugins registered at startup. A file named after a slot's default (`canonicalvexid.lua`, `grouppath.lua`...) replaces it for every project; see [[Plugin architecture]]. |
+| `plugin/` | Plugins registered at startup. A file named after a slot's default (`canonicalvexid.lua`, `grouppath.lua`...) replaces it for every project; a file with a new name can be selected with `plugins`; see [[Plugin architecture]]. |
 

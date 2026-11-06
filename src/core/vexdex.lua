@@ -104,7 +104,7 @@ function VexDex:unsafe_stamp(vexid, path)
 end
 
 function VexDex:taskroot()
-    return self.path .. '/' .. require('core.config').taskfolder
+    return lfsext.normalise(self.path .. '/' .. require('core.config').taskfolder)
 end
 
 -- the indexed vexids whose files changed or went missing since their mtimes were stamped, and the files under the task folder that no indexed task is at

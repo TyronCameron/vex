@@ -1,21 +1,7 @@
 local pretty = require 'lib.pretty'
 local lfs = require "lib.lfs"
 local cli = require "lib.cli"
-
-local default_config = {
-    taskfolder = '.',
-    default = {
-        tasktype = 'task'
-    },
-    paths = {
-        groupby = {"status", "lineage"}
-    },
-    taskowners = {},
-    loglimit = 100,
-    fingerprint = {
-        exclude = {"modified"}
-    }
-}
+local defaults = require "core.configdefaults"
 
 local function setup_vex_dir(path)
     path = path or lfs.currentdir()
@@ -31,7 +17,7 @@ end
 
 local function create_config(path)
     local f = io.open(path .. "/config.lua", "w")
-    local str = "return " .. pretty.table(default_config)
+    local str = "return " .. pretty.table(defaults)
     f:write(str)
     f:close()
 end 
@@ -44,6 +30,7 @@ local function create_ext_folders(path)
     lfs.mkdir(path .. "/recipes")
     lfs.mkdir(path .. "/tmp")
     lfs.mkdir(path .. "/events")
+    lfs.mkdir(path .. "/plugin")
 end 
 
 local function init(path)

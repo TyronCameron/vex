@@ -60,4 +60,39 @@ describe("Config", function()
         assert.same({}, cfg.files)
     end)
 
+    local function configfile(code)
+        local path = os.tmpname()
+        local f = io.open(path, "w")
+        f:write(code)
+        f:close()
+        return path
+    end
+
+    it("starts from the defaults it is given and lets files override them", function()
+        local defaults = {loglimit = 100, fingerprint = {exclude = {'modified'}}}
+        local path = configfile("return { fingerprint = { exclude = {} } }")
+        local cfg = Config.new(defaults):registerpath(path):loadall()
+        assert.equal(100, cfg.loglimit)
+        assert.same({exclude = {}}, cfg.fingerprint)
+        assert.same({exclude = {'modified'}}, defaults.fingerprint)
+        os.remove(path)
+    end)
+
+    it("reports a file that does not run instead of carrying on", function()
+        local path = configfile("return {")
+        local cfg, failed, err = Config.new():registerpath(path):loadall()
+        assert.is_nil(cfg)
+        assert.equal(path, failed)
+        assert.truthy(err)
+        os.remove(path)
+    end)
+
+    it("reports a file that does not return a table", function()
+        local path = configfile("return 5")
+        local cfg, failed = Config.new():registerpath(path):loadall()
+        assert.is_nil(cfg)
+        assert.equal(path, failed)
+        os.remove(path)
+    end)
+
 end)

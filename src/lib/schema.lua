@@ -1,5 +1,6 @@
 
 local func = require 'lib.func'
+local lfsext = require 'lib.lfsext'
 local pretty = require "lib.pretty"
 local naturaltime = require 'lib.naturaltime'
 
@@ -78,7 +79,7 @@ Schema.__call = function(self, ...)
     local specification = select('#', ...) > 1 and {...} or ...
     local complete_schema = setmetatable({}, Schema)
     for k, v in pairs(self) do complete_schema[k] = v end
-    complete_schema.specification = specification
+    if specification ~= nil then complete_schema.specification = specification end
     return complete_schema
 end
 Schema.__tostring = function(self)
@@ -111,6 +112,11 @@ end
 function Schema.register(name)
     assert(type(name) == "string", "Attempting to register a schema without a string name.")
     return function(definition)
+        if getmetatable(definition) == Schema then
+            definition._name = name
+            templates[name] = definition
+            return
+        end
         definition.name = definition.name or name 
         templates[name] = Schema.new(definition)
     end 
@@ -643,6 +649,16 @@ Schema.register 'uint' {
 Schema.register 'str' {
     validate = function(self, instance)
         return type(instance) == "string", expected("a string", instance)
+    end
+}
+
+-- a relative path, normalised
+Schema.register 'path' {
+    prevalidate = function(self, instance)
+        return type(instance) == "string" and lfsext.normalise(instance) or instance
+    end,
+    validate = function(self, instance)
+        return type(instance) == "string" and not lfsext.isabsolute(instance), "Expected a relative path"
     end
 }
 

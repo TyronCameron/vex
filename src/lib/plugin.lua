@@ -124,9 +124,32 @@ end
 function Plugin:select(set_name, member)
     local s = self.sets[set_name]
     assert(s, "unknown set '" .. set_name .. "'")
-    assert(member_of(member, s.members),
-        "'" .. member .. "' is not in set '" .. set_name .. "'")
+    assert(self.plugins[member], "'" .. member .. "' is not a registered plugin")
     s.active = member
+    return self
+end
+
+-- Apply a table of settings: `slot = 'plugin'` selects what fills a slot, `plugin = false` or `true` switches a standalone plugin.
+-- Returns self, or nil, the name and the problem for the first setting that cannot be applied.
+function Plugin:configure(settings)
+    for name, value in pairs(settings) do
+        if self.sets[name] then
+            if type(value) ~= "string" or not self.plugins[value] then
+                return nil, name, "unknown plugin '" .. tostring(value) .. "'"
+            end
+            self:select(name, value)
+        elseif self.plugins[name] then
+            if type(value) ~= "boolean" then return nil, name, "a plugin is switched with true or false, not " .. tostring(value) end
+            for _, set in pairs(self.sets) do
+                if not value and set.active == name then
+                    return nil, name, "it fills a slot, so choose another plugin for the slot instead"
+                end
+            end
+            if value then self:enable(name) else self:disable(name) end
+        else
+            return nil, name, "unknown plugin or slot"
+        end
+    end
     return self
 end
 
