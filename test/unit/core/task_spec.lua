@@ -259,6 +259,33 @@ describe("task", function()
         assert.equal('todo', task.tasks[vexid].status)
     end)
 
+    it("validates a field a type redefines by the type's own rule, not its ancestor's", function()
+        local schema = require 'lib.schema'
+        task:task 'loosecost':extends 'atom' { schema = schema.atleast { cost = schema.maybe {schema.str} } }
+        local cli = require 'lib.cli'
+        stub(cli, 'throw', function(self, name) error(name) end)
+        local vexid = task:add({description = "loosely costed task", vextype = 'loosecost', cost = "a lot"})
+        local ok, err = pcall(function() task:resolve(vexid) end)
+        cli.throw:revert()
+        assert.is_true(ok, err)
+        assert.equal("a lot", task.tasks[vexid].cost)
+    end)
+
+    it("lets an ancestor's derived field read a field its descendant defaults", function()
+        local schema = require 'lib.schema'
+        schema.register 'echoedmood' {
+            validate = function() return true end,
+            postvalidate = function(self, instance, context) return context.root.mood end
+        }
+        task:task 'echoparent':extends 'atom' { schema = schema.atleast { echo = schema.echoedmood } }
+        task:task 'echochild':extends 'echoparent' {
+            schema = schema.atleast { mood = schema.default {schema.str, default = function() return 'calm' end} }
+        }
+        local vexid = task:add({description = "echoed mood task", vextype = 'echochild'})
+        task:resolve(vexid)
+        assert.equal('calm', task.tasks[vexid].echo)
+    end)
+
     describe("transients", function()
 
         local schema = require 'lib.schema'

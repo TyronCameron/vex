@@ -307,6 +307,12 @@ function Schema:set(data, path, isoname, context)
     return self 
 end
 
+function Schema:merge(other)
+    assert(self._name == other._name, "Cannot merge a `" .. tostring(self._name) .. "` schema with a `" .. tostring(other._name) .. "` schema")
+    local mergeable = type(self.specification) == "table" and type(other.specification) == "table"
+    return Schema.instantiate(self._name, mergeable and func.merge(self.specification, other.specification) or other.specification)
+end
+
 function Schema:iterate(instance, context)
     context = Context.new(self, instance, context)
     return coroutine.wrap(function()

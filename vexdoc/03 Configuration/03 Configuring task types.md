@@ -2,7 +2,7 @@ Each `.lua` file in `.vex/tasks` can register task types and transients.
 
 ## Task types
 
-A type extends an existing one and adds a schema. Its tasks must pass its own schema and every ancestor's:
+A type extends an existing one and adds a schema. Its schema is merged over its ancestors': a field it defines replaces the ancestor's definition of that field, and it inherits every other field. Its tasks must pass the merged schema:
 
 ```lua
 task:task 'bug':extends 'atom' {

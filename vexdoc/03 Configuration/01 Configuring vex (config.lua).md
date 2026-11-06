@@ -28,6 +28,7 @@ This repository's own config sets `taskfolder = "vexdoc/vex"`: its backlog is th
 | `default.tasktype` | The `vextype` of a task added without one. |
 | `paths.groupby` | Nests task files in folders by their fields (see below). |
 | `loglimit` | How many lines the verb and event logs in `.vex/vexdex` keep (see [[Events and hooks]]). Defaults to 100. |
+| `autotags` | Rules that tag tasks automatically (see below). Unset by default: no rules. |
 | `fingerprint.exclude` | Fields whose changes don't count as a change to the task, so they never move `modified` on their own (see [[Resolution pipeline#Fingerprints and `modified`]]). They are still written to the file. `vex init` sets it to `{'modified'}`. |
 
 For example, to keep tasks in a `todo` folder and assign them to two people:
@@ -59,6 +60,26 @@ With this config, a task sits under its ancestors and then in a folder named aft
 - Files move whenever something they depend on changes. Resolving a task resolves and re-files every task linked to it or from it, transitively: editing a parent's `children` moves its children, and finishing a dependency moves its dependents. Empty folders are removed.
 - vex owns the layout. A file moved by hand is still found, and is moved back the next time it is resolved.
 - After changing `paths.groupby`, run `vex resolve all --force` to move the existing files. Without `paths.groupby`, task files sit flat at `<vexid>.md`.
+
+## Tagging tasks automatically
+
+`autotags` maps tag names to rules. A rule is a function that gets the resolved task, transients included, and returns whether the tag applies. vex adds the `#`:
+
+```lua
+return {
+    autotags = {
+        done = function(t) return t.phase == 'final' end,
+        costly = function(t) return (t.cost or 0) > 5 end,
+        ['area/docs'] = function(t) return t.description:find('[Dd]oc') ~= nil end,
+    },
+}
+```
+
+- Every resolve runs the rules and writes the result, with your `manualtags` applied, to the task's `tags` ([[02 Frontmatter schema#Tags]]).
+- After changing a rule, run `vex resolve all --force` to retag every task. Tags you pinned or suppressed in `manualtags` are kept.
+- A rule that reads other tasks, through transients such as `blockers` or `urgency`, is checked again only when its own task resolves.
+- A rule that errors stops the command with `tag-rule-failed`. A tag name with a space, or a rule that isn't a function, gives `bad-autotags`.
+- A project's `autotags` replaces the global folder's, like every other setting.
 
 ## The global folder
 

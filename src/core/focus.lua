@@ -334,6 +334,19 @@ Focus['nil'] = function(self, field)
     end, field)
 end
 
+-- contains field:value, keeping tasks whose field holds value as a key or as an element of its list
+function Focus:contains(field, value)
+    if field == nil or value == nil then
+        cli:throw('usage', 'You need to provide a field and value to check with contains. We saw field = ' .. tostring(field) .. ' and value ' .. tostring(value))
+    end
+    return self:chain('contains', function(tasks)
+        return func.ifilter(tasks, function(task)
+            local collection = task[field]
+            return type(collection) == "table" and (collection[value] ~= nil or func.any(collection, function(element) return element == value end))
+        end)
+    end, field, value)
+end
+
 -- fuzzy key:value 
 local function levenshtein(a, b)
     local la, lb = #a, #b

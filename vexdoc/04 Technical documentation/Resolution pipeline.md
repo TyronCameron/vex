@@ -3,7 +3,7 @@ How a task goes from `vex add` to a file on disk, and what else moves when it do
 ## add, resolve, write
 
 1. **`TaskManager:add`** makes a vexid with the `tagger` plugin and holds the new task in memory only.
-2. **`TaskManager:resolve`** runs the schema of the task's type and of each type it extends, from the root down. Each schema runs three steps: normalise (fill defaults, convert values), validate, and derive (compute fields, record links). A failure throws a named `resolution-failed-*` error and nothing is written. Resolution then fingerprints the task (below), indexes it in memory, writes it and moves files into place.
+2. **`TaskManager:resolve`** runs the schema of the task's type, merged with those of the types it extends when it was registered: a type's field replaces its ancestor's definition of that field. The schema runs once, in three steps: normalise (fill defaults, convert values), validate, and derive (compute fields, record links). A failure throws a named `resolution-failed-*` error and nothing is written. Resolution then fingerprints the task (below), indexes it in memory, writes it and moves files into place.
 3. **`TaskManager:write`** formats the task back to its readable form (a timestamp becomes `YYYY-MM-DD HH:MM:SS`, a vexid becomes `[[vexid]]`), writes it through the `taskformat` plugin to a temporary file and renames it into place ([[The index]]).
 
 Resolving writes every task whose content changed, so a value you typed by hand (`due: tomorrow`) becomes a date as soon as the task is resolved. A task that resolving leaves as it was is never rewritten, so resolving again leaves every file, and git, alone.

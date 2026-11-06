@@ -8,6 +8,8 @@ children:
   - "[[load-project-plugins-vex-folder-1]]"
   - "[[enable-disable-standalone-1]]"
   - "[[load-config-extensions-plugins-1]]"
+  - "[[tag-tasks-config-rules-manual-1]]"
+  - "[[make-config-loadall-merge-config-1]]"
 created: "2026-10-19 09:21:54"
-modified: "2026-10-30 07:09:14"
+modified: "2026-11-05 22:18:11"
 ---

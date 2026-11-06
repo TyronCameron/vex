@@ -62,6 +62,56 @@ schema.register 'vexlink' {
     end
 }
 
+local tagpattern = '^#[^%s#]+$'
+
+local function unsigned(override)
+    return (override:gsub('^%-', '', 1))
+end
+
+schema.register 'tag' {
+    prevalidate = function(self, instance)
+        return type(instance) == "string" and (instance:gsub('^#?', '#', 1)) or instance
+    end,
+    validate = function(self, instance)
+        return type(instance) == "string" and instance:match(tagpattern) ~= nil, "Expected a tag, a # and then a word without spaces, got `" .. tostring(instance) .. "`"
+    end
+}
+
+schema.register 'tagoverride' {
+    prevalidate = function(self, instance)
+        if type(instance) ~= "string" then return instance end
+        local sign, word = instance:match('^([+-]?)(.*)$')
+        return (sign == '-' and '-' or '') .. schema.tag:prevalidate(word)
+    end,
+    validate = function(self, instance)
+        return type(instance) == "string" and unsigned(instance):match(tagpattern) ~= nil, "Expected a tag, a # and then a word without spaces, with a - in front to suppress it, got `" .. tostring(instance) .. "`"
+    end
+}
+
+local taglist = schema.maybe {schema.vec {schema.tag}}
+
+schema.register 'autotagged' {
+    prevalidate = function(self, instance)
+        return taglist:prevalidate(instance)
+    end,
+    validate = function(self, instance)
+        return taglist:validate(instance)
+    end,
+    postvalidate = function(self, instance, context)
+        local manual = context.root.manualtags or {}
+        local wanted = {}
+        for _, tag in ipairs(context.root.autotags or {}) do wanted[tag] = true end
+        for _, override in ipairs(manual) do
+            if override:sub(1, 1) ~= '-' then wanted[override] = true end
+        end
+        for _, override in ipairs(manual) do
+            if override:sub(1, 1) == '-' then wanted[unsigned(override)] = nil end
+        end
+        local tags = func.sortedkeys(wanted)
+        return #tags > 0 and tags or nil
+    end
+}
+
 local function singleparent(child, context)
     for _, vexid in ipairs(vexdex:linksto(child)) do
         local parent = vexdex:get(vexid)
@@ -160,6 +210,8 @@ task:task 'basetask' {
         cost = schema.maybe {schema.num},
         benefit = schema.maybe {schema.num},
         owner = schema.maybe {schema.any(config.taskowners)},
+        manualtags = schema.maybe {schema.vec {schema.tagoverride}},
+        tags = schema.autotagged,
     }
 }
 
@@ -239,6 +291,29 @@ task:transient 'wordcount' {
     vextype = 'basetask',
     definition = function(t)
         return select(2, t.description:gsub('%S+', ''))
+    end
+}
+
+local function tagrules()
+    local rules = config.autotags or {}
+    if type(rules) ~= "table" then cli:throw('bad-autotags', rules) end
+    for name, rule in pairs(rules) do
+        if type(name) ~= "string" or not schema.tag:validate(schema.tag:prevalidate(name)) or type(rule) ~= "function" then cli:throw('bad-autotags', name) end
+    end
+    return rules
+end
+
+task:transient 'autotags' {
+    vextype = 'basetask',
+    definition = function(t)
+        local tags = {}
+        for name, rule in pairs(tagrules()) do
+            local ok, holds = pcall(rule, t)
+            if not ok then cli:throw('tag-rule-failed', schema.tag:prevalidate(name), t.vexid, holds) end
+            if holds then table.insert(tags, schema.tag:prevalidate(name)) end
+        end
+        table.sort(tags)
+        return #tags > 0 and tags or nil
     end
 }
 

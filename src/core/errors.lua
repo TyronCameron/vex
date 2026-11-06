@@ -105,6 +105,20 @@ cli:error "unknown-focus-operation" {
     hint = "Use a focus flag such as `--select`, `--filter`, `--orderby` or `--groupby`. See `vex help focus`."
 }
 
+cli:error "bad-autotags" {
+    function(entry)
+        return 'The `autotags` setting in your config must map tag names to functions, but `' .. tostring(entry) .. '` is not one.'
+    end,
+    hint = "Write each rule as a tag name without spaces and a function of the task, e.g. `autotags = { done = function(t) return t.phase == 'final' end }`."
+}
+
+cli:error "tag-rule-failed" {
+    function(tag, vexid, err)
+        return 'The rule for the tag `' .. tostring(tag) .. '` failed on `' .. tostring(vexid) .. '`: ' .. tostring(err)
+    end,
+    hint = "Fix the rule in the `autotags` setting of your config. A rule gets the task and returns whether the tag applies."
+}
+
 cli:error "bad-match" {
     function(pattern)
         return 'Bad pattern `' .. tostring(pattern) .. '`.'
