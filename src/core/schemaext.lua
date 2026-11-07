@@ -2,6 +2,7 @@ local cli = require 'lib.cli'
 local func = require 'lib.func'
 local statemachine = require 'lib.statemachine'
 local schema = require 'lib.schema'
+local naturaltime = require 'lib.naturaltime'
 local vexdex = require 'core.vexdex'
 local task = require 'core.task'
 local focus = require 'core.focus'
@@ -156,6 +157,20 @@ schema.register 'singleparent' {
             end
         end
         return true
+    end
+}
+
+schema.register 'recurrence' {
+    validate = function(self, phrase)
+        local now = os.time()
+        local ok, after = pcall(naturaltime.parse, tostring(phrase), now)
+        return type(phrase) == "string" and ok and after > now, "Expected a recurrence such as `weekly`, `monthly` or `3 days`, got `" .. tostring(phrase) .. "`"
+    end
+}
+
+schema.register 'datefield' {
+    validate = function(self, field, context)
+        return type(field) == "string" and context.taskmanager:isdatefield(context.task.vextype, field), "Expected the name of a date field to recur over, such as `due`, got `" .. tostring(field) .. "`"
     end
 }
 

@@ -11,6 +11,7 @@ local cli = require 'lib.cli'
 local lfs = require 'lib.lfs'
 local lfsext = require 'lib.lfsext'
 local pretty = require 'lib.pretty'
+local naturaltime = require 'lib.naturaltime'
 local vexdex = require 'core.vexdex'
 local focus = require 'core.focus'
 local config = require 'core.config'
@@ -166,6 +167,12 @@ function TaskManager:schemaof(vextype, field)
     return tasktype and select(2, tasktype.schema:get({}, {field}))
 end
 
+-- whether a type's field holds a date or datetime
+function TaskManager:isdatefield(vextype, field)
+    local fieldschema = self:schemaof(vextype, field)
+    return fieldschema ~= nil and #fieldschema:collect('datetime', 0) + #fieldschema:collect('date', 0) > 0
+end
+
 function TaskManager:transientof(vextype, name)
     local tasktype = self.tasktypes[vextype]
     local definitions = self.transients[name] or {}
@@ -215,7 +222,8 @@ function TaskManager:add(task)
     if not (type(task.description) == "string") then cli:throw("task-creation-failed", "task must have a description to be added") end
     if not (#task.description > 3) then cli:throw("task-creation-failed", "Need more than 3 characters to create a task") end
     
-    task.vexid = tagger.generate(task.description, vexdex.index)
+    local taken = setmetatable({}, {__index = function(_, vexid) return vexdex.index[vexid] or self.tasks[vexid] end})
+    task.vexid = tagger.generate(task.description, taken)
     local existing_task = self:getsingle(task.vexid)
     if existing_task then cli:throw('task-already-exists', task.vexid, existing_task.path) end 
     task.vextype = task.vextype or (config.default and config.default.tasktype) or 'task'
@@ -223,6 +231,25 @@ function TaskManager:add(task)
     self.tasks[task.vexid] = Task.new(task)
     event:trigger('post-task-add', task.vexid, self.tasks[task.vexid])
     return task.vexid
+end
+
+-- adds the next task of a recurring task, its `over` date moved on by its `recur`, among its parent's children
+function TaskManager:recur(vexid)
+    local finished = self:getsingle(vexid)
+    local nexttask = func.map(finished, function(value)
+        return type(value) == "table" and func.map(value, function(v) return v end) or value
+    end)
+    nexttask.vexid, nexttask.created, nexttask.modified, nexttask.status = nil, nil, nil, nil
+    local over = finished.over or 'due'
+    nexttask[over] = naturaltime.parse(finished.recur, finished[over] or os.time())
+    local successor = self:add(nexttask)
+    self:resolve(successor)
+    local parent = finished.parent
+    if parent and self:getsingle(parent).children then
+        self:set(parent, {children = successor}, {children = 'insert'})
+        self:resolve(parent)
+    end
+    return successor
 end
 
 -- removes task by id or focus
@@ -418,7 +445,7 @@ function TaskManager:resolvesingle(vexid)
     vexdex:unsafe_link(vexid, context.links, previouslinks)
     vexdex:unsafe_add(vexid, task)
 
-    event:trigger('post-task-resolve', vexid, task)
+    event:trigger('post-task-resolve', vexid, task, previous)
     return func.imerge(unlinked, func.imerge(task.forwardlinks, task.backlinks)), changed
 end
 

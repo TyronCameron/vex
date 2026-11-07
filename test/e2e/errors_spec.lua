@@ -28,6 +28,9 @@ describe("vex user-facing errors (e2e, subprocess)", function()
     {"an unknown focus operation", "Unknown focus operation `bogus`", {"focus", "all", "--bogus", "x"}},
     {"contains without a value", "You need to provide a field and value", {"focus", "all", "--contains", "tags"}},
     {"a manual tag with a space", "Expected a tag", {"add", "Spaced", "tag", "task", "--manualtags", "two words"}},
+    {"a recurring recipe without a recurrence", "The `recurring` recipe needs `--recur`", {"recipe", "recurring", "Wash", "dishes"}},
+    {"a repeat recipe without a count", "The `repeat` recipe needs `--n`", {"recipe", "repeat", "Wash", "dishes"}},
+    {"a recurrence it cannot read", "Expected a recurrence", {"add", "Wash", "dishes", "--recur", "sometimes"}},
   }
 
   it("rejects a set flag without a value", function()

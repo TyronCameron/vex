@@ -267,6 +267,13 @@ cli:error "unknown-field" {
     hint = "Ensure that this field is correctly written in your `config.lua` file."
 }
 
+cli:error "recipe-needs-flag" {
+    function(recipe, flag, meaning)
+        return 'The `' .. tostring(recipe) .. '` recipe needs `--' .. tostring(flag) .. '`: ' .. tostring(meaning) .. '.'
+    end,
+    hint = "Run e.g. `vex recipe recurring Do dishes --start today --recur weekly` or `vex recipe repeat Do dishes --n 10`."
+}
+
 cli:error "task-creation-failed" {
     function(msg)
         return 'Cannot create task. Reason: ' .. tostring(msg)

@@ -17,6 +17,7 @@ Every user mistake fails with a named error, a message and a hint, and exits non
 | `clear-with-value` | `--clear` before a field that is also given a value. | Use `vex set x --clear --field` alone, or drop `--clear`. |
 | `missing-value` | A `set` flag with no value. | Give it one, or put `--clear` before it to unset the field. |
 | `immutable-vexid` | `vex set --vexid`. | A vexid is the task's identity: add a new task and remove the old one. |
+| `recipe-needs-flag` | `vex recipe recurring` without `--recur`, or `vex recipe repeat` without a whole number above 0 for `--n`. | Add the flag. |
 | `task-creation-failed` | A description of 3 characters or fewer. | Describe the task in at least two words. |
 | `task-already-exists`, `path-already-exists` | The new vexid or file path is taken. | Reword the description, or `vex resolve all` if the file isn't indexed. |
 | `resolution-failed-normalisation`, `-validation`, `-derivation` | A field is invalid. The message names the field, and the footer links the file. | Fix the value, or the file if you edited it by hand. The task stays as it was. |
