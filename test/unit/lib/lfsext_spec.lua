@@ -49,6 +49,19 @@ describe("lfsext", function()
         os.execute("rm -rf '" .. dir .. "'")
     end)
 
+    it("writes a file's text and reads it back, replacing what was there", function()
+        local dir = tmpdir()
+        local path = dir .. "/note.md"
+        lfsext.writefile(path, "first\n")
+        lfsext.writefile(path, "---\nsecond\n")
+        assert.equal("---\nsecond\n", lfsext.readfile(path))
+        os.execute("rm -rf '" .. dir .. "'")
+    end)
+
+    it("reads no text from a file that is not there", function()
+        assert.is_nil(lfsext.readfile("/nonexistent/vex/note.md"))
+    end)
+
     describe("globaldir", function()
         local function env(vars)
             return function(name) return vars[name] end

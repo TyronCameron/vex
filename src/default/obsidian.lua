@@ -1,3 +1,5 @@
+local pretty = require 'lib.pretty'
+
 local escapes = {["\\"] = "\\\\", ['"'] = '\\"', ["\n"] = "\\n", ["\r"] = "\\r", ["\t"] = "\\t"}
 local unescapes = {["\\"] = "\\", ['"'] = '"', n = "\n", r = "\r", t = "\t"}
 setmetatable(unescapes, {__index = function(_, c) return "\\" .. c end})
@@ -100,22 +102,34 @@ local function to_yaml_value(v, indent)
 end
 
 return {
-    read = function(path)
-        local f = assert(io.open(path, "r"))
-        local content = f:read("*a")
-        f:close()
+    format = function(text)
+        local fences, shown = 0, {}
+        for line, ending in text:gmatch("([^\n]*)(\n?)") do
+            if line == "---" and (#shown == 0 or fences == 1) then
+                fences = fences + 1
+                line = pretty.string(line, 'cyan')
+            elseif fences == 1 then
+                local lead, rest = line:match("^(%s*%-?%s*)(.*)$")
+                local key = not rest:match("^#") and keyvalue(rest)
+                if key then line = lead .. pretty.string(key .. ":", 'green') .. rest:sub(#key + 2) end
+            end
+            table.insert(shown, line .. ending)
+        end
+        return table.concat(shown)
+    end,
 
-        if not content:match("^%-%-%-\n") then return nil end
+    parse = function(text)
+        if not text:match("^%-%-%-\n") then return nil end
 
-        local frontmatter, body = content:match("^%-%-%-\n(.-)\n%-%-%-\n(.*)$")
+        local frontmatter, body = text:match("^%-%-%-\n(.-)\n%-%-%-\n(.*)$")
         assert(frontmatter, "the frontmatter is never closed")
         frontmatter = frontmatter:match("^%s*(.-)%s*$")
         assert(#frontmatter > 0, "frontmatter must not be empty")
 
         local lines = {}
         for line in frontmatter:gmatch("[^\n]+") do
-            local indent, text = line:match("^(%s*)(.-)%s*$")
-            if text ~= "" and not text:match("^#") then lines[#lines + 1] = {indent = #indent, text = text} end
+            local indent, entry = line:match("^(%s*)(.-)%s*$")
+            if entry ~= "" and not entry:match("^#") then lines[#lines + 1] = {indent = #indent, text = entry} end
         end
         local task, nextline = parseblock(lines, 1, lines[1].indent)
         assert(nextline > #lines, "cannot read the line `" .. tostring(lines[nextline] and lines[nextline].text) .. "`")
@@ -124,21 +138,12 @@ return {
         return task
     end,
 
-    write = function(path, frontmatter_iter, body)
-        local f = assert(io.open(path, "w"))
-
-        f:write("---\n")
+    render = function(frontmatter_iter, body)
+        local lines = {"---\n"}
         for k, v in frontmatter_iter do
-            f:write(k .. ": " .. to_yaml_value(v) .. "\n")
+            table.insert(lines, k .. ": " .. to_yaml_value(v) .. "\n")
         end
-        f:write("---\n")
-
-        if body then
-            f:write(body)
-        end
-
-        f:close()
+        table.insert(lines, "---\n")
+        return table.concat(lines) .. (body or "")
     end,
-
-    value = to_yaml_value
 }
