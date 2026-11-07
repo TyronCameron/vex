@@ -13,12 +13,12 @@ local function vexids(f)
     return func.imap(f:get(), function(t) return t.vexid end)
 end
 
-local function focus_pop_args(args)
+local function pop_focus(args)
     return cli.isflag(args[1]) and focus.focus() or focus.focus(table.remove(args, 1))
 end
 
-local function focus_take_in(args)
-    local f = focus_pop_args(args)
+local function pop_focus_and_take_edits(args)
+    local f = pop_focus(args)
     task:resolveall(vexids(f:intersect(focus.focus('updated'))))
     return f
 end
@@ -40,7 +40,7 @@ end
 
 cli:verb "show" {
     function(args)
-        local f = focus_pop_args(args)
+        local f = pop_focus(args)
         local lines = {}
         f:each(function(vexid)
             table.insert(lines, task:show(vexid))
@@ -94,11 +94,11 @@ cli:verb "view" {
         local focusname
         local viewname
         if #positional_args > 1 then 
-            focusname = focus_pop_args(positional_args)
+            focusname = pop_focus(positional_args)
             viewname = table.remove(positional_args, 1)
         else 
             viewname = table.remove(positional_args, 1)
-            focusname = focus_pop_args(positional_args)
+            focusname = pop_focus(positional_args)
         end
         local flags = args:flags()
         return view:display(viewname, focusname, flags, func.ifilter(args, cli.isflag))
@@ -114,7 +114,7 @@ cli:verb "resolve" {
         if args[1] == 'all' then
             task:reindexall(force)
         else
-            local f = focus_take_in(args)
+            local f = pop_focus_and_take_edits(args)
             if force then task:resolveall(vexids(f)) end
         end
         task:writeall()
@@ -141,7 +141,7 @@ cli:verb "add" {
 
 cli:verb "remove" {
     function(args)
-        local f = focus_take_in(args)
+        local f = pop_focus_and_take_edits(args)
         local lines = {}
         f:each(function(vexid)
             task:remove(vexid)
@@ -160,7 +160,7 @@ cli:verb "remove" {
 cli:verb "get" {
     function(args)
         warn_stale()
-        local f = focus_pop_args(args)
+        local f = pop_focus(args)
         local fields = {}
         for _, flag in ipairs(func.ifilter(args, cli.isflag)) do
             if flag[1] == 'select' then
@@ -185,7 +185,7 @@ cli:verb "get" {
 
 cli:verb "set" {
     function(args)
-        local f = focus_take_in(args)
+        local f = pop_focus_and_take_edits(args)
         local taskproperties = args:flags()
         local modifiers = args:modifiers()
         local bare = args:bare()

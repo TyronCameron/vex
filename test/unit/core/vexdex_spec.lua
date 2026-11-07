@@ -126,14 +126,28 @@ describe("vexdex", function()
         for _, vexid in ipairs({"__kept", "__touched", "__gone"}) do vexdex:unsafe_remove(vexid) end
     end)
 
-    it("persists index entries without their body", function()
+    it("keeps index entries without their body, in memory and on disk", function()
         vexdex:add("__bodied", {vexid = "__bodied", status = "todo", vexbody = "private notes"})
-        assert.equal("private notes", vexdex:get("__bodied").vexbody)
+        assert.same({vexid = "__bodied", status = "todo"}, vexdex:get("__bodied"))
         assert.same({vexid = "__bodied", status = "todo"}, vexdex.new(vexdex.path):get("__bodied"))
         local stored = io.open(vexdex:vexpath("vexdex/index.bin"), "rb"):read("*a")
         assert.is_nil(stored:find("private notes", 1, true))
         assert.truthy(stored:find("__bodied", 1, true))
         vexdex:remove("__bodied")
+    end)
+
+    it("still counts the body towards a task's fingerprint", function()
+        vexdex:unsafe_add("__printed-body", {vexid = "__printed-body", vexbody = "notes"})
+        assert.is_false(vexdex:changed("__printed-body", {vexid = "__printed-body", vexbody = "notes"}))
+        assert.is_true(vexdex:changed("__printed-body", {vexid = "__printed-body", vexbody = "other notes"}))
+        vexdex:unsafe_remove("__printed-body")
+    end)
+
+    it("keeps an index entry's metatable in memory", function()
+        local Task = {__index = function() return "computed" end}
+        vexdex:unsafe_add("__wrapped", setmetatable({vexid = "__wrapped", vexbody = "notes"}, Task))
+        assert.equal(Task, getmetatable(vexdex:get("__wrapped")))
+        vexdex:unsafe_remove("__wrapped")
     end)
 
     it("persists index entries as plain data, without their metatable", function()

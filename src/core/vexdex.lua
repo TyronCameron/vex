@@ -33,8 +33,14 @@ local function excluded()
     return (require('core.config').fingerprint or {}).exclude or {}
 end
 
+local function plain(task)
+    return func.map(task, function(value) return value end)
+end
+
 function VexDex:unsafe_add(vexid, task)
-    self.index[vexid] = task
+    local entry = setmetatable(plain(task), getmetatable(task))
+    entry.vexbody = nil
+    self.index[vexid] = entry
     self.fingerprints[vexid] = {whole = self:fingerprint(task), content = self:fingerprint(task, excluded())}
     return self
 end
@@ -166,15 +172,9 @@ function VexDex:readindex()
     return self 
 end
 
-local function data(task)
-    local plain = func.map(task, function(value) return value end)
-    plain.vexbody = nil
-    return plain
-end
-
 function VexDex:writeindex()
     self:atomic(self:vexpath("vexdex/index.bin"), function(path)
-        binser.writeFile(path, func.map(self.index, data))
+        binser.writeFile(path, func.map(self.index, plain))
     end)
     self:atomic(self:vexpath("vexdex/backlinks.bin"), function(path)
         binser.writeFile(path, self.backlinks)

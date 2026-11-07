@@ -214,18 +214,18 @@ function TaskManager:remove(vexid)
     assert(vexid, "remove() requires an id or focus")
     event:trigger('pre-task-remove', vexid)
     if vexdex:get(vexid) then
-        local linkers = focus.focus(vexid):step('backlinks'):get()
+        local linkers = func.imap(focus.focus(vexid):step('backlinks'):get(), function(linker) return linker.vexid end)
         for _, linker in ipairs(linkers) do
-            for field, value in pairs(linker) do
+            local task = self:getsingle(linker)
+            for field, value in pairs(task) do
                 if value == vexid then
-                    linker[field] = nil
+                    task[field] = nil
                 elseif type(value) == "table" then
-                    linker[field] = func.ifilter(value, function(link) return link ~= vexid end)
+                    task[field] = func.ifilter(value, function(link) return link ~= vexid end)
                 end
             end
-            self.tasks[linker.vexid] = linker
         end
-        self:resolveall(func.imap(linkers, function(linker) return linker.vexid end))
+        self:resolveall(linkers)
     end
     self.tasks[vexid] = nil
     event:trigger('post-task-remove', vexid)
@@ -294,11 +294,9 @@ function TaskManager:show(vexid)
     event:trigger('pre-task-show', vexid)
     local path = self:getcurrentpath(vexid)
     if lfs.attributes(path, 'mode') ~= 'file' then path = self:find(vexid) or path end
-    local file = io.open(path, "r")
-    if not file then cli:throw('file', path) end
-    local text = file:read("*a")
-    file:close()
-    local result = pretty.string('# ' .. string.upper(vexid) .. '\n', 'cyan', 'underline', 'bold', {filelink = path}) .. taskformat.show(text)
+    local text = lfsext.readfile(path)
+    if not text then cli:throw('file', path) end
+    local result = pretty.string('# ' .. string.upper(vexid) .. '\n', 'cyan', 'underline', 'bold', {filelink = path}) .. taskformat.format(text)
     event:trigger('post-task-show', vexid, result)
     return result
 end
@@ -506,7 +504,7 @@ end
 -- reads a file from disk and adds it to memory by path; a file that cannot be read or holds no vexid gives nil
 function TaskManager:readfrompath(path)
     event:trigger('pre-task-read', path)
-    local ok, task = pcall(taskformat.read, path)
+    local ok, task = pcall(taskformat.parse, path and lfsext.readfile(path) or "")
     if ok and task and task.vexid then 
         task = self:unformat(task)
         self.tasks[task.vexid] = Task.new(task)
@@ -523,10 +521,9 @@ function TaskManager:write(vexid)
     event:trigger('pre-task-write', vexid)
     local task = format(self.tasktypes, self:getsingle(vexid))
     local path = self:getcurrentpath(vexid)
+    local text = taskformat.render(sortdata(frontmatter(task)), body(task))
     lfsext.mkdirs(dirname(path))
-    vexdex:atomic(path, function(path)
-        taskformat.write(path, sortdata(frontmatter(task)), body(task))
-    end)
+    vexdex:atomic(path, function(tmp) lfsext.writefile(tmp, text) end)
     vexdex:unsafe_stamp(vexid, path)
     vexdex:unsafe_locate(vexid, relative(path))
     self:index(vexid)

@@ -376,6 +376,15 @@ describe("vex storage (e2e, subprocess)", function()
   end)
 
 
+  it("keeps the body of a task linking to a removed task (keep-body-tasks-linking-removed-1)", function()
+    local dependent = vex(dir, "add", "Dependent", "task", "here", "--vexbody", "Remember the milk")
+    local dependency = vex(dir, "add", "Dependency", "task", "here")
+    vex(dir, "set", dependent, "--dependencies", dependency)
+    vex(dir, "remove", dependency)
+    assert.equal("", vex(dir, "get", dependent, "--dependencies"))
+    assert.truthy(helper.read_file(dir .. "/" .. dependent .. ".md"):find("Remember the milk", 1, true))
+  end)
+
   it("writes no task file when a verb fails on a later task", function()
     local child = vex(dir, "add", "Child", "task", "here", "--vextype", "atom")
     local abstract = vex(dir, "add", "Alpha", "abstract", "here", "--vextype", "abstract")

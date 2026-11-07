@@ -674,9 +674,12 @@ describe("task", function()
             return (s:gsub("\27%[[%d;]*m", ""):gsub("\27%]8;;.-\27\\", ""))
         end
 
-        it("commits no body to the index", function()
+        it("keeps the body in the task file only", function()
             local vexid = create({description = "body kept in file task", vexbody = "kept in the file"})
+            assert.is_nil(rawget(vexdex:get(vexid), 'vexbody'))
             assert.is_nil(vexdex.new(vexdex.path):get(vexid).vexbody)
+            task.tasks[vexid] = nil
+            assert.equal("kept in the file", task:getsingle(vexid).vexbody)
         end)
 
         it("shows the task file as it is on disk", function()
