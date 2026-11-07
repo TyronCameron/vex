@@ -16,6 +16,8 @@ Every task is validated against the schema of its `vextype` and of each type tha
 | `owner` | text | Optional. Must be one of the `taskowners` in `.vex/config.lua`. |
 | `dependencies` | list of links | Optional. Each entry must be an existing task without `children` or `options`, and dependencies can't form a cycle. |
 | `manualtags` | list of tags | Optional. Your own tags, which override the tag rules: `#pinned` always tags the task, `-#review` never does. vex adds a missing `#`. If a tag is both pinned and suppressed, suppressed wins (see below). |
+| `recur` | text | Optional. How often the task comes back: `daily`, `weekly`, `monthly`, `3 days` and the like. When the task reaches a final status, vex adds the next one, with its `over` date moved on by this much, among the same parent's children. |
+| `over` | field name | The date field `recur` moves along. `due` when `recur` is set. Must name a `date` or `datetime` field. |
 | `tags` | list of tags | Worked out on every resolve from the tag rules and `manualtags`, and stored so Obsidian and other tools see it. Edits to it are overwritten. Edit `manualtags` instead. |
 
 Datetimes are stored as timestamps and written as `YYYY-MM-DD HH:MM:SS`. vex reads `YYYY-MM-DD HH:MM:SS` (a `T` may replace the space, the seconds may be left out, and a `Z` or `+HH:MM` zone may follow), `YYYY-MM-DD`, or a phrase such as `tomorrow 8am`, relative to the moment the task is resolved ([[01 CLI reference#Interpreting times]]). A value it can't read fails resolution with an error naming the unknown words, and the task file is left as it was. Links are written as `[[vexid]]`, so the task files form an Obsidian vault.

@@ -226,4 +226,4 @@ Resolution keeps every task valid. `add`, `set`, `remove` and `recipe` resolve t
 $ vex recipe abstract Ship v0.2
 ```
 
-A recipe creates one or more tasks with fields already filled in. vex ships `abstract`; add your own in `.vex/recipes` ([[04 Configuring recipes]]).
+A recipe creates one or more tasks with fields already filled in. vex ships `abstract`, `recurring` (`vex recipe recurring Wash the dishes --start today --recur weekly`) and `repeat` (`vex recipe repeat Wash the dishes --n 10`), described in [[03 Using a recipe to create a sequence of tasks]]. Add your own in `.vex/recipes` ([[04 Configuring recipes]]).

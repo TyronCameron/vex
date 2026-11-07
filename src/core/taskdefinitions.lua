@@ -7,6 +7,7 @@ local func = require 'lib.func'
 local pretty = require 'lib.pretty'
 local statemachine = require 'lib.statemachine'
 local schema = require 'lib.schema'
+local event = require 'lib.event'
 require 'core.schemaext'
 
 task:task 'basetask' {
@@ -42,8 +43,17 @@ task:task 'basetask' {
         owner = schema.maybe {schema.any(config.taskowners)},
         manualtags = schema.maybe {schema.vec {schema.tagoverride}},
         tags = schema.autotagged,
+        recur = schema.maybe {schema.recurrence},
+        over = schema.default {
+            schema.maybe {schema.datefield},
+            default = function(self, instance, context) return context.task.recur and 'due' or nil end
+        },
     }
 }
+
+event:register('post-task-resolve', 'recur', function(vexid, t, previous)
+    if t and t.recur and t.phase == 'final' and previous.vexid and previous.phase ~= 'final' then task:recur(vexid) end
+end)
 
 task:task 'task':extends 'basetask' {
     schema = schema.atleast {

@@ -29,7 +29,7 @@ recipe:recipe 'release' {
 }
 ```
 
-The built-in `abstract` recipe is defined the same way.
+The built-in `abstract`, `recurring` and `repeat` recipes are defined the same way. The `vexations` plugin registers the last two again, wrapping the plain recipe so that its tasks sit inside an abstract it adds first. A recipe registered later under the same name replaces an earlier one.
 
 ## Writing a file
 

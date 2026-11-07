@@ -27,7 +27,7 @@ Every event below fires as `pre-` and `post-`.
 | `verb-<verb>` | any command, e.g. `verb-add` | args | args, output |
 | `task-add` | creating a task in memory | properties | vexid, task |
 | `task-set` | setting fields | vexid, properties, modifiers | vexid, task |
-| `task-resolve` | resolving a task | vexid | vexid, task (nil when its file is gone or unreadable, and it left the index) |
+| `task-resolve` | resolving a task | vexid | vexid, task (nil when its file is gone or unreadable, and it left the index), the task as it was last indexed (an empty table if it never was) |
 | `task-remove` | unlinking a removed task | vexid | vexid |
 | `task-delete` | deleting a task's file | vexid | vexid, path |
 | `task-read` | reading a task file | path | path, task (nil if unreadable) |
@@ -39,6 +39,16 @@ Every event below fires as `pre-` and `post-`.
 | `focus-write` | saving the focus | focus | focus |
 | `view-display` | rendering a view | view, focus, flags | view, focus, flags, output |
 | `recipe-add` | running a recipe | recipe, properties | recipe, focus |
+
+The third `post-task-resolve` arg lets a hook react to a change rather than a state. vex's own recurring tasks work this way, as a hook with the handle `recur`:
+
+```lua
+event:register('post-task-resolve', 'recur', function(vexid, t, previous)
+    if t and t.recur and t.phase == 'final' and previous.vexid and previous.phase ~= 'final' then task:recur(vexid) end
+end)
+```
+
+A hook in `.vex/events` registered under the same handle replaces vex's version, and `event:remove('post-task-resolve', 'recur')` turns recurring tasks off.
 
 A verb's `args` are its parsed arguments. `args.raw` is the command line as typed after `vex`, e.g. `set make-coffee-1 --status done`.
 
