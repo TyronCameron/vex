@@ -7,6 +7,8 @@ local func = require 'lib.func'
 local pretty = require 'lib.pretty'
 local statemachine = require 'lib.statemachine'
 local schema = require 'lib.schema'
+local event = require 'lib.event'
+local naturaltime = require 'lib.naturaltime'
 require 'core.schemaext'
 
 task:task 'basetask' {
@@ -42,8 +44,29 @@ task:task 'basetask' {
         owner = schema.maybe {schema.any(config.taskowners)},
         manualtags = schema.maybe {schema.vec {schema.tagoverride}},
         tags = schema.autotagged,
+        recur = schema.maybe {schema.recurrence},
+        over = schema.default {
+            schema.maybe {schema.datefield},
+            default = function(self, instance, context) return context.task.recur and 'due' or nil end
+        },
     }
 }
+
+event:register('post-task-resolve', 'recur', function(vexid, t, previous)
+    if not (t and t.recur and t.phase == 'final' and previous.vexid and previous.phase ~= 'final') then return end
+    local nexttask = func.map(task:getsingle(vexid), function(value)
+        return type(value) == "table" and func.map(value, function(v) return v end) or value
+    end)
+    nexttask.vexid, nexttask.created, nexttask.modified, nexttask.status = nil, nil, nil, nil
+    nexttask[t.over] = naturaltime.parse(t.recur, t[t.over] or os.time())
+    local successor = task:add(nexttask)
+    task:resolve(successor)
+    local parent = t.parent
+    if parent and task:getsingle(parent).children then
+        task:set(parent, {children = successor}, {children = 'insert'})
+        task:resolve(parent)
+    end
+end)
 
 task:task 'task':extends 'basetask' {
     schema = schema.atleast {

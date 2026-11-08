@@ -61,6 +61,22 @@ recipe:recipe 'abstract' {
     end 
 }
 
+local function inabstract(name)
+    local add = recipe.recipes[name].add
+    recipe:recipe(name) {
+        add = function(task, taskproperties)
+            local abstract = task:add({description = taskproperties.description, vextype = 'abstract'})
+            task:resolve(abstract)
+            local children = add(task, taskproperties)
+            task:set(abstract, {children = children})
+            return {abstract, unpack(children)}
+        end
+    }
+end
+
+inabstract 'recurring'
+inabstract 'repeat'
+
 local function childphases(t)
     local children = rawget(t, 'children')
     if type(children) ~= "table" then children = {children} end

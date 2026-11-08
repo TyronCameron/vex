@@ -29,6 +29,8 @@ local verbs = {
   {"view"},
   {"recipe"},
   {"recipe", "abstract", "Smoke", "recipe", "abstract"},
+  {"recipe", "recurring", "Smoke", "recurring", "recipe", "--recur", "weekly"},
+  {"recipe", "repeat", "Smoke", "repeat", "recipe", "--n", "2"},
   {"add", "Smoke", "added", "task"},
   {"add", "Explore", "some", "options", "--vextype", "exploration"},
   {"remove", "smoke-added-task-1"},

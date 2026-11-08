@@ -406,7 +406,7 @@ function TaskManager:resolvesingle(vexid)
     vexdex:unsafe_link(vexid, context.links, previouslinks)
     vexdex:unsafe_add(vexid, task)
 
-    event:trigger('post-task-resolve', vexid, task)
+    event:trigger('post-task-resolve', vexid, task, previous)
     return func.imerge(unlinked, func.imerge(task.forwardlinks, task.backlinks)), changed
 end
 
