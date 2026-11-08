@@ -368,18 +368,6 @@ v:view 'overview' {
 
         add(pretty.tabular(scope_rows, sortdata))
 
-        -- ===== QUALITY =====
-        add("")
-        add(pretty.string("QUALITY", "bold", "bright_green"))
-        add("")
-        local no_body = 0
-        for _, task in ipairs(tasks) do
-            if not task.vexbody or #task.vexbody == 0 then
-                no_body = no_body + 1
-            end
-        end
-        add("  Tasks with no vexbody: " .. string.format("%.1f%%", no_body / #tasks * 100))
-
         -- ===== STRUCTURE =====
         add("")
         add(pretty.string("STRUCTURE", "bold", "bright_yellow"))

@@ -424,6 +424,11 @@ function CLI:call(verbname, args)
     return result
 end
 
+-- Write a line to stderr, keeping stdout for the verb's result.
+function CLI:warn(text)
+    io.stderr:write(text .. "\n")
+end
+
 -- Throw a named error and exit.
 function CLI:throw(errtype, msg, ...)
     local handler = self.errors[errtype] and self.errors[errtype][1]
@@ -441,4 +446,4 @@ function CLI:throw(errtype, msg, ...)
 end
 
 -- onky need one
-return CLI.new("vex")
+return CLI.new("vex")

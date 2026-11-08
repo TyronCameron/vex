@@ -4,7 +4,7 @@ How a task goes from `vex add` to a file on disk, and what else moves when it do
 
 1. **`TaskManager:add`** makes a vexid with the `tagger` plugin and holds the new task in memory only.
 2. **`TaskManager:resolve`** runs the schema of the task's type, merged with those of the types it extends when it was registered: a type's field replaces its ancestor's definition of that field. The schema runs once, in three steps: normalise (fill defaults, convert values), validate, and derive (compute fields, record links). A failure throws a named `resolution-failed-*` error and nothing is written. Resolution then fingerprints the task (below), indexes it in memory, writes it and moves files into place.
-3. **`TaskManager:write`** formats the task back to its readable form (a timestamp becomes `YYYY-MM-DD HH:MM:SS`, a vexid becomes `[[vexid]]`), writes it through the `taskformat` plugin to a temporary file and renames it into place ([[The index]]).
+3. **`TaskManager:write`** formats the task back to its readable form (a timestamp becomes `YYYY-MM-DD HH:MM:SS`, a vexid becomes `[[vexid]]`), renders it to text with the `taskformat` plugin, writes that to a temporary file and renames it into place ([[The index]]).
 
 Resolving writes every task whose content changed, so a value you typed by hand (`due: tomorrow`) becomes a date as soon as the task is resolved. A task that resolving leaves as it was is never rewritten, so resolving again leaves every file, and git, alone.
 
@@ -14,7 +14,7 @@ Whenever the vexdex indexes a task, it keeps two fingerprints of it (`VexDex:fin
 
 ## Changes on disk
 
-The vexdex also keeps the modification time vex last saw for each task file, and lists every file under `taskfolder` with its time in one go (`VexDex:updated`). An indexed task whose file's time differs is `updated`: edited by hand, pulled, checked out, moved, unreadable or gone. Before `show`, `get`, `set`, `view`, `remove` and `resolve` read their focus, vex resolves the tasks in it that are `updated`, so a hand edit is picked up the next time you look at the task. A file that was only touched resolves to the same fingerprint and is left as it is. Resolving a task whose file is gone or no longer readable drops it from the index, leaving any file alone, and resolves the tasks it was linked to.
+The vexdex also keeps the modification time vex last saw for each task file, and lists every file under `taskfolder` with its time in one go (`VexDex:updated`). An indexed task whose file's time differs is `updated`: edited by hand, pulled, checked out, moved, unreadable or gone. Before `set`, `remove` and `resolve` work on their focus, vex resolves the tasks in it that are `updated`, so a hand edit is taken in before anything is written over it. Commands that only read never resolve: `get`, `view` and `focus` read the index as last committed and warn on stderr while any task is `updated`, and `show` prints the file as it is. A file that was only touched resolves to the same fingerprint and is left as it is. Resolving a task whose file is gone or no longer readable drops it from the index, leaving any file alone, and resolves the tasks it was linked to.
 
 `vex resolve all` (`TaskManager:reindexall`) resolves every `updated` task and reads in the files the vexdex doesn't know: new task files, and files moved by hand. `vex resolve all --force` first clears the index, so every file is read and resolved: use it when something other than a task file changed what resolution gives, such as `paths.groupby` or a task type.
 

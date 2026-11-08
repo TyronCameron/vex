@@ -123,4 +123,18 @@ function lfsext.mtime(path)
     return findmtimes(path, true)[path]
 end
 
+function lfsext.readfile(path)
+    local file = io.open(path, "r")
+    if not file then return nil end
+    local text = file:read("*a")
+    file:close()
+    return text
+end
+
+function lfsext.writefile(path, text)
+    local file = assert(io.open(path, "w"))
+    file:write(text)
+    file:close()
+end
+
 return lfsext
