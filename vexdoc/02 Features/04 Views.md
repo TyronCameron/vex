@@ -130,7 +130,6 @@ $ vex view all kanban --field status
 Statistics for the focus:
 
 - **Scope**: the share of each `vextype` in each `status`, with totals.
-- **Quality**: the share of tasks with an empty body.
 - **Structure**: the share of tasks with no parent and with no dependencies.
 - **Movement**: the earliest `created` and the latest `modified` date.
 
@@ -145,10 +144,6 @@ SCOPE
 │ task     │ 50.0% │ 50.0%  │ 2     │
 │ TOTAL    │ 33.3% │ 66.7%  │ 3     │
 └──────────┴───────┴────────┴───────┘
-
-QUALITY
-
-  Tasks with no vexbody: 100.0%
 
 STRUCTURE
 

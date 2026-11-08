@@ -26,10 +26,6 @@ local Task = {}
 
 function Task:__index(key)
     if Task[key] then return Task[key] end
-    if key == 'vexbody' then
-        local held = taskmanager:getsingle(rawget(self, 'vexid'))
-        return held and rawget(held, 'vexbody')
-    end
     local transient = taskmanager:transientof(rawget(self, 'vextype'), key)
     return transient and transient.definition(self)
 end
@@ -48,18 +44,6 @@ function Task:tostring(fields, colsep)
         if value == nil then return "" end
         return type(value) == "table" and table.concat(value, ",") or tostring(value)
     end), colsep or "\t")
-end
-
--- show 
-function Task:show(path)
-    local final_str = pretty.string('# ' .. string.upper(tostring(self.vexid)) .. '\n', 'cyan', 'underline', 'bold', {filelink = tostring(path)})
-    final_str = final_str .. pretty.string("---\n", 'cyan')
-    for k, v in sortdata(frontmatter(self)) do 
-        final_str = final_str .. pretty.string(tostring(k) .. ": ", 'green') .. pretty.string(taskformat.value(v) ..  '\n')
-    end 
-    final_str = final_str .. pretty.string("---\n", 'cyan')
-    final_str = final_str .. pretty.string(tostring(body(self) or '') .. "\n\n")
-    return final_str
 end
 
 ------------------------------------------------
@@ -230,25 +214,25 @@ function TaskManager:remove(vexid)
     assert(vexid, "remove() requires an id or focus")
     event:trigger('pre-task-remove', vexid)
     if vexdex:get(vexid) then
-        local linkers = focus.focus(vexid):step('backlinks'):get()
+        local linkers = func.imap(focus.focus(vexid):step('backlinks'):get(), function(linker) return linker.vexid end)
         for _, linker in ipairs(linkers) do
-            for field, value in pairs(linker) do
+            local task = self:getsingle(linker)
+            for field, value in pairs(task) do
                 if value == vexid then
-                    linker[field] = nil
+                    task[field] = nil
                 elseif type(value) == "table" then
-                    linker[field] = func.ifilter(value, function(link) return link ~= vexid end)
+                    task[field] = func.ifilter(value, function(link) return link ~= vexid end)
                 end
             end
-            self.tasks[linker.vexid] = linker
         end
-        self:resolveall(func.imap(linkers, function(linker) return linker.vexid end))
+        self:resolveall(linkers)
     end
     self.tasks[vexid] = nil
     event:trigger('post-task-remove', vexid)
     return vexid
 end
 
--- gets data from a task and returns it as a string for the command line
+-- gets data from a task as last committed to the index and returns it as a string for the command line
 function TaskManager:get(vexid, fields, colsep)
     event:trigger('pre-task-get', vexid, fields)
     local result = self:format(vexid):tostring(fields, colsep)
@@ -304,11 +288,15 @@ function TaskManager:set(vexid, tab, modifiers)
     return self.tasks[vexid] 
 end
 
--- shows task, basically cat 'filename'
+-- shows a task's file as it is on disk
 function TaskManager:show(vexid)
     assert(vexid, "show() requires an vexid")
     event:trigger('pre-task-show', vexid)
-    local result = self:format(vexid):show(self:getcurrentpath(vexid))
+    local path = self:getcurrentpath(vexid)
+    if lfs.attributes(path, 'mode') ~= 'file' then path = self:find(vexid) or path end
+    local text = lfsext.readfile(path)
+    if not text then cli:throw('file', path) end
+    local result = pretty.string('# ' .. string.upper(vexid) .. '\n', 'cyan', 'underline', 'bold', {filelink = path}) .. taskformat.format(text)
     event:trigger('post-task-show', vexid, result)
     return result
 end
@@ -452,11 +440,14 @@ end
 -- File I/O
 ---------------------------------------------------
 
--- format a task 
-function TaskManager:format(vexid)
-    local task = self:getsingle(vexid)
-    local formatted = self.tasktypes[task.vextype].schema:apply('format', task)
+local function format(tasktypes, task)
+    local formatted = tasktypes[task.vextype].schema:apply('format', task)
     return setmetatable(formatted, {__index = task})
+end
+
+-- formats a task as last committed to the index
+function TaskManager:format(vexid)
+    return format(self.tasktypes, vexdex:get(vexid))
 end
 
 function TaskManager:unformat(task)
@@ -513,7 +504,7 @@ end
 -- reads a file from disk and adds it to memory by path; a file that cannot be read or holds no vexid gives nil
 function TaskManager:readfrompath(path)
     event:trigger('pre-task-read', path)
-    local ok, task = pcall(taskformat.read, path)
+    local ok, task = pcall(taskformat.parse, path and lfsext.readfile(path) or "")
     if ok and task and task.vexid then 
         task = self:unformat(task)
         self.tasks[task.vexid] = Task.new(task)
@@ -528,12 +519,11 @@ end
 -- writes a file from disk
 function TaskManager:write(vexid)
     event:trigger('pre-task-write', vexid)
-    local task = self:format(vexid)
+    local task = format(self.tasktypes, self:getsingle(vexid))
     local path = self:getcurrentpath(vexid)
+    local text = taskformat.render(sortdata(frontmatter(task)), body(task))
     lfsext.mkdirs(dirname(path))
-    vexdex:atomic(path, function(path)
-        taskformat.write(path, sortdata(frontmatter(task)), body(task))
-    end)
+    vexdex:atomic(path, function(tmp) lfsext.writefile(tmp, text) end)
     vexdex:unsafe_stamp(vexid, path)
     vexdex:unsafe_locate(vexid, relative(path))
     self:index(vexid)
@@ -570,7 +560,7 @@ function TaskManager:delete(vexid)
     return vexid
 end
 
--- writes the resolved tasks that changed, moves every resolved file to where it belongs, then removes the deleted files
+-- commits: writes the resolved tasks that changed, moves every resolved file to where it belongs, removes the deleted files, then saves the index
 function TaskManager:writeall()
     for vexid, changed in pairs(self.unwritten) do
         if vexdex:get(vexid) then
@@ -583,6 +573,7 @@ function TaskManager:writeall()
         tidy(path)
     end
     self.deleted, self.unwritten = {}, {}
+    vexdex:writeindex()
 end
 
 ---------------------------------------------------

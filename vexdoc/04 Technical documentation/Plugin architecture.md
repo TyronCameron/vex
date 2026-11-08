@@ -19,7 +19,7 @@ plugin:addenum("body", {"canonicalbody"})
 | --- | --- | --- |
 | `tagger` | `default.canonicalvexid` | How a description becomes a vexid ([[01 CLI reference#Adding tasks]]). |
 | `taskpath` | `default.grouppath` | Where a task file lives under `taskfolder`: flat, or nested by `paths.groupby` ([[01 Configuring vex (config.lua)]]). |
-| `taskformat` | `default.obsidian` | How a task is written to and read from a file. |
+| `taskformat` | `default.obsidian` | How a task file's text is parsed into a task (`parse`), rendered from one (`render`), and highlighted for `vex show` (`format`). It only handles text; vex reads and writes the files. |
 | `sortdata` | `default.canonicalsort` | The order of fields in the frontmatter. |
 | `frontmatter` | `default.canonicalfrontmatter` | Which fields go in the frontmatter. |
 | `body` | `default.canonicalbody` | Which field becomes the body. |
