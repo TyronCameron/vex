@@ -86,7 +86,7 @@ describe("recurring and repeated tasks (e2e, subprocess)", function()
       vex(dir, "recipe", "recurring", "Wash", "dishes", "--start", "today", "--recur", "daily")
       local path = helper.task_file(dir, "wash-dishes-1")
       helper.write_file(path, (helper.read_file(path):gsub("status: todo", "status: done")))
-      vex(dir, "view", "all", "csv")
+      vex(dir, "resolve", "all")
       assert.equal(daysfromtoday(1), task("wash-dishes-2").due)
     end)
 

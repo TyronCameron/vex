@@ -170,7 +170,8 @@ schema.register 'recurrence' {
 
 schema.register 'datefield' {
     validate = function(self, field, context)
-        return type(field) == "string" and context.taskmanager:isdatefield(context.task.vextype, field), "Expected the name of a date field to recur over, such as `due`, got `" .. tostring(field) .. "`"
+        local fieldschema = type(field) == "string" and context.taskmanager:schemaof(context.task.vextype, field)
+        return fieldschema and #fieldschema:collect('datetime', 0) + #fieldschema:collect('date', 0) > 0, "Expected the name of a date field to recur over, such as `due`, got `" .. tostring(field) .. "`"
     end
 }
 

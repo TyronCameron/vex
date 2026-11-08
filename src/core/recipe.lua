@@ -49,7 +49,9 @@ recipes:recipe 'repeat' {
         taskproperties.n = nil
         local vexids = {}
         for _ = 1, n do
-            table.insert(vexids, task:add(func.map(taskproperties, function(v) return v end)))
+            local vexid = task:add(func.map(taskproperties, function(v) return v end))
+            task:resolve(vexid)
+            table.insert(vexids, vexid)
         end
         return vexids
     end

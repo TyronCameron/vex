@@ -66,6 +66,7 @@ local function inabstract(name)
     recipe:recipe(name) {
         add = function(task, taskproperties)
             local abstract = task:add({description = taskproperties.description, vextype = 'abstract'})
+            task:resolve(abstract)
             local children = add(task, taskproperties)
             task:set(abstract, {children = children})
             return {abstract, unpack(children)}

@@ -40,15 +40,7 @@ Every event below fires as `pre-` and `post-`.
 | `view-display` | rendering a view | view, focus, flags | view, focus, flags, output |
 | `recipe-add` | running a recipe | recipe, properties | recipe, focus |
 
-The third `post-task-resolve` arg lets a hook react to a change rather than a state. vex's own recurring tasks work this way, as a hook with the handle `recur`:
-
-```lua
-event:register('post-task-resolve', 'recur', function(vexid, t, previous)
-    if t and t.recur and t.phase == 'final' and previous.vexid and previous.phase ~= 'final' then task:recur(vexid) end
-end)
-```
-
-A hook in `.vex/events` registered under the same handle replaces vex's version, and `event:remove('post-task-resolve', 'recur')` turns recurring tasks off.
+The third `post-task-resolve` arg lets a hook react to a change rather than a state, such as a task becoming final: `previous.phase ~= 'final' and t.phase == 'final'`. vex's recurring tasks are a hook like this, with the handle `recur`, so a hook in `.vex/events` registered under that handle replaces them, and `event:remove('post-task-resolve', 'recur')` turns them off.
 
 A verb's `args` are its parsed arguments. `args.raw` is the command line as typed after `vex`, e.g. `set make-coffee-1 --status done`.
 

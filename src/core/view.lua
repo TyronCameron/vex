@@ -55,6 +55,13 @@ v:view 'csv' {
     end
 }
 
+local function isdate(t, field)
+    local fieldschema = task:schemaof(t.vextype, field)
+    if not fieldschema then return false end
+    local value = t[field]
+    return #fieldschema:collect('datetime', value) + #fieldschema:collect('date', value) > 0
+end
+
 local function icstime(epoch, allday)
     if allday then return {params = 'VALUE=DATE', value = os.date('%Y%m%d', epoch)} end
     return {value = os.date('!%Y%m%dT%H%M%SZ', math.floor(epoch))}
@@ -72,7 +79,7 @@ v:view 'ics' {
         for _, t in ipairs(focus:get()) do
             local epoch = t[field]
             if epoch ~= nil then
-                if not task:isdatefield(t.vextype, field) then cli:throw('not-a-date-field', field) end
+                if not isdate(t, field) then cli:throw('not-a-date-field', field) end
                 local row = csvrow(t)
                 local allday = atmidnight(epoch)
                 local start = icstime(epoch, allday)

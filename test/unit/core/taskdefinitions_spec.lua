@@ -394,4 +394,57 @@ describe("taskdefinitions", function()
 
     end)
 
+    describe("recurring tasks", function()
+
+        it("adds the next task, its over date moved on by the recurrence, when one is done", function()
+            local vexid = create({description = "recurring spec chore", recur = 'weekly', due = 1000000, vexbody = "same body"})
+            setstatus(vexid, 'done')
+            local next = task.tasks["recurring-spec-chore-2"]
+            assert.equal('todo', next.status)
+            assert.equal('weekly', next.recur)
+            assert.equal('due', next.over)
+            assert.equal(1000000 + 7 * 86400, next.due)
+            assert.equal("same body", next.vexbody)
+            assert.is_true(next.created >= task.tasks[vexid].created)
+        end)
+
+        it("recurs from now when the over field is empty", function()
+            local vexid = create({description = "undated recurring chore", recur = 'daily'})
+            local before = os.time()
+            setstatus(vexid, 'done')
+            local due = task.tasks["undated-recurring-chore-2"].due
+            assert.is_true(due >= before + 86400 and due <= os.time() + 86400)
+        end)
+
+        it("adds the next task only when the task moves into a final phase", function()
+            local vexid = create({description = "resolved recurring chore", recur = 'weekly'})
+            task:set(vexid, {cost = 1})
+            task:resolve(vexid)
+            assert.is_nil(task.tasks["resolved-recurring-chore-2"])
+            setstatus(vexid, 'done')
+            assert.truthy(task.tasks["resolved-recurring-chore-2"])
+            setstatus(vexid, 'done')
+            assert.is_nil(task.tasks["resolved-recurring-chore-3"])
+        end)
+
+        it("puts the next task among its parent's children", function()
+            local child = create({description = "parented recurring chore", recur = 'daily'})
+            local parent = create({description = "recurring chores parent", vextype = 'abstract', children = {child}})
+            setstatus(child, 'done')
+            assert.same({child, "parented-recurring-chore-2"}, task.tasks[parent].children)
+        end)
+
+        it("rejects a recurrence it cannot read or one that never moves on", function()
+            for _, recur in ipairs {'sometimes', 'today'} do
+                assert.has_error(function() create({description = "badly recurring chore", recur = recur}) end)
+            end
+        end)
+
+        it("rejects recurring over a field that is not a date", function()
+            assert.has_error(function() create({description = "costly recurring chore", recur = 'weekly', over = 'cost'}) end)
+            assert.stub(cli.throw).was.called_with(cli, 'resolution-failed-validation', match._, match._, match._)
+        end)
+
+    end)
+
 end)
