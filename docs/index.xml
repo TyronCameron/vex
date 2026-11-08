@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Documentation on vex</title><link>https://tyroncameron.github.io/vex/docs/</link><description>Recent content in Documentation on vex</description><generator>Hugo</generator><language>en-GB</language><atom:link href="https://tyroncameron.github.io/vex/docs/index.xml" rel="self" type="application/rss+xml"/><item><title>Introduction</title><link>https://tyroncameron.github.io/vex/docs/introduction/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://tyroncameron.github.io/vex/docs/introduction/</guid><description>&lt;div class="alert alert-info d-flex" role="alert"&gt;
+ &lt;div class="flex-shrink-1 alert-icon"&gt;
+ &lt;span class="material-icons size-20 me-2"&gt;
+ info
+ &lt;/span&gt;&lt;/div&gt;
+ &lt;div class="w-100"&gt;
+&lt;p&gt;&lt;strong&gt;Status&lt;/strong&gt; vex v0.0.0, in development.&lt;/p&gt;
+ &lt;/div&gt;
+ &lt;/div&gt;
+&lt;p&gt;vex is the embeddable, local-first, markdown-based task system. Every task is a plain-text markdown file with YAML frontmatter, and every project keeps its own &lt;code&gt;.vex&lt;/code&gt; folder, much like a &lt;code&gt;.git&lt;/code&gt; folder. There is no server, no daemon and no account.&lt;/p&gt;
+&lt;p&gt;Because a task is a text file, anything that reads and writes text can work with it: your editor, a shell script, or an AI coding agent.&lt;/p&gt;</description></item><item><title>Design journal</title><link>https://tyroncameron.github.io/vex/docs/vex/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://tyroncameron.github.io/vex/docs/vex/</guid><description>&lt;h2 id="philosophy"&gt;Philosophy &lt;a href="#philosophy" class="anchor" aria-hidden="true"&gt;&lt;i class="material-icons align-middle"&gt;link&lt;/i&gt;&lt;/a&gt;&lt;/h2&gt;&lt;p&gt;Simple way to create and manage tasks, embeddable in any project, and local first.&lt;/p&gt;
+&lt;p&gt;Tasks are just folders and markdown files.&lt;/p&gt;
+&lt;p&gt;Focus on using the task management system to reduce uncertainty, make decisions, and create maximum efficiency sets of actionable items.&lt;/p&gt;
+&lt;p&gt;Philosophy is to be minimalist, creating first a CLI tool which could be expanded into other tools.&lt;/p&gt;
+&lt;p&gt;All written in luajit so it runs on a potato.&lt;/p&gt;</description></item></channel></rss>
