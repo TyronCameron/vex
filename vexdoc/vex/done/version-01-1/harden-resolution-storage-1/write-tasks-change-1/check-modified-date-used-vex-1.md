@@ -5,5 +5,6 @@ description: "Check that modified date is used correctly in vex resolve, otherwi
 created: "2026-10-19 08:02:07"
 modified: "2026-10-31 04:51:10"
 status: done
+parent: "[[write-tasks-change-1]]"
 ---
 Answered by the atoms under [[write-tasks-change-1]]: `modified` now moves only when a task's fingerprint changes, and `vex resolve all` resolves only the files that changed (the `updated` focus), with `--force` for a full rebuild.

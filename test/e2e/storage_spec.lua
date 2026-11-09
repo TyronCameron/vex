@@ -26,7 +26,7 @@ describe("vex storage (e2e, subprocess)", function()
     local child = vex(dir, "add", "Child", "task", "here", "--cost", "5", "--due", "2026-08-01T09:00:00", "--vexbody", "Notes about the child")
     local parent = vex(dir, "add", "Parent", "abstract", "here", "--vextype", "abstract")
     local dependent = vex(dir, "add", "Dependent", "atom", "here", "--vextype", "atom")
-    helper.link(dir, parent, "children", {child})
+    helper.link(dir, child, "parent", parent)
     helper.link(dir, dependent, "dependencies", {child})
     vex(dir, "resolve", "all")
   end
@@ -202,7 +202,7 @@ describe("vex storage (e2e, subprocess)", function()
     linked_project()
     for _, vexid in ipairs({"child-task-here-1", "parent-abstract-here-1", "dependent-atom-here-1"}) do
       local fields = helper.frontmatter(dir .. "/" .. vexid .. ".md")
-      for _, transient in ipairs({"wordcount", "phase", "blockers", "lineage", "parent", "path", "age"}) do
+      for _, transient in ipairs({"wordcount", "phase", "blockers", "lineage", "children", "acceptschildren", "path", "age"}) do
         assert.is_nil(fields[transient], transient .. " was written to " .. vexid)
       end
     end
@@ -249,7 +249,7 @@ describe("vex storage (e2e, subprocess)", function()
   it("rebuilds the same tasks elsewhere by replaying the verb log", function()
     vex(dir, "add", "Plan", "a", "trip", "--vextype", "abstract")
     vex(dir, "add", "Book", "flights", "--cost", "5", "--vexbody", "Window seat, please")
-    vex(dir, "set", "plan-trip-1", "--insert", "--children", "book-flights-1")
+    vex(dir, "set", "book-flights-1", "--parent", "plan-trip-1")
     vex(dir, "recipe", "abstract", "Pack", "bags")
     vex(dir, "focus", "book-flights-1")
     vex(dir, "set", "--status", "done")
@@ -282,12 +282,11 @@ describe("vex storage (e2e, subprocess)", function()
 
 
   it("writes no task file when a verb fails on a later task", function()
-    local child = vex(dir, "add", "Child", "task", "here", "--vextype", "atom")
-    local abstract = vex(dir, "add", "Alpha", "abstract", "here", "--vextype", "abstract")
-    local atom = vex(dir, "add", "Zulu", "atom", "here", "--vextype", "atom")
-    local before = helper.read_file(dir .. "/" .. abstract .. ".md")
-    helper.vex_fails(dir, "Expected no value", "set", abstract .. "," .. atom, "--children", child)
-    assert.are.equal(before, helper.read_file(dir .. "/" .. abstract .. ".md"))
+    local child = vex(dir, "add", "Alpha", "child", "here", "--vextype", "atom")
+    local abstract = vex(dir, "add", "Zulu", "abstract", "here", "--vextype", "abstract")
+    local before = helper.read_file(dir .. "/" .. child .. ".md")
+    helper.vex_fails(dir, "is already beneath it", "set", child .. "," .. abstract, "--parent", abstract)
+    assert.are.equal(before, helper.read_file(dir .. "/" .. child .. ".md"))
     assert.are.equal("", vex(dir, "get", abstract, "--children"))
   end)
 

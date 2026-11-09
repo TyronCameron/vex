@@ -7,6 +7,7 @@ dependencies:
   - "[[let-task-types-register-hooks-1]]"
 modified: "2026-10-30 03:17:28"
 status: todo
+parent: "[[support-recurring-tasks-1]]"
 ---
 
 We want recurring tasks. What is known so far:

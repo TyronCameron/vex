@@ -5,6 +5,7 @@ description: Add first and last n focus operations
 created: "2026-10-29 22:31:16"
 modified: "2026-10-30 03:17:28"
 status: done
+parent: "[[nonessential-enhancements-1]]"
 ---
 
 Add `--first n` and `--last n` focus operations to keep only the first or last `n` tasks:

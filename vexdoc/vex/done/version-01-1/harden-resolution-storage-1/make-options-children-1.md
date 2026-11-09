@@ -5,6 +5,7 @@ description: "Make options, children and dependencies mutually exclusive"
 created: "2026-10-29 08:09:36"
 modified: "2026-10-30 07:09:14"
 status: done
+parent: "[[harden-resolution-storage-1]]"
 ---
 A task holds at most one of `children`, `options` and `dependencies`: all three are sets of vexids, and `options` should count as children for dependency purposes. Decisions never get dependencies.
 

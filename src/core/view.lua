@@ -394,8 +394,7 @@ v:view 'overview' {
         local nil_parent = 0
         local nil_deps = 0
         for _, task in ipairs(tasks) do
-            local lineage = Focus.focus(task.vexid):reversetree('children'):get()
-            if #lineage == 1 then nil_parent = nil_parent + 1 end
+            if not task.parent then nil_parent = nil_parent + 1 end
             if not task.dependencies then nil_deps = nil_deps + 1 end
         end
         add("  Tasks with nil parent:    " .. string.format("%.1f%%", nil_parent / #tasks * 100))
@@ -467,7 +466,7 @@ v:view 'singular' {
             add("")
         end
 
-        section("PARENTS", 'bright_cyan', func.reverse(related(focus:reversetree('children'))), true)
+        section("PARENTS", 'bright_cyan', func.reverse(related(focus:tree('parent'))), true)
         section("CHILDREN", 'bright_cyan', related(focus:tree('children')))
         section("DEPENDS ON", 'bright_green', related(focus:tree('dependencies')))
         section("DEPENDED ON BY", 'bright_green', related(focus:reversetree('dependencies')))

@@ -30,9 +30,9 @@ describe("Recipe", function()
     it("resolves and focuses on every vexid the recipe returns, in that order", function()
         recipe:recipe '__specpipeline' {
             add = function(taskmanager, properties)
-                local spike = taskmanager:add({description = "spike the " .. properties.description})
-                local build = taskmanager:add({description = "build the " .. properties.description})
-                local parent = taskmanager:add({description = properties.description, vextype = 'abstract', children = {spike, build}})
+                local parent = taskmanager:add({description = properties.description, vextype = 'abstract'})
+                local spike = taskmanager:add({description = "spike the " .. properties.description, parent = parent})
+                local build = taskmanager:add({description = "build the " .. properties.description, parent = parent})
                 return {parent, spike, build}
             end
         }
@@ -49,7 +49,7 @@ describe("Recipe", function()
     it("makes an abstract with the abstract recipe", function()
         local tasks = recipe:add('abstract', {description = "plan the release"}):get()
         assert.equal('abstract', tasks[1].vextype)
-        assert.same({}, tasks[1].children)
+        assert.is_nil(tasks[1].children)
     end)
 
     it("rejects an unknown recipe", function()

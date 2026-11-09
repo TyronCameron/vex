@@ -5,6 +5,7 @@ description: Double check cascading and resolving through cascading tasks is bul
 created: "2026-10-19 07:55:01"
 modified: "2026-10-30 07:09:14"
 status: done
+parent: "[[harden-resolution-storage-1]]"
 ---
 Audit of when tasks are written and resolved (`src/core/task.lua`, `src/core/vexdex.lua`, `src/core/verbs.lua`). Cascading itself (which tasks are reached, each once, moved to the right folder) held up in every case I tried. Findings, with their tests in `test/e2e/resolution_spec.lua` (tagged with this task):
 

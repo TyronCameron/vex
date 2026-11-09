@@ -5,6 +5,7 @@ description: Create Milestones
 created: "2026-06-17 21:07:43"
 modified: "2026-10-30 07:09:14"
 status: todo
+parent: "[[version-01-1]]"
 ---
 
 Need to create milestones:

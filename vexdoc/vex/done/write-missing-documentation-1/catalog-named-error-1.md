@@ -5,5 +5,6 @@ description: Catalog every named error
 created: "2026-10-29 23:48:40"
 modified: "2026-10-30 00:54:43"
 status: done
+parent: "[[write-missing-documentation-1]]"
 ---
 Every failure has a named error and hint (src/core/errors.lua) but no page lists them with cause and fix. Add a page covering each error, verified by triggering it. test/e2e/errors_spec.lua shows how.

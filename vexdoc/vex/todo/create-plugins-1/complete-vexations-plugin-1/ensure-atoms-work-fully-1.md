@@ -5,6 +5,7 @@ description: Ensure atoms work fully
 created: "2026-10-19 07:29:04"
 modified: "2026-10-19 09:22:04"
 status: todo
+parent: "[[complete-vexations-plugin-1]]"
 ---
 
 Check every promise the docs make about `atom` and add e2e coverage for any that lacks it: it can't have `children`, and `dependencies` must link to existing tasks without a cycle.
