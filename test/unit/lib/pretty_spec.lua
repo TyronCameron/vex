@@ -8,6 +8,15 @@ describe("pretty", function()
         pretty.colour(true)
     end)
 
+    it("`pretty.tabular` counts East Asian wide characters as two columns, cutting them whole", function()
+        local lines = {}
+        for line in pretty.tabular({{vexid = "x", description = "日本語タスク"}, {vexid = "y", description = "plain"}}, pairs, 7):gsub("\27%[[%d;]*m", ""):gmatch("[^\n]+") do
+            table.insert(lines, line)
+        end
+        assert.truthy(lines[4]:find("日本... │", 1, true), lines[4])
+        assert.truthy(lines[5]:find("plain   │", 1, true), lines[5])
+    end)
+
     it("writes plain text, without styles or links, when colour is off", function()
         pretty.colour(false)
         assert.equal("hello", pretty.string("hello", "bold", "red", {filelink = "/tmp/x"}))

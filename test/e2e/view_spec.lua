@@ -42,6 +42,43 @@ describe("vex view with focus flags (e2e, subprocess)", function()
     assert.truthy(out:find('^%[\n  {\n    "created"'), out)
   end)
 
+  it("keeps a column it was asked to select, even when no task has a value for it", function()
+    local out = vex(dir, "view", "all", "tabular", "--select", "owner,status")
+    assert.truthy(out:find("│ owner", 1, true), out)
+  end)
+
+  it("names the group of tasks with no value for the grouped field", function()
+    local out = vex(dir, "view", "all", "tabular", "--groupby", "owner")
+    assert.truthy(out:find("│ owner: (none)", 1, true), out)
+  end)
+
+  it("shows an abstract's derived status in tabular, csv and kanban", function()
+    local trip = vex(dir, "add", "Plan", "trip", "--vextype", "abstract", "--children", eggs .. "," .. milk)
+    assert.truthy(vex(dir, "view", "all", "tabular"):find(trip:gsub("%-", "%%-") .. "%s*│[^\n]*│ doing"), "tabular")
+    assert.truthy(vex(dir, "view", "all", "csv"):find(trip .. ",abstract", 1, true))
+    assert.truthy(vex(dir, "view", "all", "csv"):find("doing," .. trip, 1, true), vex(dir, "view", "all", "csv"))
+    assert.truthy(vex(dir, "view", "all", "kanban"):find("doing", 1, true))
+  end)
+
+  it("lines up columns holding wide characters", function()
+    vex(dir, "add", "日本語", "タスク", "を", "作る")
+    local lines = {}
+    for line in vex(dir, "view", "all", "tabular", "--select", "description"):gmatch("[^\n]+") do
+      table.insert(lines, (select(2, line:gsub("[^\128-\191]", ""))) + select(2, line:gsub("[\227-\233][\128-\191][\128-\191]", "")))
+    end
+    for i = 2, #lines do assert.equal(lines[1], lines[i], "line " .. i) end
+  end)
+
+  it("prints nothing for an empty focus", function()
+    assert.equal("", helper.run_vex(dir, {"view", "none", "tabular"}).stdout)
+  end)
+
+  it("describes structure in words", function()
+    local out = vex(dir, "view", "all", "overview")
+    assert.truthy(out:find("  Tasks without a parent:       100.0%", 1, true), out)
+    assert.truthy(out:find("  Tasks without dependencies:   100.0%", 1, true), out)
+  end)
+
   it("filters and selects through the focus flags it is given", function()
     local out = vex(dir, "view", "all", "tabular", "--filter", "status:done", "--select", "status")
     assert.truthy(out:find(eggs, 1, true), out)

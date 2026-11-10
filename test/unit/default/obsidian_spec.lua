@@ -45,6 +45,13 @@ describe("obsidian", function()
         assert.has_error(function() obsidian.parse("---\nvexid: broken-1\n") end)
     end)
 
+    it("writes no trailing space after a key whose list or map starts on the next line", function()
+        assert.equal('---\nchildren:\n  - "[[a-1]]"\n---\n', obsidian.render(to_iter({children = {"[[a-1]]"}}), nil))
+        assert.equal('---\nmeta:\n  x: 1\n---\n', obsidian.render(to_iter({meta = {x = 1}}), nil))
+        assert.equal('---\nblockedBy:\n  -\n    uid: "[[a]]"\n---\n', obsidian.render(to_iter({blockedBy = {{uid = "[[a]]"}}}), nil))
+        assert.same({{uid = "[[a]]"}}, obsidian.parse('---\nblockedBy:\n  -\n    uid: "[[a]]"\n---\n').blockedBy)
+    end)
+
     it("renders frontmatter between fences, then the body", function()
         assert.equal("---\nstatus: todo\n---\nBody text", obsidian.render(to_iter({status = "todo"}), "Body text"))
         assert.equal("---\nstatus: todo\n---\n", obsidian.render(to_iter({status = "todo"}), nil))

@@ -299,8 +299,23 @@ local function strip_ansi(s)
     return (s:gsub(styling, ""):gsub(hyperlink, ""))
 end
 
+local utf8char = '[%z\1-\127\194-\244][\128-\191]*'
+
+-- the columns a character takes in a terminal: 2 for East Asian wide characters, 1 for the rest
+local function charwidth(char)
+    local a, b, c = char:byte(1, 3)
+    if #char ~= 3 then return #char == 4 and 2 or 1 end
+    local code = (a % 16) * 4096 + (b % 64) * 64 + (c % 64)
+    local wide = (code >= 0x1100 and code <= 0x115F) or (code >= 0x2E80 and code <= 0xA4CF and code ~= 0x303F)
+        or (code >= 0xAC00 and code <= 0xD7A3) or (code >= 0xF900 and code <= 0xFAFF)
+        or (code >= 0xFE30 and code <= 0xFE4F) or (code >= 0xFF00 and code <= 0xFF60) or (code >= 0xFFE0 and code <= 0xFFE6)
+    return wide and 2 or 1
+end
+
 local function width(s)
-    return select(2, strip_ansi(s):gsub('[^\128-\191]', ''))
+    local total = 0
+    for char in strip_ansi(s):gmatch(utf8char) do total = total + charwidth(char) end
+    return total
 end
 
 local function pad(s, w)
@@ -315,13 +330,13 @@ local function truncate(s, w)
     local rest = s
     while #rest > 0 do
         local escape = rest:match('^' .. styling) or rest:match('^' .. hyperlink)
-        local char = escape or rest:match('^[%z\1-\127\194-\244][\128-\191]*')
+        local char = escape or rest:match('^' .. utf8char) or rest:sub(1, 1)
         rest = rest:sub(#char + 1)
         if escape then
             table.insert(kept, char)
-        elseif shown < w - 3 then
+        elseif not cut and shown + charwidth(char) <= w - 3 then
             table.insert(kept, char)
-            shown = shown + 1
+            shown = shown + charwidth(char)
         elseif not cut then
             table.insert(kept, '...')
             cut = true

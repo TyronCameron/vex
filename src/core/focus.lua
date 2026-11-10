@@ -714,6 +714,14 @@ function describe(operations)
     return table.concat(words, ' ')
 end
 
+-- the fields the focus's last select asked for, vexid included, or nil when it selects none
+function Focus:selected()
+    for i = #self.operations, 1, -1 do
+        local op = self.operations[i]
+        if op.operation == 'select' then return func.imerge(op.args, {'vexid'}) end
+    end
+end
+
 -- the focus and flags that rebuild this focus, as typed after `vex focus`
 function Focus:describe()
     return describe(self.operations)

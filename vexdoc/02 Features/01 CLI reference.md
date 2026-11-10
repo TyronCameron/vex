@@ -166,7 +166,7 @@ Values are separated by `:`.
 | `--fuzzy field:value[:n]` | Tasks whose `field` contains `value` within `n` edits, ignoring case. `n` defaults to one edit for every four characters of `value`. |
 | `--match field:pattern` | Tasks whose `field` matches a Lua pattern (`^`, `$`, `.*`, `%d`; no `\|` alternation): `description:"^Fix.*$"`. |
 | `--nil field` | Tasks that hold no value for `field`, transients included: `--nil due`. |
-| `--between field:low:high` | Tasks with `low <= field <= high`. Leave `low` or `high` empty for an open side: `cost::9`. Dates may be `YYYY-MM-DD`. |
+| `--between field:low:high` | Tasks with `low <= field <= high`. Leave `low` or `high` empty for an open side: `cost::9`. Dates may be `YYYY-MM-DD`, and a time after a date keeps its colons: `--between 'due:2026-11-09 08:00:2026-11-10 17:00'`. |
 | `--step field[:field...]` | The tasks one hop along `field`, such as `children`, `forwardlinks` or `backlinks`. |
 | `--tree field[:field...]` | The tasks and everything reachable by following `field`, hop after hop. |
 | `--reversetree field[:field...]` | The tasks and everything that reaches them through `field`. |

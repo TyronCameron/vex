@@ -3,6 +3,34 @@ local func = require 'lib.func'
 
 local format = {}
 
+local function isarray(val)
+    for k in pairs(val) do
+        if type(k) ~= 'number' or k < 1 or k ~= math.floor(k) or k > #val then return false end
+    end
+    return true
+end
+
+-- writes a value as a Lua literal: lists as lists, other keys in order
+function format.lua(val, level)
+    level = level or 0
+    if type(val) == 'string' then return string.format('%q', val) end
+    if type(val) ~= 'table' then return tostring(val) end
+    if next(val) == nil then return '{}' end
+    local inner = string.rep('  ', level + 1)
+    local parts = {}
+    if isarray(val) then
+        for _, v in ipairs(val) do table.insert(parts, inner .. format.lua(v, level + 1)) end
+    else
+        local keys = func.keys(val)
+        table.sort(keys, function(a, b) return tostring(a) < tostring(b) end)
+        for _, k in ipairs(keys) do
+            local key = type(k) == 'string' and k:match('^[%a_][%w_]*$') and k or '[' .. format.lua(k) .. ']'
+            table.insert(parts, inner .. key .. ' = ' .. format.lua(val[k], level + 1))
+        end
+    end
+    return '{\n' .. table.concat(parts, ',\n') .. '\n' .. string.rep('  ', level) .. '}'
+end
+
 function format.json(val, indent, level)
     local pad = string.rep('  ', level or indent or 0)
     local pad_inner = string.rep('  ', (level or indent or 0) + 1)
@@ -15,15 +43,7 @@ function format.json(val, indent, level)
         return 'null'
     elseif type(val) == 'table' then
         -- check if it's an array (all keys are sequential integers starting from 1)
-        local is_array = true
-        for k, v in pairs(val) do
-            if type(k) ~= 'number' or k < 1 or k ~= math.floor(k) or k > #val then
-                is_array = false
-                break
-            end
-        end
-        
-        if is_array then
+        if isarray(val) then
             if #val == 0 then return '[]' end
             local parts = {}
             for i, v in ipairs(val) do
