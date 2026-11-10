@@ -1,7 +1,9 @@
 local cli = require 'lib.cli'
+local func = require 'lib.func'
 local task = require 'core.task'
 require 'core.taskdefinitions'
 require 'plugin.vexations'
+local recipe = require 'core.recipe'
 
 describe("vexations", function()
 
@@ -85,7 +87,7 @@ describe("vexations", function()
             local parent = create({description = "childless " .. vextype .. " parent", vextype = vextype})
             local child = task:add({description = "unwanted " .. vextype .. " child", parent = parent})
             assert.has_error(function() task:resolve(child) end)
-            assert.stub(cli.throw).was.called_with(cli, 'childless-parent', child, parent, vextype)
+            assert.stub(cli.throw).was.called_with(cli, 'leaf-parent', child, parent, vextype)
         end
 
         it("lets an atom depend on an atom", function()
@@ -172,6 +174,32 @@ describe("vexations", function()
             task:set(first, {}, {parent = "clear"})
             task:resolve(first)
             assert.equal("todo", task.tasks[parent].status)
+        end)
+
+    end)
+
+    describe("recipes", function()
+
+        it("puts a recurring task inside an abstract it adds first", function()
+            local tasks = recipe:add('recurring', {description = "sweep the yard", recur = 'weekly', start = 'today'}):get()
+            assert.equal("sweep-yard-1", tasks[1].vexid)
+            assert.equal('abstract', tasks[1].vextype)
+            assert.same({"sweep-yard-2"}, tasks[1].children)
+            assert.is_nil(rawget(tasks[1], 'recur'))
+            assert.equal('weekly', tasks[2].recur)
+        end)
+
+        it("puts each next recurring task inside the same abstract", function()
+            recipe:add('recurring', {description = "mow the lawn", recur = 'weekly'})
+            task:writeall()
+            setstatus("mow-lawn-2", "done")
+            assert.same({"mow-lawn-2", "mow-lawn-3"}, task.tasks["mow-lawn-1"].children)
+        end)
+
+        it("puts repeated tasks inside an abstract it adds first", function()
+            local tasks = recipe:add('repeat', {description = "stretch the hamstrings", n = 2}):get()
+            assert.same({"stretch-hamstrings-1", "stretch-hamstrings-2", "stretch-hamstrings-3"}, func.imap(tasks, function(t) return t.vexid end))
+            assert.same({"stretch-hamstrings-2", "stretch-hamstrings-3"}, tasks[1].children)
         end)
 
     end)

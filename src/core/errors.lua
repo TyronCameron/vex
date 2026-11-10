@@ -211,11 +211,18 @@ cli:error 'parent-cycle' {
     hint = "A task cannot be its own parent or sit under one of its own descendants. Choose another parent, or remove it with `--clear --parent`."
 }
 
-cli:error 'childless-parent' {
+cli:error 'leaf-parent' {
     function(vexid, parent, vextype)
-        return 'Task `' .. tostring(vexid) .. '` cannot sit under `' .. tostring(parent) .. '`, because tasks of type `' .. tostring(vextype) .. '` cannot have children.'
+        return 'Task `' .. tostring(vexid) .. '` cannot sit under `' .. tostring(parent) .. '`, because tasks of type `' .. tostring(vextype) .. '` are leaves and have no children.'
     end,
     hint = "Choose a parent of a type that takes children, such as an abstract, or change the type of the parent."
+}
+
+cli:error 'depended-parent' {
+    function(vexid, parent, dependent)
+        return 'Task `' .. tostring(vexid) .. '` cannot sit under `' .. tostring(parent) .. '`, because `' .. tostring(dependent) .. '` depends on `' .. tostring(parent) .. '`.'
+    end,
+    hint = "Nothing may depend on a task with children. Remove that dependency first, or have it depend on the tasks under the parent instead."
 }
 
 cli:error 'immutable-vexid' {
@@ -267,6 +274,13 @@ cli:error "unknown-field" {
     hint = "Ensure that this field is correctly written in your `config.lua` file."
 }
 
+cli:error "recipe-needs-flag" {
+    function(recipe, flag, meaning)
+        return 'The `' .. tostring(recipe) .. '` recipe needs `--' .. tostring(flag) .. '`: ' .. tostring(meaning) .. '.'
+    end,
+    hint = "Run e.g. `vex recipe recurring Do dishes --start today --recur weekly` or `vex recipe repeat Do dishes --n 10`."
+}
+
 cli:error "task-creation-failed" {
     function(msg)
         return 'Cannot create task. Reason: ' .. tostring(msg)
@@ -285,7 +299,7 @@ cli:error "unknown-modifier" {
     function(modifier)
         return 'Unknown modifier `' .. tostring(modifier) .. '`.'
     end,
-    hint = "Put `--insert` or `--remove` before a list field, e.g. `vex set my-task --insert --children a,b`, or `--clear` before any field to unset it."
+    hint = "Put `--insert` or `--remove` before a list field, e.g. `vex set my-task --insert --dependencies a,b`, or `--clear` before any field to unset it."
 }
 
 cli:error "clear-with-value" {

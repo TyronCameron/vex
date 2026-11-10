@@ -2,6 +2,7 @@ local cli = require 'lib.cli'
 local func = require 'lib.func'
 local statemachine = require 'lib.statemachine'
 local schema = require 'lib.schema'
+local naturaltime = require 'lib.naturaltime'
 local vexdex = require 'core.vexdex'
 local task = require 'core.task'
 local focus = require 'core.focus'
@@ -129,10 +130,12 @@ schema.register 'childless' {
     end
 }
 
-schema.register 'adoptive' {
+schema.register 'hasvalidparent' {
     validate = function(self, parent, context)
         local target = task:getsingle(parent)
-        if not target.acceptschildren then cli:throw('childless-parent', context.vexid, parent, target.vextype) end
+        if target.leaf then cli:throw('leaf-parent', context.vexid, parent, target.vextype) end
+        local dependents = target.dependents
+        if #dependents > 0 then cli:throw('depended-parent', context.vexid, parent, dependents[1]) end
         return true
     end
 }
@@ -144,6 +147,21 @@ schema.register 'dueinorder' {
             cli:throw('due-out-of-order', context.vexid, dependency)
         end
         return true
+    end
+}
+
+schema.register 'recurrence' {
+    validate = function(self, phrase)
+        local now = os.time()
+        local ok, after = pcall(naturaltime.parse, tostring(phrase), now)
+        return type(phrase) == "string" and ok and after > now, "Expected a recurrence such as `weekly`, `monthly` or `3 days`, got `" .. tostring(phrase) .. "`"
+    end
+}
+
+schema.register 'datefield' {
+    validate = function(self, field, context)
+        local fieldschema = type(field) == "string" and context.taskmanager:schemaof(context.task.vextype, field)
+        return fieldschema and #fieldschema:collect('datetime', 0) + #fieldschema:collect('date', 0) > 0, "Expected the name of a date field to recur over, such as `due`, got `" .. tostring(field) .. "`"
     end
 }
 
@@ -174,6 +192,6 @@ schema.register 'parent' (schema.maybe {
     schema.all {
         schema.formatted {schema.vexlink},
         schema.acyclic {'parent', 'parent-cycle'},
-        schema.adoptive
+        schema.hasvalidparent
     }
 })

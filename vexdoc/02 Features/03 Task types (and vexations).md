@@ -27,7 +27,7 @@ $ vex set fix-login-1 --parent ship-beta-1
 
 An abstract's `status` is worked out from its children ([[06 Status and state machines]]). Nothing can depend on an abstract or a decision: depend on the atoms under it.
 
-A task has at most one `parent`, and a task can't sit under itself or one of its own descendants (`parent-cycle`). `--tree parent` walks up from a task, `--tree children` walks down, and the `lineage` transient lists its ancestors, root first. Explorations and atoms take no children: a task naming one as its `parent` fails with `childless-parent`.
+A task has at most one `parent`, and a task can't sit under itself or one of its own descendants (`parent-cycle`). `--tree parent` walks up from a task, `--tree children` walks down, and the `lineage` transient lists its ancestors, root first. Explorations and atoms are leaves and take no children: a task naming one as its `parent` fails with `leaf-parent`. Nothing may depend on a task with children, so a task can't sit under a task that another task depends on either (`depended-parent`).
 
 ### Decision
 

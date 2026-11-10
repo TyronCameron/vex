@@ -108,12 +108,110 @@ describe("vex storage (e2e, subprocess)", function()
     assert.equal(OLD, modified("child-task-here-1"))
   end)
 
-  it("resolves a hand edit when a command reads the task, and moves its modified", function()
+  it("reads a hand edit only once resolve takes it in, and then moves its modified", function()
     backdated_project()
     edit("child-task-here-1", "\ncost: 5\n", "\ncost: 9\n")
+    assert.equal("5", vex(dir, "get", "child-task-here-1", "--cost"))
+    assert.truthy(vex(dir, "focus", "all", "--filter", "cost:9"):find("Focusing on 0 vexes", 1, true))
+    assert.equal(OLD, modified("child-task-here-1"))
+    vex(dir, "resolve", "all")
     assert.equal("9", vex(dir, "get", "child-task-here-1", "--cost"))
-    assert.truthy(vex(dir, "focus", "all", "--filter", "cost:9"):find("Focusing on 1 vex", 1, true))
     assert.not_equal(OLD, modified("child-task-here-1"))
+  end)
+
+  local function state()
+    local files = {}
+    local handle = io.popen("cd " .. helper.shell_escape(dir) .. " && find . -path ./.vex -prune -o -type f ! -name '.e2e_*' -printf '%p %T@\\n' | sort")
+    for line in handle:lines() do
+      local path = line:match("^(.-) [%d.]+$")
+      files[line] = helper.read_file(dir .. "/" .. path)
+    end
+    handle:close()
+    local vexdex = function(names)
+      local result = {}
+      for _, name in ipairs(names) do result[name] = helper.read_file(dir .. "/.vex/vexdex/" .. name) or "" end
+      return result
+    end
+    return {
+      taskfiles = files,
+      index = vexdex({"index.bin", "backlinks.bin", "paths.bin", "fingerprints.bin", "mtimes.bin"}),
+      focus = vexdex({"focus.bin"}),
+    }
+  end
+
+  local function same(a, b)
+    for k, v in pairs(a) do if b[k] ~= v then return false end end
+    for k in pairs(b) do if a[k] == nil then return false end end
+    return true
+  end
+
+  local effects = {
+    {{"help"}},
+    {{"version"}},
+    {{"show", "child-task-here-1"}},
+    {{"get", "all", "--cost"}},
+    {{"view", "all", "tabular"}},
+    {{"view", "all", "overview"}},
+    {{"view", "child-task-here-1", "singular"}},
+    {{"focus"}},
+    {{"focus", "all", "--filter", "status:todo"}, focus = true},
+    {{"add", "Brand", "new", "task"}, index = true, focus = true, taskfiles = true},
+    {{"set", "dependent-atom-here-1", "--cost", "7"}, index = true, taskfiles = true},
+    {{"resolve", "all"}, index = true, taskfiles = true},
+    {{"remove", "dependent-atom-here-1"}, index = true, focus = true, taskfiles = true},
+    {{"recipe", "abstract", "Brand", "new", "abstract"}, index = true, focus = true, taskfiles = true},
+  }
+
+  for _, effect in ipairs(effects) do
+    local words = table.concat(effect[1], " ")
+    it("changes only what the CLI reference says when running vex " .. words .. " over a hand edit", function()
+      linked_project()
+      vex(dir, "focus", "all")
+      edit("child-task-here-1", "\ncost: 5\n", "\ncost: 9\n")
+      local before = state()
+      vex(dir, unpack(effect[1]))
+      local after = state()
+      for _, part in ipairs({"index", "focus", "taskfiles"}) do
+        local changed = not same(before[part], after[part])
+        assert.are.equal(effect[part] or false, changed, "vex " .. words .. (changed and " changed " or " left ") .. part)
+      end
+    end)
+  end
+
+  it("shows a task file as it is on disk, unresolved", function()
+    linked_project()
+    edit("child-task-here-1", "\ncost: 5\n", "\ncost: 9\ndue: tomorrow 8am\n")
+    local out = vex(dir, "show", "child-task-here-1")
+    assert.truthy(out:find("due: tomorrow 8am", 1, true), out)
+    assert.truthy(out:find("cost: 9", 1, true), out)
+    assert.truthy(out:find("Notes about the child", 1, true), out)
+    assert.truthy(helper.read_file(dir .. "/child-task-here-1.md"):find("due: tomorrow 8am", 1, true))
+  end)
+
+  it("warns on stderr, and only there, while indexed task files changed since vex last saw them", function()
+    linked_project()
+    edit("child-task-here-1", "\ncost: 5\n", "\ncost: 9\n")
+    for _, args in ipairs({{"get", "child-task-here-1", "--cost"}, {"view", "all", "csv"}, {"focus", "all"}}) do
+      local result = helper.run_vex(dir, args)
+      assert.truthy(helper.strip_ansi(result.stderr):find("1 task file changed since vex last saw it", 1, true), table.concat(args, " "))
+      assert.is_nil(result.stdout:find("changed since", 1, true))
+    end
+    assert.equal("5", vex(dir, "get", "child-task-here-1", "--cost"))
+    vex(dir, "resolve", "all")
+    assert.equal("", helper.run_vex(dir, {"get", "child-task-here-1", "--cost"}).stderr)
+  end)
+
+  it("gives no warning for a new file vex has not indexed", function()
+    linked_project()
+    helper.write_file(dir .. "/Buy groceries.md", "---\ntitle: Buy groceries\n---\n")
+    assert.equal("", helper.run_vex(dir, {"get", "all"}).stderr)
+  end)
+
+  it("writes no index when a read verb runs without one, as in a fresh clone", function()
+    linked_project()
+    os.execute("rm -rf " .. helper.shell_escape(dir .. "/.vex/vexdex"))
+    vex(dir, "get", "all")
+    assert.is_false(helper.is_file(dir .. "/.vex/vexdex/index.bin"))
   end)
 
   it("lists hand-edited tasks as updated, and takes in new task files on resolve all", function()
@@ -202,7 +300,7 @@ describe("vex storage (e2e, subprocess)", function()
     linked_project()
     for _, vexid in ipairs({"child-task-here-1", "parent-abstract-here-1", "dependent-atom-here-1"}) do
       local fields = helper.frontmatter(dir .. "/" .. vexid .. ".md")
-      for _, transient in ipairs({"wordcount", "phase", "blockers", "lineage", "children", "acceptschildren", "path", "age"}) do
+      for _, transient in ipairs({"wordcount", "phase", "blockers", "lineage", "children", "leaf", "path", "age"}) do
         assert.is_nil(fields[transient], transient .. " was written to " .. vexid)
       end
     end
@@ -235,15 +333,12 @@ describe("vex storage (e2e, subprocess)", function()
     assert.truthy(listing:find("focus.bin", 1, true))
   end)
 
-  it("keeps task bodies out of the index and still reads them for queries", function()
+  it("keeps task bodies out of the index, so only show prints them", function()
     local vexid = vex(dir, "add", "Body", "stays", "home", "--vexbody", "Window seat please")
-    vex(dir, "add", "Empty", "body", "here")
-    for _, file in ipairs({"index.bin"}) do
-      assert.is_nil(helper.read_file(dir .. "/.vex/vexdex/" .. file):find("Window seat", 1, true))
-    end
-    assert.equal("Window seat please", vex(dir, "get", vexid, "--vexbody"))
-    assert.truthy(vex(dir, "focus", "all", "--filter", "vexbody:Window seat please"):find("Focusing on 1 vex", 1, true))
-    assert.truthy(vex(dir, "view", "all", "overview"):find("Tasks with no vexbody: 50.0%", 1, true))
+    assert.is_nil(helper.read_file(dir .. "/.vex/vexdex/index.bin"):find("Window seat", 1, true))
+    assert.equal("", vex(dir, "get", vexid, "--vexbody"))
+    assert.is_nil(vex(dir, "view", vexid, "json"):find("Window seat", 1, true))
+    assert.truthy(vex(dir, "show", vexid):find("Window seat please", 1, true))
   end)
 
   it("rebuilds the same tasks elsewhere by replaying the verb log", function()
@@ -280,6 +375,15 @@ describe("vex storage (e2e, subprocess)", function()
     assert.are.equal("done", replayed["book-flights-1"][1].status)
   end)
 
+
+  it("keeps the body of a task linking to a removed task (keep-body-tasks-linking-removed-1)", function()
+    local dependent = vex(dir, "add", "Dependent", "task", "here", "--vexbody", "Remember the milk")
+    local dependency = vex(dir, "add", "Dependency", "task", "here")
+    vex(dir, "set", dependent, "--dependencies", dependency)
+    vex(dir, "remove", dependency)
+    assert.equal("", vex(dir, "get", dependent, "--dependencies"))
+    assert.truthy(helper.read_file(dir .. "/" .. dependent .. ".md"):find("Remember the milk", 1, true))
+  end)
 
   it("writes no task file when a verb fails on a later task", function()
     local child = vex(dir, "add", "Alpha", "child", "here", "--vextype", "atom")

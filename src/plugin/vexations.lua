@@ -52,13 +52,28 @@ recipe:recipe 'abstract' {
 }
 
 for _, vextype in ipairs({'exploration', 'atom'}) do
-    task:transient 'acceptschildren' {
+    task:transient 'leaf' {
         vextype = vextype,
         definition = function(t)
-            return false
+            return true
         end
     }
 end
+
+local function inabstract(name)
+    local add = recipe.recipes[name].add
+    recipe:recipe(name) {
+        add = function(task, taskproperties)
+            local abstract = task:add({description = taskproperties.description, vextype = 'abstract'})
+            task:resolve(abstract)
+            taskproperties.parent = abstract
+            return {abstract, unpack(add(task, taskproperties))}
+        end
+    }
+end
+
+inabstract 'recurring'
+inabstract 'repeat'
 
 local function childphases(t)
     return func.imap(t.children or {}, function(vexid) return vexdex:get(vexid).phase end)

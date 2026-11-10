@@ -102,6 +102,14 @@ describe("CLI", function()
         assert.truthy(table.concat(written):find('_test_unregistered', 1, true))
     end)
 
+    it("warns on stderr, leaving stdout alone", function()
+        local stderr, written = io.stderr, {}
+        io.stderr = {write = function(self, text) table.insert(written, text) end}
+        cli:warn('_test_warning')
+        io.stderr = stderr
+        assert.equal('_test_warning\n', table.concat(written))
+    end)
+
     it("makes the raw string available to verbs via args.raw", function()
         local captured
         cli:verb("_test_raw_capture") {

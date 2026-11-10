@@ -17,11 +17,13 @@ Every user mistake fails with a named error, a message and a hint, and exits non
 | `clear-with-value` | `--clear` before a field that is also given a value. | Use `vex set x --clear --field` alone, or drop `--clear`. |
 | `missing-value` | A `set` flag with no value. | Give it one, or put `--clear` before it to unset the field. |
 | `immutable-vexid` | `vex set --vexid`. | A vexid is the task's identity: add a new task and remove the old one. |
+| `recipe-needs-flag` | `vex recipe recurring` without `--recur`, or `vex recipe repeat` without a whole number above 0 for `--n`. | Add the flag. |
 | `task-creation-failed` | A description of 3 characters or fewer. | Describe the task in at least two words. |
 | `task-already-exists`, `path-already-exists` | The new vexid or file path is taken. | Reword the description, or `vex resolve all` if the file isn't indexed. |
 | `resolution-failed-normalisation`, `-validation`, `-derivation` | A field is invalid. The message names the field, and the footer links the file. | Fix the value, or the file if you edited it by hand. The task stays as it was. |
 | `parent-cycle` | A task's `parent` is the task itself or one of its descendants. | Choose another parent, or `--clear --parent`. |
-| `childless-parent` | A task's `parent` is of a type that takes no children, such as an atom or an exploration. | Choose another parent, or change the parent's type. |
+| `leaf-parent` | A task's `parent` is a leaf, a type that takes no children, such as an atom or an exploration. | Choose another parent, or change the parent's type. |
+| `depended-parent` | A task's `parent` is a task that another task depends on. | Remove that dependency first, or depend on the tasks under the parent instead. |
 | `dependency-cycle` | Dependencies that lead back to the task. | Remove one of them. |
 | `dependency-with-children` | A dependency on a task that has children, such as an abstract or a decision. | Depend on the tasks under it. |
 | `due-out-of-order` | A task is due earlier than one of its dependencies. | Change one of the due dates. |

@@ -23,9 +23,16 @@ local function unlink(value)
     return value:match("%[%[(.-)%]%]") or value
 end
 
+local function slurp(path)
+    local f = assert(io.open(path, "r"))
+    local content = f:read("*a")
+    f:close()
+    return content
+end
+
 local tasks, paths = {}, {}
 for _, path in ipairs(files()) do
-    local ok, task = pcall(obsidian.read, path)
+    local ok, task = pcall(obsidian.parse, slurp(path))
     if ok and task and task.vexid then
         tasks[task.vexid], paths[task.vexid] = task, path
     end
@@ -65,7 +72,7 @@ local function migrate(content, vexid)
         if not skipping then table.insert(lines, line) end
     end
     if parentof[vexid] and not tasks[vexid].parent then
-        table.insert(lines, "parent: " .. obsidian.value("[[" .. parentof[vexid] .. "]]"))
+        table.insert(lines, 'parent: "[[' .. parentof[vexid] .. ']]"')
     end
     return "---\n" .. table.concat(lines, "\n") .. "\n" .. rest
 end
@@ -73,11 +80,9 @@ end
 local emptied, parented = 0, 0
 for vexid, path in pairs(paths) do
     if held[vexid] or (parentof[vexid] and not tasks[vexid].parent) then
-        local f = assert(io.open(path, "r"))
-        local content = f:read("*a")
-        f:close()
-        f = assert(io.open(path, "w"))
-        f:write(migrate(content, vexid))
+        local content = migrate(slurp(path), vexid)
+        local f = assert(io.open(path, "w"))
+        f:write(content)
         f:close()
         if held[vexid] then emptied = emptied + 1 end
         if parentof[vexid] and not tasks[vexid].parent then parented = parented + 1 end

@@ -29,7 +29,7 @@ recipe:recipe 'release' {
 }
 ```
 
-The built-in `abstract` recipe is defined the same way.
+The built-in `abstract`, `recurring` and `repeat` recipes are defined the same way.
 
 ## Writing a file
 

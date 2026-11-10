@@ -45,6 +45,8 @@ end
 
 local aliases = {
     {'first light', 'dawn'}, {'end of day', 'eod'}, {'close of business', 'cob'}, {'and a half', 'andahalf'},
+    {'hourly', '1 hour'}, {'daily', '1 day'}, {'weekly', '1 week'}, {'fortnightly', '1 fortnight'},
+    {'monthly', '1 month'}, {'yearly', '1 year'}, {'annually', '1 year'},
 }
 
 local function tokenize(phrase)

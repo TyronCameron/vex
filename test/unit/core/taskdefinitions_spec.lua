@@ -109,13 +109,21 @@ describe("taskdefinitions", function()
             assert.stub(cli.throw).was.called_with(cli, 'parent-cycle', first, second)
         end)
 
-        it("rejects a parent whose type accepts no children", function()
+        it("rejects a parent whose type is a leaf", function()
             task:task 'barren':extends 'task' {schema = require('lib.schema').atleast {}}
-            task:transient 'acceptschildren' { vextype = 'barren', definition = function() return false end }
+            task:transient 'leaf' { vextype = 'barren', definition = function() return true end }
             local barren = create({description = "barren parent task", vextype = 'barren'})
             local child = task:add({description = "unwanted child task", parent = barren})
             assert.has_error(function() task:resolve(child) end)
-            assert.stub(cli.throw).was.called_with(cli, 'childless-parent', child, barren, 'barren')
+            assert.stub(cli.throw).was.called_with(cli, 'leaf-parent', child, barren, 'barren')
+        end)
+
+        it("rejects a parent that another task depends on", function()
+            local needed = create({description = "depended parent task"})
+            local dependent = create({description = "depending on parent task", dependencies = {needed}})
+            local child = task:add({description = "late child task", parent = needed})
+            assert.has_error(function() task:resolve(child) end)
+            assert.stub(cli.throw).was.called_with(cli, 'depended-parent', child, needed, dependent)
         end)
 
         it("rejects a link to a task that does not exist", function()
@@ -216,9 +224,9 @@ describe("taskdefinitions", function()
             assert.is_nil(task.tasks[first].children)
         end)
 
-        it("accepts children on every task unless its type says otherwise", function()
+        it("is no leaf unless its type says otherwise", function()
             local vexid = create({description = "accepting parent task"})
-            assert.is_true(task.tasks[vexid].acceptschildren)
+            assert.is_false(task.tasks[vexid].leaf)
         end)
 
         it("lists the tasks linking to a task as its backlinks and the tasks it links to as its forwardlinks", function()
@@ -411,6 +419,59 @@ describe("taskdefinitions", function()
                 assert.is_false(pcall(function() task:resolve(vexid) end))
                 assert.stub(cli.throw).was_called_with(cli, 'bad-autotags', match._)
             end
+        end)
+
+    end)
+
+    describe("recurring tasks", function()
+
+        it("adds the next task, its over date moved on by the recurrence, when one is done", function()
+            local vexid = create({description = "recurring spec chore", recur = 'weekly', due = 1000000, vexbody = "same body"})
+            setstatus(vexid, 'done')
+            local next = task.tasks["recurring-spec-chore-2"]
+            assert.equal('todo', next.status)
+            assert.equal('weekly', next.recur)
+            assert.equal('due', next.over)
+            assert.equal(1000000 + 7 * 86400, next.due)
+            assert.equal("same body", next.vexbody)
+            assert.is_true(next.created >= task.tasks[vexid].created)
+        end)
+
+        it("recurs from now when the over field is empty", function()
+            local vexid = create({description = "undated recurring chore", recur = 'daily'})
+            local before = os.time()
+            setstatus(vexid, 'done')
+            local due = task.tasks["undated-recurring-chore-2"].due
+            assert.is_true(due >= before + 86400 and due <= os.time() + 86400)
+        end)
+
+        it("adds the next task only when the task moves into a final phase", function()
+            local vexid = create({description = "resolved recurring chore", recur = 'weekly'})
+            task:set(vexid, {cost = 1})
+            task:resolve(vexid)
+            assert.is_nil(task.tasks["resolved-recurring-chore-2"])
+            setstatus(vexid, 'done')
+            assert.truthy(task.tasks["resolved-recurring-chore-2"])
+            setstatus(vexid, 'done')
+            assert.is_nil(task.tasks["resolved-recurring-chore-3"])
+        end)
+
+        it("puts the next task among its parent's children", function()
+            local parent = create({description = "recurring chores parent", vextype = 'abstract'})
+            local child = create({description = "parented recurring chore", recur = 'daily', parent = parent})
+            setstatus(child, 'done')
+            assert.same({child, "parented-recurring-chore-2"}, task.tasks[parent].children)
+        end)
+
+        it("rejects a recurrence it cannot read or one that never moves on", function()
+            for _, recur in ipairs {'sometimes', 'today'} do
+                assert.has_error(function() create({description = "badly recurring chore", recur = recur}) end)
+            end
+        end)
+
+        it("rejects recurring over a field that is not a date", function()
+            assert.has_error(function() create({description = "costly recurring chore", recur = 'weekly', over = 'cost'}) end)
+            assert.stub(cli.throw).was.called_with(cli, 'resolution-failed-validation', match._, match._, match._)
         end)
 
     end)
