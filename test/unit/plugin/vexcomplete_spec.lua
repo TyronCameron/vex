@@ -36,6 +36,22 @@ describe("vexcomplete", function()
         assert.truthy(lines(run("suggest 3 vex view all")).kanban)
     end)
 
+    it("suggests nothing when given no words", function()
+        assert.equal("", run("suggest"))
+    end)
+
+    it("fences each snippet as its own shell", function()
+        assert.truthy(run("autocomplete fish"):find("```fish", 1, true))
+    end)
+
+    it("names the shells when none is given", function()
+        local thrown = {}
+        stub(cli, 'throw', function(self, name, msg) table.insert(thrown, msg) error(name) end)
+        pcall(run, "autocomplete")
+        cli.throw:revert()
+        assert.truthy(tostring(thrown[1]):find("bash", 1, true))
+    end)
+
     it("suggests recipes for the recipe verb", function()
         assert.truthy(lines(run("suggest 2 vex recipe")).abstract)
     end)

@@ -20,6 +20,9 @@ describe("init", function()
         assert.equal(100, config.loglimit)
         assert.same({groupby = {"status", "lineage"}}, config.paths)
         assert.is_nil(config.plugins)
+        local text = io.open(dir .. "/.vex/config.lua"):read("*a")
+        assert.truthy(text:find('groupby = {\n      "status",\n      "lineage"\n    }', 1, true), text)
+        assert.equal("\n", text:sub(-1))
         for _, folder in ipairs({"vexdex", "tasks", "recipes", "focuses", "views", "events", "plugin", "tmp"}) do
             assert.truthy(io.open(dir .. "/.vex/" .. folder .. "/."), folder .. " was not created")
         end

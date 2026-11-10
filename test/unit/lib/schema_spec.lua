@@ -452,6 +452,12 @@ describe("schema", function()
         assert.equal(s:prevalidate("2026-10-01T06:00:00Z"), s:prevalidate("2026-10-01T01:30:00-0430"))
     end)
 
+    it("`schema.date` and `schema.datetime` do not format a date that does not exist", function()
+        assert.equal("2026-02-30", schema.date:unapply('format', "2026-02-30"))
+        assert.equal("2026-13-45 08:00:00", schema.datetime:unapply('format', "2026-13-45 08:00:00"))
+        assert.equal("2026-02-30", schema.datetime:unapply('format', "2026-02-30"))
+    end)
+
     it("`schema.datetime` does not format an ISO time with an unknown zone", function()
         assert.equal("2026-10-01T08:00:00 later", schema.datetime:unapply('format', "2026-10-01T08:00:00 later"))
     end)

@@ -64,7 +64,15 @@ function parseblock(lines, i, indent)
     return block, i
 end
 
-local function to_yaml_value(v, indent)
+local to_yaml_value
+
+-- a `key: value` line, with no space after the colon when the value starts on the next line
+local function to_yaml_entry(k, v, indent)
+    local value = to_yaml_value(v, indent)
+    return k .. (value:sub(1, 1) == "\n" and ":" or ": ") .. value
+end
+
+function to_yaml_value(v, indent)
     indent = indent or ""
     local t = type(v)
     if t == "boolean" or t == "number" then return tostring(v) end
@@ -78,7 +86,8 @@ local function to_yaml_value(v, indent)
         if is_array then
             local lines = {}
             for _, item in ipairs(v) do
-                lines[#lines + 1] = inner .. "- " .. to_yaml_value(item, inner)
+                local value = to_yaml_value(item, inner)
+                lines[#lines + 1] = inner .. (value:sub(1, 1) == "\n" and "-" or "- ") .. value
             end
             return "\n" .. table.concat(lines, "\n")
         else
@@ -87,7 +96,7 @@ local function to_yaml_value(v, indent)
             table.sort(keys)
             local lines = {}
             for _, k in ipairs(keys) do
-                lines[#lines + 1] = inner .. k .. ": " .. to_yaml_value(v[k], inner)
+                lines[#lines + 1] = inner .. to_yaml_entry(k, v[k], inner)
             end
             return "\n" .. table.concat(lines, "\n")
         end
@@ -141,7 +150,7 @@ return {
     render = function(frontmatter_iter, body)
         local lines = {"---\n"}
         for k, v in frontmatter_iter do
-            table.insert(lines, k .. ": " .. to_yaml_value(v) .. "\n")
+            table.insert(lines, to_yaml_entry(k, v) .. "\n")
         end
         table.insert(lines, "---\n")
         return table.concat(lines) .. (body or "")

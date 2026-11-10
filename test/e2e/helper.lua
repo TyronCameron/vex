@@ -48,8 +48,8 @@ function M.rm_tmp_dir(dir)
   os.execute("rm -rf " .. M.shell_escape(dir))
 end
 
--- Strips ANSI SGR + OSC-8 hyperlink escape codes that lib/pretty.lua always
--- emits (no isatty/NO_COLOR check), so specs can assert on plain text.
+-- Strips ANSI SGR + OSC-8 hyperlink escape codes, so specs can assert on
+-- plain text whether or not lib/pretty.lua wrote any.
 function M.strip_ansi(s)
   s = s:gsub("\27%[[%d;]*m", "")
   s = s:gsub("\27%]8;;.-\27\\", "")

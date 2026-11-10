@@ -16,26 +16,79 @@ describe("vex user-facing errors (e2e, subprocess)", function()
 
   local cases = {
     {"an unknown verb", "unknown verb 'frobnicate'", {"frobnicate"}},
-    {"an unknown focus", "unknown focus with name: nosuch", {"show", "nosuch"}},
+    {"an unknown focus", "No task or focus called `nosuch`.", {"show", "nosuch"}},
     {"an unknown view", "A view of name `nope` does not exist", {"view", "all", "nope"}},
     {"an unknown recipe", "A recipe of name `nope` does not exist", {"recipe", "nope", "Hello", "there"}},
-    {"an unknown vextype", "Type  = nope", {"add", "Bad", "type", "thing", "--vextype", "nope"}},
-    {"a description that is too short", "Need more than 3 characters", {"add", "abc"}},
+    {"an unknown vextype", "Unknown task type `nope`. The types are abstract, atom, decision, exploration, task.", {"add", "Bad", "type", "thing", "--vextype", "nope"}},
+    {"a description that is too short", "A description needs at least 3 characters.", {"add", "ab"}},
+    {"a description of one word", "Expected at least 2 words", {"add", "abcd"}},
+    {"an unknown verb, with a hint that has no trailing space", "run `vex help` for usage", {"frobnicate"}},
     {"vex init inside a project", "Already in a vex directory", {"init"}},
-    {"a filter without a value", "You need to provide a field and value", {"focus", "all", "--filter", "status"}},
+    {"a filter without a value", "`--filter` takes field:value, e.g. `--filter status:todo`.", {"focus", "all", "--filter", "status"}},
+    {"a filter written with =", "`--filter` takes field:value", {"focus", "all", "--filter", "status=done"}},
+    {"an owner when none are configured", "No task owners are configured: add `taskowners", {"add", "Owned", "task", "--owner", "bob"}},
+    {"a link to a task that does not exist", "No task `nosuch-1`.", {"add", "Linked", "task", "--dependencies", "nosuch-1"}},
     {"an unknown shell", "is not known", {"autocomplete", "nosuchshell"}},
+    {"autocomplete without a shell", "Name your shell: bash, fish, powershell, zsh.", {"autocomplete"}},
     {"a malformed match", "Bad pattern `[a`", {"focus", "all", "--match", "description:[a"}},
     {"an unknown focus operation", "Unknown focus operation `bogus`", {"focus", "all", "--bogus", "x"}},
-    {"contains without a value", "You need to provide a field and value", {"focus", "all", "--contains", "tags"}},
+    {"contains without a value", "`--contains` takes field:value", {"focus", "all", "--contains", "tags"}},
     {"a manual tag with a space", "Expected a tag", {"add", "Spaced", "tag", "task", "--manualtags", "two words"}},
     {"a recurring recipe without a recurrence", "The `recurring` recipe needs `--recur`", {"recipe", "recurring", "Wash", "dishes"}},
     {"a repeat recipe without a count", "The `repeat` recipe needs `--n`", {"recipe", "repeat", "Wash", "dishes"}},
     {"a recurrence it cannot read", "Expected a recurrence", {"add", "Wash", "dishes", "--recur", "sometimes"}},
+    {"a date that does not exist", "Cannot interpret `2026-02-30` as a time: that date does not exist", {"add", "Due", "some", "day", "--due", "2026-02-30"}},
+    {"a month that does not exist", "Cannot interpret `2026-13-45`", {"add", "Due", "some", "day", "--due", "2026-13-45"}},
   }
+
+  it("says that a single word given to view is the view", function()
+    vex(dir, "add", "Some", "task")
+    fails(dir, "Run `vex view` to list the views", "view", "all")
+  end)
+
+  it("says how long a description must be", function()
+    local vexid = vex(dir, "add", "Some", "task")
+    fails(dir, "Expected at least 3 characters, got 0", "set", vexid, "--description", "")
+  end)
+
+  it("suggests the vexids close to one it can't find", function()
+    vex(dir, "add", "Make", "coffee", "for", "wife")
+    fails(dir, "Did you mean `make-coffee-wife-1`?", "show", "make-coffee")
+  end)
+
+  it("points validation failures at the task file and the task types, not config.lua", function()
+    local vexid = vex(dir, "add", "Some", "task")
+    local stderr = fails(dir, "Fix the value, or the task file if you edited it by hand.", "set", vexid, "--cost", "abc")
+    assert.is_nil(stderr:find("config.lua", 1, true))
+  end)
 
   it("rejects a set flag without a value", function()
     local vexid = vex(dir, "add", "Some", "task")
     fails(dir, "needs a value", "set", vexid, "--status")
+  end)
+
+  it("refuses to move a task out of its initial status while a dependency is unfinished", function()
+    local first = vex(dir, "add", "First", "step")
+    local second = vex(dir, "add", "Second", "step", "--dependencies", first)
+    fails(dir, "Task `" .. second .. "` can't move to `done` while `" .. first .. "`, which it depends on, isn't finished.", "set", second, "--status", "done")
+    fails(dir, "isn't finished", "add", "Third", "step", "--status", "done", "--dependencies", first)
+    vex(dir, "set", first, "--status", "done")
+    vex(dir, "set", second, "--status", "done")
+  end)
+
+  it("refuses a hand edit that finishes a blocked task", function()
+    local first = vex(dir, "add", "First", "step")
+    local second = vex(dir, "add", "Second", "step", "--dependencies", first)
+    local path = helper.task_file(dir, second)
+    helper.write_file(path, (helper.read_file(path):gsub("status: todo", "status: done")))
+    fails(dir, "isn't finished", "resolve", "all")
+  end)
+
+  it("finishes a task and its dependency together, in either order", function()
+    local first = vex(dir, "add", "Zeta", "step")
+    local second = vex(dir, "add", "Alpha", "step", "--dependencies", first)
+    vex(dir, "set", second .. "," .. first, "--status", "done")
+    assert.equal("done\ndone", vex(dir, "get", second .. "," .. first, "--status"))
   end)
 
   it("rejects clearing a field and giving it a value", function()
@@ -95,8 +148,7 @@ describe("vex user-facing errors (e2e, subprocess)", function()
     fails(dir, "ERROR: Cannot transition status from done to todo", "set", vexid, "--status", "todo")
     fails(dir, "at status", "set", vexid, "--status", "todo")
     local raw = helper.run_vex(dir, {"set", vexid, "--status", "todo"}).stderr
-    assert.truthy(raw:find("\27]8;;file://", 1, true))
-    assert.truthy(raw:find(vexid .. ".md\27\\", 1, true))
+    assert.truthy(raw:find("while resolving `" .. vexid .. "` in " .. helper.task_file(dir, vexid), 1, true), raw)
     assert.equal("done", helper.frontmatter(helper.task_file(dir, vexid)).status)
   end)
 
@@ -135,7 +187,7 @@ describe("vex user-facing errors (e2e, subprocess)", function()
 
   it("rejects a task file without a vextype", function()
     helper.write_file(dir .. "/no-type-1.md", "---\nvexid: no-type-1\ndescription: No type here\nstatus: todo\n---\n")
-    fails(dir, "field = vextype", "resolve", "all")
+    fails(dir, "Task `no-type-1` has no `vextype`.", "resolve", "all")
   end)
 
   it("rejects an abstract listing itself as a child", function()
@@ -188,5 +240,27 @@ describe("vex user-facing errors (e2e, subprocess)", function()
   it("rejects tag rules that are not tag names mapped to functions", function()
     autotags("broken = true")
     fails(dir, "The `autotags` setting in your config", "add", "Badly", "ruled", "task")
+  end)
+end)
+
+describe("vex outside a project (e2e, subprocess)", function()
+  local dir
+
+  before_each(function()
+    dir = helper.make_tmp_dir()
+  end)
+
+  after_each(function()
+    helper.rm_tmp_dir(dir)
+  end)
+
+  it("prints help for the verbs that work without a project", function()
+    local out = vex(dir, "help")
+    assert.truthy(out:find("init", 1, true))
+    assert.truthy(out:find("Run `vex init`, or cd into a vex project, to see every verb.", 1, true))
+  end)
+
+  it("refuses the verbs that need a project", function()
+    fails(dir, "Not in a vex directory.", "view", "all", "list")
   end)
 end)

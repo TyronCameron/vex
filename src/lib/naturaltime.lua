@@ -1,3 +1,4 @@
+local func = require 'lib.func'
 local naturaltime = {}
 
 local numbers = {
@@ -67,6 +68,14 @@ end
 
 local function unit(word)
     return word and (units[word] or units[(word:gsub('s$', ''))])
+end
+
+-- whether local calendar fields name a real moment, rather than one os.time would roll over, such as 30 February
+function naturaltime.exists(fields)
+    local hour, min, sec = fields.hour or 0, fields.min or 0, fields.sec or 0
+    if hour < 0 or hour > 23 or min < 0 or min > 59 or sec < 0 or sec > 59 then return false end
+    local t = os.date('*t', os.time({year = fields.year, month = fields.month, day = fields.day, hour = 12}))
+    return t.year == fields.year and t.month == fields.month and t.day == fields.day
 end
 
 -- local calendar fields to a timestamp, the same way the datetime format iso reads them
@@ -161,10 +170,12 @@ local ordinals = {st = true, nd = true, rd = true, th = true}
 
 local function clock(word)
     local h, m, s = word:match('^(%d%d?):(%d%d):?(%d?%d?)$')
-    if h then return tonumber(h), tonumber(m), tonumber(s) end
+    h, m, s = tonumber(h), tonumber(m), tonumber(s)
+    if h and h < 24 and m < 60 and (s or 0) < 60 then return h, m, s end
     local meridiem
     h, m, meridiem = word:match('^(%d%d?):?(%d*)([ap]m)$')
-    if h then return tonumber(h) % 12 + (meridiem == 'pm' and 12 or 0), tonumber(m) end
+    h, m = tonumber(h), tonumber(m)
+    if h and h >= 1 and h <= 12 and (m or 0) < 60 then return h % 12 + (meridiem == 'pm' and 12 or 0), m end
 end
 
 -- each rule reads the tokens at i into the state and returns how many it consumed, or nil
@@ -268,6 +279,7 @@ local function settle(state)
     local base = state.now
     if date.year or date.month or date.day then
         local fields = {year = date.year or t.year, month = date.month or (date.year and 1) or t.month, day = date.day or 1}
+        if not naturaltime.exists(fields) then return end
         if not date.year and moment(fields) < midnight then
             if date.month then fields.year = fields.year + 1 else fields.month = fields.month + 1 end
         end
@@ -299,8 +311,13 @@ function naturaltime.parse(phrase, now)
         if not consumed then table.insert(unknown, tokens[i]) end
         i = i + (consumed or 1)
     end
-    if #unknown > 0 then error('Cannot interpret `' .. tostring(phrase) .. '` as a time. Unknown words: ' .. table.concat(unknown, ', ') .. '. Try a phrase such as `tomorrow`, `next tuesday`, `friday arvo`, `in 3 days`, `26 July` or `2026-07-26 09:00`.', 0) end
-    return settle(state)
+    local examples = 'Try a phrase such as `tomorrow`, `next tuesday`, `friday arvo`, `in 3 days`, `26 July` or `2026-07-26 09:00`.'
+    local words = func.ifilter(unknown, function(word) return not tonumber(word) end)
+    if #words == 0 then words = unknown end
+    if #words > 0 then error('Cannot interpret `' .. tostring(phrase) .. '` as a time. Unknown words: ' .. table.concat(words, ', ') .. '. ' .. examples, 0) end
+    local epoch = settle(state)
+    if not epoch then error('Cannot interpret `' .. tostring(phrase) .. '` as a time: that date does not exist. ' .. examples, 0) end
+    return epoch
 end
 
 local scales = {{'year', 31536000}, {'month', 2592000}, {'week', 604800}, {'day', 86400}, {'hour', 3600}, {'minute', 60}}

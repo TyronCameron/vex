@@ -11,6 +11,24 @@ describe("canonicalvexid", function()
         assert.equal("hello-world-1", cv.generate("hello, world!", {}))
     end)
 
+    it("folds accented Latin letters to plain ones", function()
+        assert.equal("cafe-creme-fur-jurgen-1", cv.generate("Café crème für Jürgen", {}))
+        assert.equal("strasse-oeuvre-aerodrome-1", cv.generate("Straße Œuvre Ærodrome", {}))
+    end)
+
+    it("keeps the letters of other scripts as they are", function()
+        assert.equal("日本語-タスク-を-作る-1", cv.generate("日本語 タスク を 作る", {}))
+        assert.equal("починить-сервер-1", cv.generate("починить сервер", {}))
+    end)
+
+    it("reads curly apostrophes and dashes as their plain forms", function()
+        assert.equal("fix-not-load-1", cv.generate("Fix — doesn’t load", {}))
+    end)
+
+    it("counts the 32-character budget in characters, not bytes", function()
+        assert.equal("дддддддддд-дддддддддд-дддддддддд-1", cv.generate("дддддддддд дддддддддд дддддддддд дддддддддд", {}))
+    end)
+
     it("drops filler words", function()
         assert.equal("quick-fox-1", cv.generate("the quick fox", {}))
     end)

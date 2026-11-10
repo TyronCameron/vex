@@ -42,7 +42,7 @@ schema.register 'statemachine' {
 
 schema.register 'vexlink' {
     validate = function(self, vexid)
-        return type(vexid) == "string" and task:getsingle(vexid), "Cannot find " .. tostring(vexid) .. " in the task manager "
+        return type(vexid) == "string" and task:getsingle(vexid), "No task `" .. tostring(vexid) .. "`."
     end,
     isos = {
         format = {
@@ -139,6 +139,16 @@ schema.register 'dueinorder' {
     end
 }
 
+schema.register 'unblocked' {
+    validate = function(self, dependency, context)
+        local leaving = (context.previous.phase or 'initial') == 'initial' and context.task.phase ~= 'initial'
+        if leaving and task:getsingle(dependency).phase ~= 'final' then
+            cli:throw('blocked', context.vexid, context.task.status, dependency)
+        end
+        return true
+    end
+}
+
 schema.register 'notself' {
     validate = function(self, child, context)
         if child == context.vexid then cli:throw('self-child', child) end
@@ -193,7 +203,8 @@ schema.register 'dependencies' (schema.maybe {
             schema.formatted {schema.vexlink},
             schema.acyclic,
             schema.childless,
-            schema.dueinorder
+            schema.dueinorder,
+            schema.unblocked
         }
     }
 })

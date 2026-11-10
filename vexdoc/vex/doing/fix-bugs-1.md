@@ -2,7 +2,7 @@
 vexid: fix-bugs-1
 vextype: abstract
 description: Fix bugs
-children: 
+children:
   - "[[fix-tabular-printing-table-field-1]]"
   - "[[reject-abstract-listing-itself-1]]"
   - "[[show-column-blank-missing-values-1]]"
@@ -16,6 +16,7 @@ children:
   - "[[keep-modified-forcing-resolve-1]]"
   - "[[keep-body-tasks-linking-removed-1]]"
   - "[[fix-two-adds-one-description-1]]"
+  - "[[fix-issues-qa-audit-1]]"
 created: "2026-10-19 07:34:55"
-modified: "2026-11-07 11:27:19"
+modified: "2026-11-10 11:00:43"
 ---

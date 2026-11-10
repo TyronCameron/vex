@@ -196,8 +196,8 @@ end
 function TaskManager:add(task)
     assert(task and type(task) == "table", "add() requires a table of task properties")
     event:trigger('pre-task-add', task)
-    if not (type(task.description) == "string") then cli:throw("task-creation-failed", "task must have a description to be added") end
-    if not (#task.description > 3) then cli:throw("task-creation-failed", "Need more than 3 characters to create a task") end
+    if type(task.description) ~= "string" then cli:throw("task-creation-failed", "A task needs a description.") end
+    if #task.description < 3 then cli:throw("task-creation-failed", "A description needs at least 3 characters.") end
     
     task.vexid = tagger.generate(task.description, vexdex.index)
     local existing_task = self:getsingle(task.vexid)
@@ -214,9 +214,15 @@ function TaskManager:remove(vexid)
     assert(vexid, "remove() requires an id or focus")
     event:trigger('pre-task-remove', vexid)
     if vexdex:get(vexid) then
+        local orphans = self:getsingle(vexid).children or {}
+        if #orphans > 0 then
+            self:set(vexid, {}, {children = 'clear'})
+            self:resolve(vexid)
+        end
         local linkers = func.imap(focus.focus(vexid):step('backlinks'):get(), function(linker) return linker.vexid end)
         for _, linker in ipairs(linkers) do
             local task = self:getsingle(linker)
+            local adopts = type(task.children) == "table" and func.any(task.children, function(child) return child == vexid end)
             for field, value in pairs(task) do
                 if value == vexid then
                     task[field] = nil
@@ -224,6 +230,7 @@ function TaskManager:remove(vexid)
                     task[field] = func.ifilter(value, function(link) return link ~= vexid end)
                 end
             end
+            if adopts then task.children = func.imerge(task.children, orphans) end
         end
         self:resolveall(linkers)
     end
@@ -288,6 +295,14 @@ function TaskManager:set(vexid, tab, modifiers)
     return self.tasks[vexid] 
 end
 
+-- keeps a task as it stands, unresolved, for writeall to write and index
+function TaskManager:force(vexid)
+    event:trigger('pre-task-force', vexid)
+    self.unwritten[vexid] = true
+    event:trigger('post-task-force', vexid, self.tasks[vexid])
+    return vexid
+end
+
 -- shows a task's file as it is on disk
 function TaskManager:show(vexid)
     assert(vexid, "show() requires an vexid")
@@ -296,7 +311,7 @@ function TaskManager:show(vexid)
     if lfs.attributes(path, 'mode') ~= 'file' then path = self:find(vexid) or path end
     local text = lfsext.readfile(path)
     if not text then cli:throw('file', path) end
-    local result = pretty.string('# ' .. string.upper(vexid) .. '\n', 'cyan', 'underline', 'bold', {filelink = path}) .. taskformat.format(text)
+    local result = pretty.string('# ' .. vexid .. '\n', 'cyan', 'underline', 'bold', {filelink = path}) .. taskformat.format(text)
     event:trigger('post-task-show', vexid, result)
     return result
 end
@@ -382,7 +397,10 @@ function TaskManager:resolvesingle(vexid)
     if not task.vextype then cli:throw('missing-required-field', task.vexid, 'vextype') end 
 
     local vextype = self.tasktypes[task.vextype]
-    if not vextype then cli:throw('unknown-vextype', task.vextype, func.keys(self.tasktypes)) end 
+    if not vextype then
+        local types = func.ifilter(func.sortedkeys(self.tasktypes), function(name) return self.tasktypes[name].parent end)
+        cli:throw('unknown-vextype', task.vextype, types)
+    end
 
     local context = {
         vexid = vexid,

@@ -19,8 +19,8 @@ describe("view", function()
         parent = create({description = "viewed parent abstract", vextype = 'abstract', children = {child}})
         dependent = create({description = "viewed dependent atom", vextype = 'atom', dependencies = {child}})
         task:set(dependent, {status = 'done'})
-        task:resolve(dependent)
-        task:write(dependent)
+        task:force(dependent)
+        task:writeall()
     end)
 
     local function crashes(focusname, skip)
@@ -90,7 +90,7 @@ describe("view", function()
     it("renders the singular view for each linked task", function()
         for _, vexid in ipairs({child, parent, dependent}) do
             local result = view:display('singular', focus.focus(vexid), {})
-            assert.truthy(result:find(vexid:upper(), 1, true))
+            assert.truthy(result:find("# " .. vexid, 1, true))
         end
     end)
 

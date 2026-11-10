@@ -108,3 +108,24 @@ describe("vex get separators and feeding a focus into a list field (e2e, subproc
     assert.equal(table.concat(atoms), vex(dir, "get", "prev", ""))
   end)
 end)
+
+describe("vex focus flag values (e2e, subprocess)", function()
+  local dir
+
+  before_each(function()
+    dir = helper.project()
+  end)
+
+  after_each(function()
+    helper.rm_tmp_dir(dir)
+  end)
+
+  it("keeps the colons of a clock time in a filter or between value", function()
+    local early = vex(dir, "add", "Early", "task", "--due", "2026-11-09 08:00:00")
+    vex(dir, "add", "Late", "task", "--due", "2026-11-10 17:00:00")
+    vex(dir, "focus", "all", "--filter", "due:2026-11-09 08:00:00")
+    assert.equal(early, vex(dir, "get"))
+    vex(dir, "focus", "all", "--between", "due:2026-11-09 07:00:2026-11-09 09:30")
+    assert.equal(early, vex(dir, "get"))
+  end)
+end)

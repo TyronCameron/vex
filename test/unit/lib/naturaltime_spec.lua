@@ -80,6 +80,20 @@ describe("naturaltime", function()
         assert.truthy(err:find("`next tuesday`", 1, true))
     end)
 
+    it("rejects a date or time that does not exist", function()
+        for _, phrase in ipairs({"2026-02-30", "2026-13-01", "2026-12-25 25:00", "2026-12-25 09:75", "30 february"}) do
+            local ok, err = pcall(naturaltime.parse, phrase, now)
+            assert.is_false(ok, phrase)
+            assert.truthy(err:find("Cannot interpret `" .. phrase .. "`", 1, true), phrase)
+        end
+    end)
+
+    it("names only the words it does not know, not the numbers before them", function()
+        local ok, err = pcall(naturaltime.parse, "in 3 dayz", now)
+        assert.is_false(ok)
+        assert.truthy(err:find("Unknown words: dayz.", 1, true))
+    end)
+
     it("rejects a relation with nothing to relate to", function()
         assert.is_false(pcall(naturaltime.parse, "next", now))
     end)

@@ -64,11 +64,29 @@ describe("format", function()
 
     end)
 
+    describe("lua", function()
+
+        it("writes a table as a Lua literal, lists without keys and other keys in order", function()
+            assert.equal('{\n  a = 1,\n  b = {\n    "x",\n    "y"\n  },\n  ["not a name"] = true\n}', format.lua({b = {"x", "y"}, a = 1, ["not a name"] = true}))
+            assert.equal('{}', format.lua({}))
+        end)
+
+        it("reads back as the same table", function()
+            local value = {paths = {groupby = {"status", "lineage"}}, taskfolder = ".", loglimit = 100, taskowners = {}}
+            assert.same(value, loadstring("return " .. format.lua(value))())
+        end)
+
+    end)
+
     describe("json", function()
 
         it("writes arrays, objects and escaped strings", function()
             assert.equal('[\n  1,\n  "a\\"b"\n]', format.json({1, 'a"b'}))
             assert.equal('{\n  "k": true\n}', format.json({k = true}))
+        end)
+
+        it("writes an object's keys in order", function()
+            assert.equal('{\n  "a": 1,\n  "b": 2,\n  "c": 3\n}', format.json({c = 3, a = 1, b = 2}))
         end)
 
         it("writes empty tables as an empty array", function()

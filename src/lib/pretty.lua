@@ -1,7 +1,17 @@
 
+local function interactive()
+    if os.getenv('NO_COLOR') then return false end
+    local ok, ffi = pcall(require, 'ffi')
+    if not ok then return true end
+    pcall(ffi.cdef, 'int isatty(int fd); int _isatty(int fd);')
+    local found, isatty = pcall(function() return ffi.os == 'Windows' and ffi.C._isatty or ffi.C.isatty end)
+    return not found or isatty(1) ~= 0
+end
+
 local PrettyString = {}
 PrettyString.__index = PrettyString
 PrettyString.__tostring = function(self)
+    if not PrettyString.colour then return self[1] end
     local text
     if #self == 1 then
         text = self[1]
@@ -149,6 +159,12 @@ end
 
 local pretty = {style = {}}
 
+-- whether styles and links are written as escape codes: only when stdout is a terminal and NO_COLOR is unset
+function pretty.colour(on)
+    PrettyString.colour = on
+end
+pretty.colour(interactive())
+
 -- function pretty.styles.reset()
 --     return nil
 -- end
@@ -222,18 +238,17 @@ function pretty.any(...)
     if #printables == 0 then 
         return unpack({...})
     end 
-    local final_printable = ""
+    local parts = {}
     for _, printable in ipairs(printables) do
         if type(printable) == 'table' and getmetatable(printable) == PrettyString then 
-            final_printable = final_printable .. pretty.string(printable)
+            table.insert(parts, pretty.string(printable))
         elseif type(printable) == 'table' then 
-            final_printable = final_printable .. pretty.table(printable)
+            table.insert(parts, pretty.table(printable))
         else 
-            final_printable = final_printable .. tostring(printable)
+            table.insert(parts, tostring(printable))
         end
-        final_printable = final_printable .. '\t'
     end
-    return final_printable
+    return table.concat(parts, '\t')
 end
 
 function pretty.print(...)
@@ -284,8 +299,23 @@ local function strip_ansi(s)
     return (s:gsub(styling, ""):gsub(hyperlink, ""))
 end
 
+local utf8char = '[%z\1-\127\194-\244][\128-\191]*'
+
+-- the columns a character takes in a terminal: 2 for East Asian wide characters, 1 for the rest
+local function charwidth(char)
+    local a, b, c = char:byte(1, 3)
+    if #char ~= 3 then return #char == 4 and 2 or 1 end
+    local code = (a % 16) * 4096 + (b % 64) * 64 + (c % 64)
+    local wide = (code >= 0x1100 and code <= 0x115F) or (code >= 0x2E80 and code <= 0xA4CF and code ~= 0x303F)
+        or (code >= 0xAC00 and code <= 0xD7A3) or (code >= 0xF900 and code <= 0xFAFF)
+        or (code >= 0xFE30 and code <= 0xFE4F) or (code >= 0xFF00 and code <= 0xFF60) or (code >= 0xFFE0 and code <= 0xFFE6)
+    return wide and 2 or 1
+end
+
 local function width(s)
-    return select(2, strip_ansi(s):gsub('[^\128-\191]', ''))
+    local total = 0
+    for char in strip_ansi(s):gmatch(utf8char) do total = total + charwidth(char) end
+    return total
 end
 
 local function pad(s, w)
@@ -300,13 +330,13 @@ local function truncate(s, w)
     local rest = s
     while #rest > 0 do
         local escape = rest:match('^' .. styling) or rest:match('^' .. hyperlink)
-        local char = escape or rest:match('^[%z\1-\127\194-\244][\128-\191]*')
+        local char = escape or rest:match('^' .. utf8char) or rest:sub(1, 1)
         rest = rest:sub(#char + 1)
         if escape then
             table.insert(kept, char)
-        elseif shown < w - 3 then
+        elseif not cut and shown + charwidth(char) <= w - 3 then
             table.insert(kept, char)
-            shown = shown + 1
+            shown = shown + charwidth(char)
         elseif not cut then
             table.insert(kept, '...')
             cut = true
@@ -343,7 +373,9 @@ function pretty.subheader(field, value, depth)
     return setmetatable({field = field, value = value, depth = depth}, Subheader)
 end
 
-local guide = pretty.string('│', 'dim') .. ' '
+local function guide(depth)
+    return string.rep(pretty.string('│', 'dim') .. ' ', depth)
+end
 
 function pretty.tabular(data, sortfunc, maxwidth)
     if #data == 0 then return '' end
@@ -371,7 +403,7 @@ function pretty.tabular(data, sortfunc, maxwidth)
         else
             local cells = {}
             for _, f in ipairs(fields) do cells[f] = cell(row[f], maxwidth) end
-            cells[fields[1]] = string.rep(guide, depth) .. cells[fields[1]]
+            cells[fields[1]] = guide(depth) .. cells[fields[1]]
             table.insert(entries, {cells = cells})
         end
     end
@@ -426,7 +458,7 @@ function pretty.tabular(data, sortfunc, maxwidth)
     for _, entry in ipairs(entries) do
         local row = box.left
         if entry.label then
-            row = row .. ' ' .. pad(string.rep(guide, entry.depth) .. pretty.string(entry.label, "bold"), inner) .. ' ' .. box.right
+            row = row .. ' ' .. pad(guide(entry.depth) .. pretty.string(entry.label, "bold"), inner) .. ' ' .. box.right
         else
             for _, f in ipairs(fields) do
                 row = row .. ' ' .. pad(entry.cells[f], widths[f]) .. ' ' .. box.right

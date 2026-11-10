@@ -9,6 +9,10 @@ ERROR: Cannot transition status from done to todo
 
 Setting a task to its current status is fine, and `doing` is not a status: `vex set --status doing` fails with `Cannot transition status from todo to doing`.
 
+A task can't leave its initial status (`todo`) while anything in its `dependencies` is unfinished. `vex set`, `vex add --status done` and a hand edit taken in by `resolve` all fail with `blocked`, naming the dependency. Finish the dependencies first: `vex set a-1,b-1 --status done` finishes both at once, whatever their order. Once a task has left `todo`, adding a dependency to it is allowed.
+
+To reopen a finished task, skip the state machine with `vex set tidy-readme-1 --force --status todo` ([[01 CLI reference#Editing tasks]]).
+
 ## Abstracts
 
 An abstract stores no status. It is worked out from its children each time it is read, so you never set it:

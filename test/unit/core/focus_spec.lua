@@ -87,6 +87,16 @@ describe("Focus", function()
         assert.is_nil(({[result[1]] = true, [result[2]] = true})[t2])
     end)
 
+    it("notin, onlyin and xor keep the order of the tasks they are given", function()
+        local list = {{vexid = "a"}, {vexid = "b"}, {vexid = "c"}, {vexid = "d"}, {vexid = "e"}}
+        local evens = Focus.new("evens", function(t) return {t[4], t[2]} end)
+        local some = Focus.new("some", function(t) return {t[1], t[2], t[3], t[5]} end)
+        local function vexids(focus) return func.imap(focus:get(list), function(t) return t.vexid end) end
+        assert.same({"a", "c", "e"}, vexids(some:notin(evens)))
+        assert.same({"d"}, vexids(some:onlyin(evens)))
+        assert.same({"a", "c", "e", "d"}, vexids(some:xor(evens)))
+    end)
+
     it("onlyin returns tasks in the second focus but not the first", function()
         local f1 = Focus.new("f1", function(t) return {t[1], t[2]} end)
         local f2 = Focus.new("f2", function(t) return {t[2], t[3]} end)
@@ -100,6 +110,23 @@ describe("Focus", function()
         }
         local f = Focus.new("all", function(t) return t end)
         assert.same({tasks[1]}, f:fuzzy("description", "milc", 1):get(tasks))
+    end)
+
+    it("fuzzy allows one edit for every four characters of the text, ignoring case", function()
+        local tasks = {
+            {vexid = "book-hotel-1"},
+            {vexid = "book-flights-1"},
+            {vexid = "second-trip-abs-1"},
+            {vexid = "pack-bags-1"},
+        }
+        local f = Focus.new("all", function(t) return t end)
+        local function vexids(focus) return func.imap(focus:get(tasks), function(t) return t.vexid end) end
+        assert.same({"book-hotel-1", "book-flights-1"}, vexids(f:fuzzy("vexid", "book")))
+        assert.same({"book-hotel-1", "book-flights-1"}, vexids(f:fuzzy("vexid", "BOOK")))
+        assert.same({"book-hotel-1", "book-flights-1"}, vexids(f:fuzzy("vexid", "bokk")))
+        assert.same({}, vexids(f:fuzzy("vexid", "bok")))
+        assert.same({}, vexids(f:apply(cli:parse("--fuzzy vexid:bxxk"))))
+        assert.same({"book-hotel-1", "book-flights-1"}, vexids(f:apply(cli:parse("--fuzzy vexid:bxxk:2"))))
     end)
 
     describe("match", function()
@@ -122,6 +149,19 @@ describe("Focus", function()
         it("keeps colons in the pattern", function()
             local parts = f:apply(require('lib.cli'):parse('--match description:world: part'))
             assert.same({tasks[1]}, parts:get(tasks))
+        end)
+
+        it("splits a flag's value at colons, but not at those inside a clock time", function()
+            local function args(flags)
+                local ops = f:apply(require('lib.cli'):parse(flags)).operations
+                return ops[#ops].args
+            end
+            assert.same({"due", "2026-11-09 08:00:00"}, args("--filter 'due:2026-11-09 08:00:00'"))
+            assert.same({"due", "2026-11-09 08:00", "2026-11-10 09:00"}, args("--between 'due:2026-11-09 08:00:2026-11-10 09:00'"))
+            assert.same({"due", "tomorrow 8:30", ""}, args("--between 'due:tomorrow 8:30:'"))
+            assert.same({"cost", "", "9"}, args("--between cost::9"))
+            assert.same({"cost", "10", "20"}, args("--between cost:10:20"))
+            assert.same({"created", "1 week ago", "now"}, args("--between 'created:1 week ago:now'"))
         end)
 
         it("rejects a malformed pattern", function()

@@ -44,11 +44,7 @@ function Focus.register_focus(name, get)
 end
 
 function Focus.getalltasks()
-    local tasks = {}
-    for _, task in ipairs(func.values(vexdex.index)) do
-        table.insert(tasks, task)
-    end
-    return tasks
+    return func.imap(func.sortedkeys(vexdex.index), function(vexid) return vexdex.index[vexid] end)
 end
 
 Focus.register_focus("all", function()
@@ -78,7 +74,7 @@ end)
 -- Binary Operations
 -----------------------------------------
 
-local deserialize
+local deserialize, describe
 
 local function asfocus(focus)
     if type(focus) == "string" then return Focus.focus(focus) end
@@ -93,6 +89,17 @@ function Focus:chain(operation, focus, ...)
     return Focus.new('chain', function(tasks) 
         return leaves(self:result(tasks), function(list) return focus:result(list) end)
     end, func.imerge(self.operations or {}, {{ operation = operation, args = {...} }}))
+end
+
+-- the tasks of list, in order and each once, that others doesn't hold
+local function without(list, others)
+    local seen = {}
+    for _, task in ipairs(others) do seen[task] = true end
+    return func.ifilter(list, function(task)
+        if seen[task] then return false end
+        seen[task] = true
+        return true
+    end)
 end
 
 function Focus:intersect(focus)
@@ -143,7 +150,7 @@ function Focus:complement()
         for _, task in ipairs(self:get(tasks)) do 
             hash[task] = true 
         end 
-        for _, task in pairs(Focus.getalltasks()) do
+        for _, task in ipairs(Focus.getalltasks()) do
             if not hash[task] then table.insert(tasklist, task) end 
         end
         return tasklist 
@@ -153,56 +160,22 @@ end
 function Focus:xor(focus)
     focus = asfocus(focus)
     return Focus.new('xor', function(tasks) 
-        local dedup = {}
-        for _, task in ipairs(self:get(tasks)) do
-            if not dedup[task] then 
-                dedup[task] = task 
-            end 
-        end
-        for _, task in ipairs(focus:get(tasks)) do
-            if dedup[task] then 
-                dedup[task] = nil
-            else 
-                dedup[task] = task 
-            end 
-        end
-        return func.values(dedup) 
+        local mine, theirs = self:get(tasks), focus:get(tasks)
+        return func.imerge(without(mine, theirs), without(theirs, mine))
     end, func.imerge(self.operations or {}, {{ operation = 'xor', args = {{ name = focus.name, operations = focus.operations }}}}))
 end 
 
 function Focus:notin(focus)
     focus = asfocus(focus)
     return Focus.new('notin', function(tasks) 
-        local dedup = {}
-        for _, task in ipairs(self:get(tasks)) do
-            if not dedup[task] then 
-                dedup[task] = task 
-            end 
-        end
-        for _, task in ipairs(focus:get(tasks)) do
-            if dedup[task] then 
-                dedup[task] = nil
-            end 
-        end
-        return func.values(dedup) 
+        return without(self:get(tasks), focus:get(tasks))
     end, func.imerge(self.operations or {}, {{ operation = 'notin', args = {{ name = focus.name, operations = focus.operations }}}}))
 end 
 
 function Focus:onlyin(focus)
     focus = asfocus(focus)
     return Focus.new('onlyin', function(tasks) 
-        local dedup = {}
-        for _, task in ipairs(focus:get(tasks)) do
-            if not dedup[task] then 
-                dedup[task] = task 
-            end 
-        end
-        for _, task in ipairs(self:get(tasks)) do
-            if dedup[task] then 
-                dedup[task] = nil
-            end 
-        end
-        return func.values(dedup) 
+        return without(focus:get(tasks), self:get(tasks))
     end, func.imerge(self.operations or {}, {{ operation = 'onlyin', args = {{ name = focus.name, operations = focus.operations }}}}))
 end 
 
@@ -264,7 +237,8 @@ function namedfocus.focus(focusname)
     if focusname == 'prev' then 
         return Focus.read()
     end 
-    cli:throw('unknown-focus', focusname)
+    local near = type(focusname) == "string" and Focus.named.all:fuzzy('vexid', focusname):first(3):get() or {}
+    cli:throw('unknown-focus', focusname, func.imap(near, function(t) return t.vexid end))
 end 
 
 function Focus.focus(focusname, ...)
@@ -317,7 +291,7 @@ end
 -- filter key:value
 function Focus:filter(field, value)
     if value == nil then 
-        cli:throw('usage', 'You need to provide a field and value to filter on. We saw field = ' .. tostring(field) .. ' and value ' .. tostring(value)) 
+        cli:throw('usage', '`--filter` takes field:value, e.g. `--filter status:todo`.')
     end 
     return self:chain('filter', function(tasks)
         return func.ifilter(tasks, function(task)
@@ -337,7 +311,7 @@ end
 -- contains field:value, keeping tasks whose field holds value as a key or as an element of its list
 function Focus:contains(field, value)
     if field == nil or value == nil then
-        cli:throw('usage', 'You need to provide a field and value to check with contains. We saw field = ' .. tostring(field) .. ' and value ' .. tostring(value))
+        cli:throw('usage', '`--contains` takes field:value, e.g. `--contains tags:#urgent`.')
     end
     return self:chain('contains', function(tasks)
         return func.ifilter(tasks, function(task)
@@ -389,10 +363,14 @@ local function levenshtein_less_than_equal_to(fuzz, text, n)
     return false
 end 
 
+-- fuzzy field:text[:edits], allowing one edit for every four characters of text unless told how many, ignoring case
 function Focus:fuzzy(field, fuzz, n)
-    n = n or 3
+    local edits = tonumber(n) or (fuzz and math.floor(#fuzz / 4))
     return self:chain('fuzzy', function(tasks) 
-        return func.ifilter(tasks, function(task) return levenshtein_less_than_equal_to(fuzz, task[field], n) end)
+        return func.ifilter(tasks, function(task)
+            local text = task[field]
+            return type(text) == "string" and levenshtein_less_than_equal_to(fuzz:lower(), text:lower(), edits)
+        end)
     end, field, fuzz, n)
 end 
 
@@ -669,11 +647,22 @@ end
 -- Parsing
 -----------------------------------------
 
-local function split(str, sep)
-    local parts = {}
-    for part in (str .. sep):gmatch('(.-)' .. sep) do
-        table.insert(parts, part)
+-- whether the colon at i joins the hours, minutes and seconds of a clock time written after a date or word, as in `2026-11-09 08:00:00`
+local function inclock(str, i)
+    local before, after = str:sub(1, i - 1), str:sub(i + 1)
+    return (before:match('[ T]%d%d?$') or before:match('[ T]%d%d?:%d%d$')) and after:match('^%d%d%f[%D]') ~= nil
+end
+
+-- splits a flag's value at each colon outside a clock time
+local function split(str)
+    local parts, start = {}, 1
+    for i in str:gmatch('():') do
+        if not inclock(str, i) then
+            table.insert(parts, str:sub(start, i - 1))
+            start = i + 1
+        end
     end
+    table.insert(parts, str:sub(start))
     return unpack(parts)
 end
 
@@ -685,7 +674,7 @@ function Focus:apply(args)
             local split_args = {}
             local values = type(arg[2]) == "table" and arg[2] or {arg[2]}
             for _, value in ipairs(values) do
-                for _, part in ipairs({ split(value, ':') }) do
+                for _, part in ipairs({ split(value) }) do
                     table.insert(split_args, part)
                 end
             end
@@ -704,6 +693,38 @@ function Focus.parse(args)
     end 
     if not current then cli:throw('no-focus') end
     return current:apply(args)
+end
+
+function describe(operations)
+    local function word(arg)
+        if type(arg) ~= "table" then return tostring(arg) end
+        if arg.operations then return describe(arg.operations) end
+        return table.concat(func.imap(arg, word), ',')
+    end
+    local words = {}
+    for _, op in ipairs(operations) do
+        if op.operation == 'focus' then
+            table.insert(words, word(op.args[1]))
+        else
+            local value = table.concat(func.imap(op.args, word), ':')
+            if value:find('%s') then value = "'" .. value .. "'" end
+            table.insert(words, '--' .. op.operation .. (value ~= '' and ' ' .. value or ''))
+        end
+    end
+    return table.concat(words, ' ')
+end
+
+-- the fields the focus's last select asked for, vexid included, or nil when it selects none
+function Focus:selected()
+    for i = #self.operations, 1, -1 do
+        local op = self.operations[i]
+        if op.operation == 'select' then return func.imerge(op.args, {'vexid'}) end
+    end
+end
+
+-- the focus and flags that rebuild this focus, as typed after `vex focus`
+function Focus:describe()
+    return describe(self.operations)
 end
 
 -----------------------------------------

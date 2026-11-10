@@ -281,7 +281,7 @@ local function create_usage_error(cli)
             if msg then
                 table.insert(lines, "  " .. msg)
             end
-            table.insert(lines, "  hint: run `" .. cli.entrypoint .. " help " .. verb .. "` for usage")
+            table.insert(lines, "  hint: run `" .. cli.entrypoint .. " help" .. (verb ~= "" and " " .. verb or "") .. "` for usage")
             return table.concat(lines, "\n")
         end
     }
@@ -393,7 +393,7 @@ function CLI:run(input)
     args.raw = raw
 
     local result = self:call(verbname, args)
-    if result ~= nil and (type(result) == "string" or type(result) == "number") then
+    if (type(result) == "string" and result ~= "") or type(result) == "number" then
         print(result)
     end
 end
