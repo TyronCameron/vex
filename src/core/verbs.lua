@@ -5,7 +5,6 @@ local func = require 'lib.func'
 local pretty = require 'lib.pretty'
 local view = require 'core.view'
 local recipe = require 'core.recipe'
-local vexdex = require 'core.vexdex'
 local task = require 'core.task'
 require 'core.taskdefinitions'
 
@@ -24,10 +23,8 @@ local function pop_focus_and_take_edits(args)
 end
 
 local function warn_stale()
-    local stale = #focus.focus('updated'):get()
-    if stale == 0 then return end
-    local text = stale == 1 and "1 task file changed since vex last saw it" or stale .. " task files changed since vex last saw them"
-    cli:warn(pretty.string(text, 'yellow') .. ": run `vex resolve all` to take " .. (stale == 1 and "it" or "them") .. " in.")
+    if #focus.focus('updated'):get() == 0 then return end
+    cli:warn(pretty.string("Known task files changed since vex last saw them", 'yellow') .. ": run `vex resolve all` to take them in.")
 end
 
 -- joins accumulated output lines into the verb's return value; nil (rather
@@ -149,10 +146,10 @@ cli:verb "remove" {
             table.insert(lines, pretty.any(vexid))
         end)
         task:writeall()
-        vexdex:setfocus(nil)
+        focus.focus('none'):write()
         return join_lines(lines)
     end,
-    doc = "Deletes tasks in the focus, and drops your focus. Runs resolve on all linked tasks thereafter. Not recommended for regular use.",
+    doc = "Deletes tasks in the focus and leaves an empty focus. A removed abstract's children move to its parent. Runs resolve on all linked tasks thereafter. Not recommended for regular use.",
     args = "[focus]",
     example = "vex remove make-coffee"
 }
@@ -183,20 +180,30 @@ cli:verb "get" {
     example = "vex set final-1 --dependencies $(vex get prev ,)"
 }
 
+local function isforce(word)
+    return cli.isflag(word) and word[1] == 'force' and not word[2]
+end
+
 cli:verb "set" {
     function(args)
-        local f = pop_focus_and_take_edits(args)
+        local force = func.any(args, isforce)
+        for i = #args, 1, -1 do
+            if isforce(args[i]) then table.remove(args, i) end
+        end
+        local f = force and pop_focus(args) or pop_focus_and_take_edits(args)
         local taskproperties = args:flags()
         local modifiers = args:modifiers()
         local bare = args:bare()
         if #bare > 0 then cli:throw('missing-value', bare[1][1]) end
-        f:each(function(vexid)
+        local targets = vexids(f)
+        for _, vexid in ipairs(targets) do
             task:set(vexid, taskproperties, modifiers)
-            task:resolve(vexid)
-        end)
+            if force then task:force(vexid) end
+        end
+        if not force then task:resolveall(targets) end
         task:writeall()
     end,
-    doc = "Allows you to set fields in the focus. Put --insert or --remove before a list field to add or remove values rather than overwrite it, or --clear before any field to unset it. Resolution is called on that `focus`",
+    doc = "Allows you to set fields in the focus. Put --insert or --remove before a list field to add or remove values rather than overwrite it, or --clear before any field to unset it. Resolution is called on that `focus`. --force writes the fields as given without resolving, e.g. to reopen a finished task; links and derived fields catch up on the next `vex resolve <vexid> --force`.",
     args = "[focus] [--fields...]",
     example = "vex set plan-trip-1 --insert --children book-flights-1,book-hotel-1"
 }
@@ -226,5 +233,5 @@ cli:verb "recipe" {
     end,
     doc = "Creates a recipe (series of tasks). This outputs and changes the focus",
     args = "[recipe] Description... [--fields...]",
-    example = "vex recipe abstract Create more vex tasks! --status todo"
+    example = "vex recipe abstract Create more vex tasks!"
 }

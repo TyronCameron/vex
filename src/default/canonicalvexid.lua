@@ -28,8 +28,29 @@ local negated = set [[
     wont wouldnt cant couldnt shouldnt mustnt
 ]]
 
+local folds = {
+    ["à"] = "a", ["á"] = "a", ["â"] = "a", ["ã"] = "a", ["ä"] = "a", ["å"] = "a", ["æ"] = "ae",
+    ["À"] = "a", ["Á"] = "a", ["Â"] = "a", ["Ã"] = "a", ["Ä"] = "a", ["Å"] = "a", ["Æ"] = "ae",
+    ["ç"] = "c", ["Ç"] = "c", ["ñ"] = "n", ["Ñ"] = "n", ["ß"] = "ss", ["œ"] = "oe", ["Œ"] = "oe",
+    ["è"] = "e", ["é"] = "e", ["ê"] = "e", ["ë"] = "e", ["È"] = "e", ["É"] = "e", ["Ê"] = "e", ["Ë"] = "e",
+    ["ì"] = "i", ["í"] = "i", ["î"] = "i", ["ï"] = "i", ["Ì"] = "i", ["Í"] = "i", ["Î"] = "i", ["Ï"] = "i",
+    ["ò"] = "o", ["ó"] = "o", ["ô"] = "o", ["õ"] = "o", ["ö"] = "o", ["ø"] = "o",
+    ["Ò"] = "o", ["Ó"] = "o", ["Ô"] = "o", ["Õ"] = "o", ["Ö"] = "o", ["Ø"] = "o",
+    ["ù"] = "u", ["ú"] = "u", ["û"] = "u", ["ü"] = "u", ["Ù"] = "u", ["Ú"] = "u", ["Û"] = "u", ["Ü"] = "u",
+    ["ý"] = "y", ["ÿ"] = "y", ["Ý"] = "y",
+    ["‘"] = "'", ["’"] = "'", ["“"] = " ", ["”"] = " ", ["–"] = " ", ["—"] = " ", ["…"] = ". ", ["。"] = ". ",
+}
+
+local function fold(str)
+    return (str:gsub("[\194-\244][\128-\191]*", function(char) return folds[char] end))
+end
+
+local function length(word)
+    return select(2, word:gsub("[^\128-\191]", ""))
+end
+
 local function normalise(str)
-    return str:lower()
+    return fold(str):lower()
         :gsub("[%.!?]%s.*$", "")
         :gsub("'s%f[%A]", "")
         :gsub("'", "")
@@ -39,7 +60,7 @@ local function words(str)
     local all, content, tier = {}, {}, 1
     for chunk in normalise(str):gmatch("[^%s,;:%(%)]+") do
         chunk = chunk:gsub("/.*$", "")
-        for word in chunk:gmatch("%w+") do
+        for word in chunk:gmatch("[%w\128-\255]+") do
             if negated[word] then word = "not" end
             table.insert(all, word)
             if boundary[word] then
@@ -53,14 +74,14 @@ local function words(str)
 end
 
 local function fit(content)
-    local keep, length, count = {}, -1, 0
+    local keep, size, count = {}, -1, 0
     for tier = 1, content[#content].tier do
         for i, entry in ipairs(content) do
             if entry.tier == tier then
-                local fits = count < 2 or length + 1 + #entry.word <= maxchars
+                local fits = count < 2 or size + 1 + length(entry.word) <= maxchars
                 if count == maxwords or not fits then return keep end
                 keep[i] = true
-                length = length + 1 + #entry.word
+                size = size + 1 + length(entry.word)
                 count = count + 1
             end
         end

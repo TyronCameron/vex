@@ -93,6 +93,20 @@ describe("vex storage (e2e, subprocess)", function()
     end
   end)
 
+  it("writes only the forced task on a set --force, without resolving it or its links", function()
+    backdated_project()
+    local before = stamps()
+    vex(dir, "set", "child-task-here-1", "--force", "--cost", "abc")
+    assert.equal("abc", helper.frontmatter(dir .. "/child-task-here-1.md").cost)
+    assert.equal(OLD, modified("child-task-here-1"))
+    for _, vexid in ipairs({"parent-abstract-here-1", "dependent-atom-here-1"}) do
+      assert.equal(before[vexid], helper.read_file(dir .. "/" .. vexid .. ".md"), vexid)
+      assert.equal(before[vexid .. " mtime"], mtime(vexid), vexid)
+    end
+    assert.equal("abc", vex(dir, "get", "child-task-here-1", "--cost"))
+    assert.equal("", helper.trim(helper.strip_ansi(helper.run_vex(dir, {"get", "all"}).stderr)))
+  end)
+
   it("writes no task file when rebuilding a lost index", function()
     linked_project()
     local before = stamps()
@@ -157,6 +171,7 @@ describe("vex storage (e2e, subprocess)", function()
     {{"focus", "all", "--filter", "status:todo"}, focus = true},
     {{"add", "Brand", "new", "task"}, index = true, focus = true, taskfiles = true},
     {{"set", "dependent-atom-here-1", "--cost", "7"}, index = true, taskfiles = true},
+    {{"set", "dependent-atom-here-1", "--force", "--cost", "7"}, index = true, taskfiles = true},
     {{"resolve", "all"}, index = true, taskfiles = true},
     {{"remove", "dependent-atom-here-1"}, index = true, focus = true, taskfiles = true},
     {{"recipe", "abstract", "Brand", "new", "abstract"}, index = true, focus = true, taskfiles = true},
@@ -193,7 +208,7 @@ describe("vex storage (e2e, subprocess)", function()
     edit("child-task-here-1", "\ncost: 5\n", "\ncost: 9\n")
     for _, args in ipairs({{"get", "child-task-here-1", "--cost"}, {"view", "all", "csv"}, {"focus", "all"}}) do
       local result = helper.run_vex(dir, args)
-      assert.truthy(helper.strip_ansi(result.stderr):find("1 task file changed since vex last saw it", 1, true), table.concat(args, " "))
+      assert.truthy(helper.strip_ansi(result.stderr):find("Known task files changed since vex last saw them: run `vex resolve all` to take them in.", 1, true), table.concat(args, " "))
       assert.is_nil(result.stdout:find("changed since", 1, true))
     end
     assert.equal("5", vex(dir, "get", "child-task-here-1", "--cost"))

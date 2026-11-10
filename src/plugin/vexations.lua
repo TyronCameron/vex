@@ -8,6 +8,7 @@ require 'core.schemaext'
 task:task 'abstract':extends 'basetask' {
     schema = schema.atleast {
         vexbody = schema.maybe {schema.empty},
+        status = schema.none,
         options = schema.none,
         dependencies = schema.none,
         children = schema.children

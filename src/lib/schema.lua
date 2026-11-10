@@ -40,6 +40,11 @@ function Context:snapshot()
     }, Context)
 end
 
+local function stored(instance, key)
+    if type(instance) == "table" then return rawget(instance, key) end
+    return instance[key]
+end
+
 function Context:descend(schemakey, instancekey, fn)
     local parentschema = self.currentschema
     local parentvalue = self.currentvalue
@@ -50,7 +55,7 @@ function Context:descend(schemakey, instancekey, fn)
     end
     if instancekey ~= nil then
         table.insert(self.path, instancekey)
-        self.currentvalue = self.currentvalue[instancekey]
+        self.currentvalue = stored(self.currentvalue, instancekey)
     end
 
     local value = fn()
@@ -328,7 +333,7 @@ function Schema:iterate(instance, context)
                 self.specification[schemakey] = childschema
                 context:descend(schemakey, instancekey, function()
                     if instancekey ~= nil then
-                        coroutine.yield(childschema, instance[instancekey], schemakey, instancekey)
+                        coroutine.yield(childschema, stored(instance, instancekey), schemakey, instancekey)
                     else
                         coroutine.yield(childschema, instance, schemakey, instancekey)
                     end
@@ -704,7 +709,7 @@ Schema.register 'date' {
             backward = function(self, value)
                 if type(value) ~= "string" then return value end
                 local y, mo, d = value:match("^(%d%d%d%d)-(%d%d)-(%d%d)$")
-                if not y then return value end
+                if not (y and naturaltime.exists {year = tonumber(y), month = tonumber(mo), day = tonumber(d)}) then return value end
                 return os.time({
                     year = tonumber(y), month = tonumber(mo), day = tonumber(d),
                     hour = tonumber(0), min = tonumber(0), sec = tonumber(0), 
@@ -742,7 +747,7 @@ Schema.register 'datetime' {
                     y, mo, d = value:match("^(%d%d%d%d)-(%d%d)-(%d%d)$")
                     h, mi, s, zone = 0, 0, 0, ""
                 end
-                if not y then return value end
+                if not (y and naturaltime.exists {year = tonumber(y), month = tonumber(mo), day = tonumber(d), hour = tonumber(h), min = tonumber(mi), sec = tonumber(s) or 0}) then return value end
                 local sign, zh, zm = zone:match("^([+-])(%d%d):?(%d%d)$")
                 if zone ~= "" and zone ~= "Z" and not sign then return value end
                 local epoch = os.time({

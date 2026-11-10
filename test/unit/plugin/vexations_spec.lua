@@ -119,7 +119,7 @@ describe("vexations", function()
             for _, name in ipairs({'task', 'decision', 'exploration', 'atom'}) do
                 assert.truthy(task:schemaof(name, 'status'), name)
             end
-            assert.is_nil(task:schemaof('abstract', 'status'))
+            assert.is_false(task:schemaof('abstract', 'status'):validate('todo', {}))
         end)
 
     end)

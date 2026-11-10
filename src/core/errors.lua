@@ -239,6 +239,13 @@ cli:error 'due-out-of-order' {
     hint = "A task must be due no earlier than the tasks it depends on. Change one of the due dates."
 }
 
+cli:error 'blocked' {
+    function(vexid, status, dependency)
+        return 'Task `' .. tostring(vexid) .. '` can\'t move to `' .. tostring(status) .. '` while `' .. tostring(dependency) .. '`, which it depends on, isn\'t finished.'
+    end,
+    hint = "Finish the tasks it depends on first, or drop the dependency with `vex set <vexid> --remove --dependencies <dependency>`."
+}
+
 cli:error 'dependency-with-children' {
     function(vexid, dependency)
         return 'Task `' .. tostring(vexid) .. '` cannot depend on `' .. tostring(dependency) .. '`, because it has children or options.'

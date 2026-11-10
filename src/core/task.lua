@@ -214,9 +214,15 @@ function TaskManager:remove(vexid)
     assert(vexid, "remove() requires an id or focus")
     event:trigger('pre-task-remove', vexid)
     if vexdex:get(vexid) then
+        local orphans = self:getsingle(vexid).children or {}
+        if #orphans > 0 then
+            self:set(vexid, {}, {children = 'clear'})
+            self:resolve(vexid)
+        end
         local linkers = func.imap(focus.focus(vexid):step('backlinks'):get(), function(linker) return linker.vexid end)
         for _, linker in ipairs(linkers) do
             local task = self:getsingle(linker)
+            local adopts = type(task.children) == "table" and func.any(task.children, function(child) return child == vexid end)
             for field, value in pairs(task) do
                 if value == vexid then
                     task[field] = nil
@@ -224,6 +230,7 @@ function TaskManager:remove(vexid)
                     task[field] = func.ifilter(value, function(link) return link ~= vexid end)
                 end
             end
+            if adopts then task.children = func.imerge(task.children, orphans) end
         end
         self:resolveall(linkers)
     end
@@ -286,6 +293,14 @@ function TaskManager:set(vexid, tab, modifiers)
     self.tasks[vexid] = Task.new(task)
     event:trigger('post-task-set', vexid, self.tasks[vexid])
     return self.tasks[vexid] 
+end
+
+-- keeps a task as it stands, unresolved, for writeall to write and index
+function TaskManager:force(vexid)
+    event:trigger('pre-task-force', vexid)
+    self.unwritten[vexid] = true
+    event:trigger('post-task-force', vexid, self.tasks[vexid])
+    return vexid
 end
 
 -- shows a task's file as it is on disk

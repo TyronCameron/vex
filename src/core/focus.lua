@@ -389,10 +389,14 @@ local function levenshtein_less_than_equal_to(fuzz, text, n)
     return false
 end 
 
+-- fuzzy field:text[:edits], allowing one edit for every four characters of text unless told how many, ignoring case
 function Focus:fuzzy(field, fuzz, n)
-    n = n or 3
+    local edits = tonumber(n) or (fuzz and math.floor(#fuzz / 4))
     return self:chain('fuzzy', function(tasks) 
-        return func.ifilter(tasks, function(task) return levenshtein_less_than_equal_to(fuzz, task[field], n) end)
+        return func.ifilter(tasks, function(task)
+            local text = task[field]
+            return type(text) == "string" and levenshtein_less_than_equal_to(fuzz:lower(), text:lower(), edits)
+        end)
     end, field, fuzz, n)
 end 
 
@@ -669,11 +673,22 @@ end
 -- Parsing
 -----------------------------------------
 
-local function split(str, sep)
-    local parts = {}
-    for part in (str .. sep):gmatch('(.-)' .. sep) do
-        table.insert(parts, part)
+-- whether the colon at i joins the hours, minutes and seconds of a clock time written after a date or word, as in `2026-11-09 08:00:00`
+local function inclock(str, i)
+    local before, after = str:sub(1, i - 1), str:sub(i + 1)
+    return (before:match('[ T]%d%d?$') or before:match('[ T]%d%d?:%d%d$')) and after:match('^%d%d%f[%D]') ~= nil
+end
+
+-- splits a flag's value at each colon outside a clock time
+local function split(str)
+    local parts, start = {}, 1
+    for i in str:gmatch('():') do
+        if not inclock(str, i) then
+            table.insert(parts, str:sub(start, i - 1))
+            start = i + 1
+        end
     end
+    table.insert(parts, str:sub(start))
     return unpack(parts)
 end
 
@@ -685,7 +700,7 @@ function Focus:apply(args)
             local split_args = {}
             local values = type(arg[2]) == "table" and arg[2] or {arg[2]}
             for _, value in ipairs(values) do
-                for _, part in ipairs({ split(value, ':') }) do
+                for _, part in ipairs({ split(value) }) do
                     table.insert(split_args, part)
                 end
             end

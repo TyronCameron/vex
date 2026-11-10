@@ -264,7 +264,7 @@ local function bymoves(field, tasks)
         for _, t in ipairs(tasks) do
             local status = task:schemaof(t.vextype, 'status')
             local distances = {[t.status] = ({initial = 0, interim = 1, final = 2})[t.phase]}
-            if status then
+            if status and status._name == 'statemachine' then
                 local machine = statemachine.new(status.specification.states, status.specification.initial, status.specification.initial)
                 distances = machine:distances()
             end

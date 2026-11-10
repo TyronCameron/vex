@@ -57,7 +57,8 @@ cli:verb "version" {
 
 require 'core.errors'
 
-if arg[1] ~= 'init' and arg[1] ~= 'version' then
+local outside = arg[1] == 'help' and not projectdir
+if arg[1] ~= 'init' and arg[1] ~= 'version' and not outside then
     local config = require 'core.config'
     local configured, name, problem = plugin:configure(config.plugins or {})
     if not configured then cli:throw('bad-plugin-setting', name, problem) end
@@ -67,3 +68,4 @@ if arg[1] ~= 'init' and arg[1] ~= 'version' then
 end
 
 cli:run(cli:rawify(arg))
+if outside then print("\nRun `vex init`, or cd into a vex project, to see every verb.") end

@@ -20,8 +20,8 @@
 | `vex view [focus] [view] [--flags...]` | Renders the focus with a view. With no arguments, lists the views. See [[04 Views]]. |
 | `vex focus [focus] [--flags...]` | Builds and saves a focus. With no arguments, prints the saved focus and saves nothing. |
 | `vex add Description [--fields...]` | Creates and resolves a task, prints its vexid and focuses on it. |
-| `vex set [focus] [--fields...]` | Sets fields on every task in the focus, then resolves them. |
-| `vex remove [focus]` | Deletes every task in the focus, removes links to them from other tasks, and clears the focus. |
+| `vex set [focus] [--force] [--fields...]` | Sets fields on every task in the focus, then resolves them. `--force` writes them without resolving. |
+| `vex remove [focus]` | Deletes every task in the focus, removes links to them from other tasks, hands a removed abstract's children to its parent, and leaves an empty focus. |
 | `vex resolve [focus] [--force]` | Resolves the tasks in the focus whose files changed since vex last saw them, and writes back what changes. `vex resolve all` also takes in new task files and drops deleted ones. `--force` resolves every task in the focus; `vex resolve all --force` rebuilds the whole index from disk. |
 | `vex recipe [recipe] Description [--fields...]` | Creates tasks from a recipe and focuses on them. With no recipe, lists the recipes. |
 | `vex autocomplete shell` | Prints a completion script for `bash`, `zsh`, `fish` or `powershell`. |
@@ -44,7 +44,7 @@ Every user mistake, such as an unknown focus or an invalid field, fails with a n
 | `recipe` | ● | ● | ● | ● |
 | `autocomplete`, `suggest` | | | | |
 
-`show`, `get`, `view` and `focus` only read. `get`, `view` and `focus` read the index as last committed and never open a task file. When a task file was edited, moved or deleted by hand since vex last saw it, they print a warning on stderr and still show what the index holds; `vex resolve all` takes the change in. `show` prints the file itself, so it shows a hand edit straight away, unresolved. Commands that change tasks (`add`, `set`, `remove`, `resolve`, `recipe`) first take in hand edits to the tasks in their focus, then write every change and the index together when they finish. Every command appends to the logs in `.vex/vexdex`; those are a record, not state.
+`show`, `get`, `view` and `focus` only read. `get`, `view` and `focus` read the index as last committed and never open a task file. When a task file was edited, moved or deleted by hand since vex last saw it, they print a warning on stderr and still show what the index holds; `vex resolve all` takes the change in. `show` prints the file itself, so it shows a hand edit straight away, unresolved. Commands that change tasks (`add`, `set`, `remove`, `resolve`, `recipe`) first take in hand edits to the tasks in their focus (`set --force` doesn't), then write every change and the index together when they finish. Every command appends to the logs in `.vex/vexdex`; those are a record, not state.
 
 ## Initialisation
 
@@ -93,6 +93,14 @@ $ vex set my-task-1 --clear --due --clear --owner
 ```
 
 A field that the task type requires fails resolution as usual. A flag with no value, such as `vex set x --status`, is an error rather than being ignored.
+
+`--force`, anywhere after the focus, writes the fields as given and skips resolution entirely: no validation, no status machine, no cascade into linked tasks, and no taking in of hand edits. Use it to get out of a corner the rules won't let you leave, such as reopening a finished task:
+
+```console
+$ vex set tidy-readme-1 --force --status todo
+```
+
+The task's links, backlinks and derived fields only catch up the next time it resolves, which `vex resolve tidy-readme-1 --force` does at once.
 
 ## Focuses
 
@@ -155,7 +163,7 @@ Values are separated by `:`.
 | --- | --- |
 | `--select field,field` | Only those fields, plus `vexid`. Transients are included once selected. |
 | `--filter field:value` | Tasks whose `field` equals `value`. |
-| `--fuzzy field:value[:n]` | Tasks whose `field` contains `value` within `n` edits (default 3). |
+| `--fuzzy field:value[:n]` | Tasks whose `field` contains `value` within `n` edits, ignoring case. `n` defaults to one edit for every four characters of `value`. |
 | `--match field:pattern` | Tasks whose `field` matches a Lua pattern (`^`, `$`, `.*`, `%d`; no `\|` alternation): `description:"^Fix.*$"`. |
 | `--nil field` | Tasks that hold no value for `field`, transients included: `--nil due`. |
 | `--between field:low:high` | Tasks with `low <= field <= high`. Leave `low` or `high` empty for an open side: `cost::9`. Dates may be `YYYY-MM-DD`. |

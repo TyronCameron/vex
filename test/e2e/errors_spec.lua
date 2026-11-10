@@ -31,11 +31,37 @@ describe("vex user-facing errors (e2e, subprocess)", function()
     {"a recurring recipe without a recurrence", "The `recurring` recipe needs `--recur`", {"recipe", "recurring", "Wash", "dishes"}},
     {"a repeat recipe without a count", "The `repeat` recipe needs `--n`", {"recipe", "repeat", "Wash", "dishes"}},
     {"a recurrence it cannot read", "Expected a recurrence", {"add", "Wash", "dishes", "--recur", "sometimes"}},
+    {"a date that does not exist", "Cannot interpret `2026-02-30` as a time: that date does not exist", {"add", "Due", "some", "day", "--due", "2026-02-30"}},
+    {"a month that does not exist", "Cannot interpret `2026-13-45`", {"add", "Due", "some", "day", "--due", "2026-13-45"}},
   }
 
   it("rejects a set flag without a value", function()
     local vexid = vex(dir, "add", "Some", "task")
     fails(dir, "needs a value", "set", vexid, "--status")
+  end)
+
+  it("refuses to move a task out of its initial status while a dependency is unfinished", function()
+    local first = vex(dir, "add", "First", "step")
+    local second = vex(dir, "add", "Second", "step", "--dependencies", first)
+    fails(dir, "Task `" .. second .. "` can't move to `done` while `" .. first .. "`, which it depends on, isn't finished.", "set", second, "--status", "done")
+    fails(dir, "isn't finished", "add", "Third", "step", "--status", "done", "--dependencies", first)
+    vex(dir, "set", first, "--status", "done")
+    vex(dir, "set", second, "--status", "done")
+  end)
+
+  it("refuses a hand edit that finishes a blocked task", function()
+    local first = vex(dir, "add", "First", "step")
+    local second = vex(dir, "add", "Second", "step", "--dependencies", first)
+    local path = helper.task_file(dir, second)
+    helper.write_file(path, (helper.read_file(path):gsub("status: todo", "status: done")))
+    fails(dir, "isn't finished", "resolve", "all")
+  end)
+
+  it("finishes a task and its dependency together, in either order", function()
+    local first = vex(dir, "add", "Zeta", "step")
+    local second = vex(dir, "add", "Alpha", "step", "--dependencies", first)
+    vex(dir, "set", second .. "," .. first, "--status", "done")
+    assert.equal("done\ndone", vex(dir, "get", second .. "," .. first, "--status"))
   end)
 
   it("rejects clearing a field and giving it a value", function()
@@ -188,5 +214,27 @@ describe("vex user-facing errors (e2e, subprocess)", function()
   it("rejects tag rules that are not tag names mapped to functions", function()
     autotags("broken = true")
     fails(dir, "The `autotags` setting in your config", "add", "Badly", "ruled", "task")
+  end)
+end)
+
+describe("vex outside a project (e2e, subprocess)", function()
+  local dir
+
+  before_each(function()
+    dir = helper.make_tmp_dir()
+  end)
+
+  after_each(function()
+    helper.rm_tmp_dir(dir)
+  end)
+
+  it("prints help for the verbs that work without a project", function()
+    local out = vex(dir, "help")
+    assert.truthy(out:find("init", 1, true))
+    assert.truthy(out:find("Run `vex init`, or cd into a vex project, to see every verb.", 1, true))
+  end)
+
+  it("refuses the verbs that need a project", function()
+    fails(dir, "Not in a vex directory.", "view", "all", "list")
   end)
 end)
