@@ -113,10 +113,14 @@ cli:error "no-focus" {
 }
 
 cli:error "unknown-focus" {
-    function(focusname)
-        return "You are attempting to create an unknown focus with name: " .. tostring(focusname)
+    function(focusname, suggestions)
+        local message = "No task or focus called `" .. tostring(focusname) .. "`."
+        if type(suggestions) == "table" and #suggestions > 0 then
+            message = message .. " Did you mean `" .. table.concat(suggestions, "`, `") .. "`?"
+        end
+        return message
     end,
-    hint = "Use one of the standard focus names ('all', 'none', 'prev') or a valid vexid which is in the vexdex. Use vex resolve all if your vexdex is out of date."
+    hint = "Use a vexid, a task file or folder, or a named focus such as `all`, `prev`, `ready` or `final`. Run `vex resolve all` if the task file is new."
 }
 
 cli:error "unknown-focus-operation" {
@@ -162,46 +166,46 @@ cli:error "not-a-date-field" {
 
 cli:error "missing-required-field" {
     function(vexid, field)
-        return "A required field is missing from a task. Vexid = " .. tostring(vexid) .. ', field = ' .. tostring(field)
+        return "Task `" .. tostring(vexid) .. "` has no `" .. tostring(field) .. "`."
     end,
-    hint = "Ensure that all tasks have all required fields, such as: `vexid`, `vextype`, `description`, `status`, `created`, and `modified`"
+    hint = "Add the field to the task file. Every task file needs a `vexid`, a `vextype` and a `description`."
 }
 
 cli:error "unknown-vextype" {
     function(vextype, all_types)
-        if type(all_types) ~= "table" then all_types = {} end 
-        return "The vextype for this vex task is unknown. Type  = " .. tostring(vextype) .. '. Available types = ' .. table.concat(all_types, ',')
+        return "Unknown task type `" .. tostring(vextype) .. "`. The types are " .. table.concat(type(all_types) == "table" and all_types or {}, ', ') .. "."
     end,
-    hint = "Ensure that the vextype is correctly written in your `config.lua` file and that this vex task has a matching name."
+    hint = "Check the spelling, or add the type in `.vex/tasks`."
 }
 
 local function resolutionfailure(step)
     return function(vexid, failure, path)
-        local footer = pretty.string('the ' .. step .. ' step failed while resolving ', 'dim') .. pretty.string('`' .. tostring(vexid) .. '`', unpack(path and {{filelink = path}} or {}))
+        local footer = pretty.string('the ' .. step .. ' step failed while resolving ', 'dim') .. '`' .. tostring(vexid) .. '`'
+        if path then footer = footer .. pretty.string(' in ', 'dim') .. pretty.string(path, {filelink = path}) end
         return failure and (tostring(failure) .. '\n\n' .. footer) or footer
     end
 end
 
 cli:error 'resolution-failed-validation' {
     resolutionfailure('validation'),
-    hint = "Ensure that data is correct and that the tasktype definitions in `config.lua` are sound."
+    hint = "Fix the value, or the task file if you edited it by hand. Task types are defined in `.vex/tasks`."
 }
 
 cli:error 'resolution-failed-derivation' {
     resolutionfailure('derivation'),
-    hint = "Ensure that data is correct and that the tasktype definitions in `config.lua` are sound."
+    hint = "Fix the value, or the task file if you edited it by hand. Task types are defined in `.vex/tasks`."
 }
 
 cli:error 'resolution-failed-normalisation' {
     resolutionfailure('normalisation'),
-    hint = "Ensure that data is correct and that the tasktype definitions in `config.lua` are sound."
+    hint = "Fix the value, or the task file if you edited it by hand. Task types are defined in `.vex/tasks`."
 }
 
 cli:error 'resolution-failed-linking' {
     function(vexid, msg)
         return 'The Linking step failed during resolution for vexid ' .. tostring(vexid) .. '. ' .. tostring(msg or '')
     end,
-    hint = "Ensure that data is correct and that the tasktype definitions in `config.lua` are sound."
+    hint = "Fix the value, or the task file if you edited it by hand. Task types are defined in `.vex/tasks`."
 }
 
 cli:error 'multiple-parents' {
@@ -257,21 +261,21 @@ cli:error "unknown-view" {
     function(viewname)
         return 'A view of name `' .. tostring(viewname) .. '` does not exist.'
     end,
-    hint = "Ensure that this view is correctly written in your `config.lua` file."
+    hint = "Run `vex view` to list the views, and add your own in `.vex/views`. Given one word, `vex view` takes it as the view: write `vex view all tabular`, not `vex view all`."
 }
 
 cli:error "unknown-recipe" {
     function(recipe)
         return 'A recipe of name `' .. tostring(recipe) .. '` does not exist.'
     end,
-    hint = "Ensure that this recipe is correctly written in your `config.lua` file."
+    hint = "Run `vex recipe` to list the recipes. Add your own in `.vex/recipes`."
 }
 
 cli:error "unknown-field" {
     function(field)
         return 'A field of name `' .. tostring(field) .. '` does not exist.'
     end,
-    hint = "Ensure that this field is correctly written in your `config.lua` file."
+    hint = "Check the spelling. A task type's fields are defined in `.vex/tasks`."
 }
 
 cli:error "recipe-needs-flag" {
@@ -283,9 +287,9 @@ cli:error "recipe-needs-flag" {
 
 cli:error "task-creation-failed" {
     function(msg)
-        return 'Cannot create task. Reason: ' .. tostring(msg)
+        return tostring(msg)
     end,
-    hint = "Ensure that you are calling the task adding function correctly."
+    hint = "Describe the task in a few words, e.g. `vex add Make coffee`."
 }
 
 cli:error "bad-extension" {

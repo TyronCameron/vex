@@ -23,6 +23,25 @@ describe("vex view with focus flags (e2e, subprocess)", function()
     return (out:gsub("\27%[[0-9;]*m", ""))
   end
 
+  it("lists tasks, views and recipes in the same order every time", function()
+    assert.equal(table.concat({bread, eggs, milk}, "\n"), vex(dir, "get", "all"))
+    local views = vex(dir, "view")
+    assert.truthy(views:find("csv.*ics.*json.*kanban.*list.*overview.*singular.*tabular"), views)
+    assert.truthy(vex(dir, "recipe"):find("abstract.*recurring.*repeat"))
+  end)
+
+  it("writes no escape codes when its output is not a terminal", function()
+    for _, args in ipairs({{"view", "all", "tabular"}, {"show", milk}, {"focus", "all"}, {"set", milk, "--status", "nonsense"}}) do
+      local result = helper.run_vex(dir, args)
+      assert.is_nil((result.stdout .. result.stderr):find("\27", 1, true), table.concat(args, " "))
+    end
+  end)
+
+  it("writes json from the first column, with each task's keys in order", function()
+    local out = vex(dir, "view", milk, "json")
+    assert.truthy(out:find('^%[\n  {\n    "created"'), out)
+  end)
+
   it("filters and selects through the focus flags it is given", function()
     local out = vex(dir, "view", "all", "tabular", "--filter", "status:done", "--select", "status")
     assert.truthy(out:find(eggs, 1, true), out)

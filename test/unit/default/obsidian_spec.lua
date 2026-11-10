@@ -159,6 +159,7 @@ describe("obsidian", function()
         end)
 
         it("marks each frontmatter key and the fences, and leaves the body plain", function()
+            require('lib.pretty').colour(true)
             local shown = obsidian.format('---\nstatus: todo\n---\nstatus: not a key\n')
             assert.truthy(shown:find("\27%[[%d;]*m%-%-%-"))
             assert.truthy(shown:find("\27%[[%d;]*mstatus:"))

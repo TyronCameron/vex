@@ -87,6 +87,16 @@ describe("Focus", function()
         assert.is_nil(({[result[1]] = true, [result[2]] = true})[t2])
     end)
 
+    it("notin, onlyin and xor keep the order of the tasks they are given", function()
+        local list = {{vexid = "a"}, {vexid = "b"}, {vexid = "c"}, {vexid = "d"}, {vexid = "e"}}
+        local evens = Focus.new("evens", function(t) return {t[4], t[2]} end)
+        local some = Focus.new("some", function(t) return {t[1], t[2], t[3], t[5]} end)
+        local function vexids(focus) return func.imap(focus:get(list), function(t) return t.vexid end) end
+        assert.same({"a", "c", "e"}, vexids(some:notin(evens)))
+        assert.same({"d"}, vexids(some:onlyin(evens)))
+        assert.same({"a", "c", "e", "d"}, vexids(some:xor(evens)))
+    end)
+
     it("onlyin returns tasks in the second focus but not the first", function()
         local f1 = Focus.new("f1", function(t) return {t[1], t[2]} end)
         local f2 = Focus.new("f2", function(t) return {t[2], t[3]} end)

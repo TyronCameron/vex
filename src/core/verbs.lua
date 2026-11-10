@@ -46,31 +46,25 @@ cli:verb "show" {
     end,
     doc = "Prints out a task to terminal, highlighting YAML frontmatter and Markdown notes.",
     args = "[focus]",
-    example = "vex show make-coffee"
+    example = "vex show make-coffee-wife-1"
 }
 
 cli:verb "focus" {
     function(args)
         warn_stale()
-        local lines = {}
         local function count(f)
-            local vex_cnt = #f:get()
-            return pretty.string(vex_cnt, "bold") .. (vex_cnt == 1 and " vex" or " vexes")
+            local n = #f:get()
+            return pretty.string(n, "bold") .. (n == 1 and " task" or " tasks")
         end
         if #args == 0 then
             local f = focus.read()
-            table.insert(lines, pretty.any('Current focus on ' .. count(f)))
-            for _, op in ipairs(f.operations) do
-                table.insert(lines, pretty.any(pretty.string(op.operation, 'cyan'), pretty.string('args = ', 'green'), op.args))
-            end
-        else
-            local f = focus.parse(args)
-            f:write()
-            table.insert(lines, pretty.any("Focusing on " .. count(f)))
+            return 'Current focus on ' .. count(f) .. ':\n  ' .. pretty.string('vex focus ' .. f:describe(), 'cyan')
         end
-        return join_lines(lines)
+        local f = focus.parse(args)
+        f:write()
+        return "Focusing on " .. count(f)
     end,
-    doc = "Creates an focus which can be used as a data query against the vex folder. Provide no args to see the current focus.",
+    doc = "Creates a focus which can be used as a data query against the vex folder. Provide no args to see the current focus.",
     args = "[focus] [--focusflags...]",
     example = "vex focus all --filter status:done"
 }
@@ -81,7 +75,7 @@ cli:verb "view" {
 
         if #positional_args == 0 then
             local lines = { pretty.any('Available views:') }
-            for view in pairs(view.views) do
+            for _, view in ipairs(func.sortedkeys(view.views)) do
                 table.insert(lines, pretty.any('  ' .. view))
             end
             return join_lines(lines)
@@ -100,8 +94,8 @@ cli:verb "view" {
         local flags = args:flags()
         return view:display(viewname, focusname, flags, func.ifilter(args, cli.isflag))
     end,
-    doc = "Prints a view of current tasks",
-    args = "[focus] [view]",
+    doc = "Prints a view of the focus. With one word, the word is the view, shown for the saved focus. With none, lists the views.",
+    args = "[focus] <view>",
     example = "vex view all tabular"
 }
 
@@ -133,7 +127,7 @@ cli:verb "add" {
     end,
     doc = "Creates a task with the Description provided. Automatically fills out some frontmatter and resolves. This outputs and sets the focus to this new tag",
     args = "Description... [--fields...]",
-    example = "vex add Make coffee for wife --importance high"
+    example = "vex add Make coffee for wife --cost 15"
 }
 
 cli:verb "remove" {
@@ -151,7 +145,7 @@ cli:verb "remove" {
     end,
     doc = "Deletes tasks in the focus and leaves an empty focus. A removed abstract's children move to its parent. Runs resolve on all linked tasks thereafter. Not recommended for regular use.",
     args = "[focus]",
-    example = "vex remove make-coffee"
+    example = "vex remove make-coffee-wife-1"
 }
 
 cli:verb "get" {
@@ -213,7 +207,7 @@ cli:verb "recipe" {
         local recipename = table.remove(args, 1)
         if not recipename then
             local lines = { pretty.any('Available recipes:') }
-            for recipename in pairs(recipe.recipes) do
+            for _, recipename in ipairs(func.sortedkeys(recipe.recipes)) do
                 table.insert(lines, pretty.any('  ' .. recipename))
             end
             return join_lines(lines)

@@ -17,7 +17,7 @@
 | `vex init` | Creates a `.vex` folder in the current folder. |
 | `vex show [focus]` | Prints each task's file as it is on disk, frontmatter and body highlighted. The only command that shows the body. |
 | `vex get [focus] [row_sep] [col_sep] [--fields...]` | Prints one tab-separated line per task. `--select a,b` names the fields as a list. Defaults to `vexid`. A row separator and a column separator replace the newline and tab (see [[01 CLI reference#Feeding a focus into a list field]]). |
-| `vex view [focus] [view] [--flags...]` | Renders the focus with a view. With no arguments, lists the views. See [[04 Views]]. |
+| `vex view [focus] <view> [--flags...]` | Renders the focus with a view. With one word, the word is the view, shown for the saved focus. With no arguments, lists the views. See [[04 Views]]. |
 | `vex focus [focus] [--flags...]` | Builds and saves a focus. With no arguments, prints the saved focus and saves nothing. |
 | `vex add Description [--fields...]` | Creates and resolves a task, prints its vexid and focuses on it. |
 | `vex set [focus] [--force] [--fields...]` | Sets fields on every task in the focus, then resolves them. `--force` writes them without resolving. |

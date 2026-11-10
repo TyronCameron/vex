@@ -33,7 +33,10 @@ function format.json(val, indent, level)
         else
             if next(val) == nil then return '{}' end
             local parts = {}
-            for k, v in pairs(val) do
+            local keys = func.keys(val)
+            table.sort(keys, function(a, b) return tostring(a) < tostring(b) end)
+            for _, k in ipairs(keys) do
+                local v = val[k]
                 table.insert(parts, pad_inner .. format.json(tostring(k), indent, (level or indent or 0) + 1) .. ': ' .. format.json(v, indent, (level or indent or 0) + 1))
             end
             return '{\n' .. table.concat(parts, ',\n') .. '\n' .. pad .. '}'

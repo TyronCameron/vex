@@ -194,7 +194,7 @@ describe("vex grouped task paths (e2e, subprocess)", function()
     groupby "{'status'}"
     vex(dir, "add", "First", "todo", "task")
     vex(dir, "add", "Second", "todo", "task")
-    assert.truthy(vex(dir, "focus", "todo/"):find("Focusing on 2 vexes", 1, true))
+    assert.truthy(vex(dir, "focus", "todo/"):find("Focusing on 2 tasks", 1, true))
   end)
 
   it("rejects a groupby that is not a list of field names", function()

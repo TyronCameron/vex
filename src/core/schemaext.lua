@@ -42,7 +42,7 @@ schema.register 'statemachine' {
 
 schema.register 'vexlink' {
     validate = function(self, vexid)
-        return type(vexid) == "string" and task:getsingle(vexid), "Cannot find " .. tostring(vexid) .. " in the task manager "
+        return type(vexid) == "string" and task:getsingle(vexid), "No task `" .. tostring(vexid) .. "`."
     end,
     isos = {
         format = {

@@ -102,7 +102,7 @@ local function parse_usage(usage)
     local pos, flags = {}, {}
     for token in usage:gmatch("%S+") do
         local flag = token:match("^%[%-%-(.-)%.?%.?%.?%]$")
-        local positional = token:match("^%[(.-)%]$")
+        local positional = token:match("^%[(.-)%]$") or token:match("^<(.-)>$")
         if flag then
             table.insert(flags, flag)
         elseif positional then

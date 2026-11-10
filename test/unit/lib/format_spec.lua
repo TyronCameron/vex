@@ -71,6 +71,10 @@ describe("format", function()
             assert.equal('{\n  "k": true\n}', format.json({k = true}))
         end)
 
+        it("writes an object's keys in order", function()
+            assert.equal('{\n  "a": 1,\n  "b": 2,\n  "c": 3\n}', format.json({c = 3, a = 1, b = 2}))
+        end)
+
         it("writes empty tables as an empty array", function()
             assert.equal('[]', format.json({}))
         end)

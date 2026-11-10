@@ -281,7 +281,7 @@ local function create_usage_error(cli)
             if msg then
                 table.insert(lines, "  " .. msg)
             end
-            table.insert(lines, "  hint: run `" .. cli.entrypoint .. " help " .. verb .. "` for usage")
+            table.insert(lines, "  hint: run `" .. cli.entrypoint .. " help" .. (verb ~= "" and " " .. verb or "") .. "` for usage")
             return table.concat(lines, "\n")
         end
     }

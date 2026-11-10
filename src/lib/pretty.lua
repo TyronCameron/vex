@@ -1,7 +1,17 @@
 
+local function interactive()
+    if os.getenv('NO_COLOR') then return false end
+    local ok, ffi = pcall(require, 'ffi')
+    if not ok then return true end
+    pcall(ffi.cdef, 'int isatty(int fd); int _isatty(int fd);')
+    local found, isatty = pcall(function() return ffi.os == 'Windows' and ffi.C._isatty or ffi.C.isatty end)
+    return not found or isatty(1) ~= 0
+end
+
 local PrettyString = {}
 PrettyString.__index = PrettyString
 PrettyString.__tostring = function(self)
+    if not PrettyString.colour then return self[1] end
     local text
     if #self == 1 then
         text = self[1]
@@ -149,6 +159,12 @@ end
 
 local pretty = {style = {}}
 
+-- whether styles and links are written as escape codes: only when stdout is a terminal and NO_COLOR is unset
+function pretty.colour(on)
+    PrettyString.colour = on
+end
+pretty.colour(interactive())
+
 -- function pretty.styles.reset()
 --     return nil
 -- end
@@ -222,18 +238,17 @@ function pretty.any(...)
     if #printables == 0 then 
         return unpack({...})
     end 
-    local final_printable = ""
+    local parts = {}
     for _, printable in ipairs(printables) do
         if type(printable) == 'table' and getmetatable(printable) == PrettyString then 
-            final_printable = final_printable .. pretty.string(printable)
+            table.insert(parts, pretty.string(printable))
         elseif type(printable) == 'table' then 
-            final_printable = final_printable .. pretty.table(printable)
+            table.insert(parts, pretty.table(printable))
         else 
-            final_printable = final_printable .. tostring(printable)
+            table.insert(parts, tostring(printable))
         end
-        final_printable = final_printable .. '\t'
     end
-    return final_printable
+    return table.concat(parts, '\t')
 end
 
 function pretty.print(...)
@@ -343,7 +358,9 @@ function pretty.subheader(field, value, depth)
     return setmetatable({field = field, value = value, depth = depth}, Subheader)
 end
 
-local guide = pretty.string('│', 'dim') .. ' '
+local function guide(depth)
+    return string.rep(pretty.string('│', 'dim') .. ' ', depth)
+end
 
 function pretty.tabular(data, sortfunc, maxwidth)
     if #data == 0 then return '' end
@@ -371,7 +388,7 @@ function pretty.tabular(data, sortfunc, maxwidth)
         else
             local cells = {}
             for _, f in ipairs(fields) do cells[f] = cell(row[f], maxwidth) end
-            cells[fields[1]] = string.rep(guide, depth) .. cells[fields[1]]
+            cells[fields[1]] = guide(depth) .. cells[fields[1]]
             table.insert(entries, {cells = cells})
         end
     end
@@ -426,7 +443,7 @@ function pretty.tabular(data, sortfunc, maxwidth)
     for _, entry in ipairs(entries) do
         local row = box.left
         if entry.label then
-            row = row .. ' ' .. pad(string.rep(guide, entry.depth) .. pretty.string(entry.label, "bold"), inner) .. ' ' .. box.right
+            row = row .. ' ' .. pad(guide(entry.depth) .. pretty.string(entry.label, "bold"), inner) .. ' ' .. box.right
         else
             for _, f in ipairs(fields) do
                 row = row .. ' ' .. pad(entry.cells[f], widths[f]) .. ' ' .. box.right

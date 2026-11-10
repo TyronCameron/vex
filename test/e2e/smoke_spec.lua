@@ -134,7 +134,7 @@ describe("vex smoke test: every verb, view and focus (e2e, subprocess)", functio
       test(name(row), function()
         local out = vex(dir, unpack(row))
         if row.count then
-          assert.truthy(out:find("Focusing on " .. row.count .. " vex", 1, true), out)
+          assert.truthy(out:find("Focusing on " .. row.count .. " task", 1, true), out)
         end
       end)
     end

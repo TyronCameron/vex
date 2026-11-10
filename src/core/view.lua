@@ -253,7 +253,7 @@ v:view 'list' {
 v:view 'json' {
     display = function(focus, flags)
         local tasks = focus:get()
-        return format.json(tasks, 2)
+        return format.json(tasks)
     end
 }
 
@@ -432,7 +432,7 @@ v:view 'singular' {
         local function add(s) table.insert(lines, s) end
 
         -- ===== HEADING =====
-        add(pretty.string('# ' .. string.upper(tostring(task.vexid)), 'cyan', 'underline', 'bold'))
+        add(pretty.string('# ' .. tostring(task.vexid), 'cyan', 'underline', 'bold'))
         add(pretty.string('  ' .. tostring(task.vextype or 'task') .. '  |  ' .. tostring(task.status or 'todo'), 'dim'))
         if task.created then
             add(pretty.string('  created: ' .. os.date('%Y-%m-%d %H:%M', math.floor(task.created)), 'dim'))

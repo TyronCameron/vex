@@ -196,8 +196,8 @@ end
 function TaskManager:add(task)
     assert(task and type(task) == "table", "add() requires a table of task properties")
     event:trigger('pre-task-add', task)
-    if not (type(task.description) == "string") then cli:throw("task-creation-failed", "task must have a description to be added") end
-    if not (#task.description > 3) then cli:throw("task-creation-failed", "Need more than 3 characters to create a task") end
+    if type(task.description) ~= "string" then cli:throw("task-creation-failed", "A task needs a description.") end
+    if #task.description < 3 then cli:throw("task-creation-failed", "A description needs at least 3 characters.") end
     
     task.vexid = tagger.generate(task.description, vexdex.index)
     local existing_task = self:getsingle(task.vexid)
@@ -311,7 +311,7 @@ function TaskManager:show(vexid)
     if lfs.attributes(path, 'mode') ~= 'file' then path = self:find(vexid) or path end
     local text = lfsext.readfile(path)
     if not text then cli:throw('file', path) end
-    local result = pretty.string('# ' .. string.upper(vexid) .. '\n', 'cyan', 'underline', 'bold', {filelink = path}) .. taskformat.format(text)
+    local result = pretty.string('# ' .. vexid .. '\n', 'cyan', 'underline', 'bold', {filelink = path}) .. taskformat.format(text)
     event:trigger('post-task-show', vexid, result)
     return result
 end
@@ -397,7 +397,10 @@ function TaskManager:resolvesingle(vexid)
     if not task.vextype then cli:throw('missing-required-field', task.vexid, 'vextype') end 
 
     local vextype = self.tasktypes[task.vextype]
-    if not vextype then cli:throw('unknown-vextype', task.vextype, func.keys(self.tasktypes)) end 
+    if not vextype then
+        local types = func.ifilter(func.sortedkeys(self.tasktypes), function(name) return self.tasktypes[name].parent end)
+        cli:throw('unknown-vextype', task.vextype, types)
+    end
 
     local context = {
         vexid = vexid,

@@ -90,7 +90,7 @@ describe("view", function()
     it("renders the singular view for each linked task", function()
         for _, vexid in ipairs({child, parent, dependent}) do
             local result = view:display('singular', focus.focus(vexid), {})
-            assert.truthy(result:find(vexid:upper(), 1, true))
+            assert.truthy(result:find("# " .. vexid, 1, true))
         end
     end)
 

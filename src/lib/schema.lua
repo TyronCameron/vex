@@ -779,12 +779,19 @@ Schema.register 'datetime' {
 -- Descriptive schemas 
 -----------------------------------------------
 
+-- describes the bounds of a range, such as `at least 3` or `between 1 and 5`
+local function bounds(lower, upper)
+    if upper == "inf" then return "at least " .. tostring(lower) end
+    if lower == "-inf" then return "at most " .. tostring(upper) end
+    return "between " .. tostring(lower) .. " and " .. tostring(upper)
+end
+
 -- checks for a numeric range 
 Schema.register 'rng' {
     validate = function(self, instance)
         local lower = self.specification[1] or self.specification.lower or "-inf"
         local upper = self.specification[2] or self.specification.upper or "inf"
-        return (lower == "-inf" or lower <= instance) and (upper == "inf" or instance <= upper), "Range: " .. tostring(lower) .. " <= " .. tostring(instance) .. " <= " .. tostring(upper)
+        return (lower == "-inf" or lower <= instance) and (upper == "inf" or instance <= upper), "Expected a number " .. bounds(lower, upper) .. ", got " .. tostring(instance)
     end
 }
 
@@ -802,7 +809,7 @@ Schema.register 'hasmetatable' {
 -- checks for an empty string or table 
 Schema.register 'empty' {
     validate = function(self, instance)
-        return instance == nil or #instance == 0, "Non-empty length of " .. tostring(instance and #instance)
+        return instance == nil or #instance == 0, "Expected nothing here, got " .. tostring(instance)
     end
 }
 
@@ -812,7 +819,7 @@ Schema.register 'size' {
         local lower = (self.specification and (self.specification[1] or self.specification.lower)) or 0
         local upper = (self.specification and (self.specification[2] or self.specification.upper)) or "inf"
         local size = #instance
-        return (lower == "-inf" or lower <= size) and (upper == "inf" or size <= upper), "Range: " .. tostring(lower) .. " <= " .. tostring(size) .. " <= " .. tostring(upper)
+        return (lower == "-inf" or lower <= size) and (upper == "inf" or size <= upper), "Expected " .. bounds(lower, upper) .. (type(instance) == "string" and " characters" or " items") .. ", got " .. tostring(size)
     end
 }
 

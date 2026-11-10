@@ -1,10 +1,10 @@
 A view renders the tasks in a focus:
 
 ```txt
-vex view [focus] [view]
+vex view [focus] <view>
 ```
 
-With no arguments, `vex view` lists the views. With one argument, it is the view, rendering the saved focus. Views show the fields each task stores. A focus built with `--select` shows only the selected fields, transients included.
+With no arguments, `vex view` lists the views. With one argument, it is the view, rendering the saved focus: `vex view all` looks for a view called `all`, so write `vex view all tabular`. Views show the fields each task stores. A focus built with `--select` shows only the selected fields, transients included.
 
 ## `tabular`
 
