@@ -87,7 +87,7 @@ describe("vexations", function()
             local parent = create({description = "childless " .. vextype .. " parent", vextype = vextype})
             local child = task:add({description = "unwanted " .. vextype .. " child", parent = parent})
             assert.has_error(function() task:resolve(child) end)
-            assert.stub(cli.throw).was.called_with(cli, 'leaf-parent', child, parent, vextype)
+            assert.stub(cli.throw).was.called_with(cli, 'has-children', parent, vextype, child)
         end
 
         it("lets an atom depend on an atom", function()
@@ -105,6 +105,14 @@ describe("vexations", function()
         it("gives atoms and explorations no children", function()
             childless('atom')
             childless('exploration')
+        end)
+
+        it("refuses to turn a task with children into an atom", function()
+            local parent = create({description = "switching parent abstract", vextype = 'abstract'})
+            local child = create({description = "switching parent child", parent = parent})
+            task:set(parent, {vextype = 'atom'})
+            assert.has_error(function() task:resolve(parent) end)
+            assert.stub(cli.throw).was.called_with(cli, 'has-children', parent, 'atom', child)
         end)
 
         it("lets any task type sit under an abstract", function()

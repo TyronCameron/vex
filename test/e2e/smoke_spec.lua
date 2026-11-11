@@ -74,7 +74,6 @@ local focuses = {
   {"focus", "all", "--match", "description:^.*child"},
   {"focus", "all", "--select", "description"},
   {"focus", PARENT, "--tree", "children"},
-  {"focus", CHILD, "--reversetree", "children"},
   {"focus", CHILD, "--tree", "parent"},
   {"focus", PARENT, "--step", "children"},
   {"focus", CHILD, "--step", "forwardlinks"},

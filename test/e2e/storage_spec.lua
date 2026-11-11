@@ -101,6 +101,15 @@ describe("vex storage (e2e, subprocess)", function()
     assert.same(before, stamps())
   end)
 
+  for _, names in ipairs({{"Aardvark atom", "Zebra child"}, {"Zebra atom", "Aardvark child"}}) do
+    it("checks a hand-edited child under an atom when rebuilding the index (" .. names[1] .. ")", function()
+      local atom = vex(dir, "add", names[1], "--vextype", "atom")
+      local child = vex(dir, "add", names[2])
+      helper.link(dir, child, "parent", atom)
+      helper.vex_fails(dir, "can't have children", "resolve", "all", "--force")
+    end)
+  end
+
   it("treats a touched but unchanged file as unchanged", function()
     backdated_project()
     os.execute("touch " .. helper.shell_escape(dir .. "/child-task-here-1.md"))
@@ -300,7 +309,7 @@ describe("vex storage (e2e, subprocess)", function()
     linked_project()
     for _, vexid in ipairs({"child-task-here-1", "parent-abstract-here-1", "dependent-atom-here-1"}) do
       local fields = helper.frontmatter(dir .. "/" .. vexid .. ".md")
-      for _, transient in ipairs({"wordcount", "phase", "blockers", "lineage", "children", "leaf", "path", "age"}) do
+      for _, transient in ipairs({"wordcount", "phase", "blockers", "lineage", "children", "path", "age"}) do
         assert.is_nil(fields[transient], transient .. " was written to " .. vexid)
       end
     end

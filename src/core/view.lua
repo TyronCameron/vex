@@ -457,7 +457,7 @@ v:view 'singular' {
         section("PARENTS", 'bright_cyan', func.reverse(related(focus:tree('parent'))), true)
         section("CHILDREN", 'bright_cyan', related(focus:tree('children')))
         section("DEPENDS ON", 'bright_green', related(focus:tree('dependencies')))
-        section("DEPENDED ON BY", 'bright_green', related(focus:reversetree('dependencies')))
+        section("DEPENDED ON BY", 'bright_green', related(focus:tree('dependents')))
 
         return table.concat(lines, "\n")
     end

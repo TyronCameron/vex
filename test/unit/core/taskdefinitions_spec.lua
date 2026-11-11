@@ -109,21 +109,12 @@ describe("taskdefinitions", function()
             assert.stub(cli.throw).was.called_with(cli, 'parent-cycle', first, second)
         end)
 
-        it("rejects a parent whose type is a leaf", function()
-            task:task 'barren':extends 'task' {schema = require('lib.schema').atleast {}}
-            task:transient 'leaf' { vextype = 'barren', definition = function() return true end }
-            local barren = create({description = "barren parent task", vextype = 'barren'})
-            local child = task:add({description = "unwanted child task", parent = barren})
-            assert.has_error(function() task:resolve(child) end)
-            assert.stub(cli.throw).was.called_with(cli, 'leaf-parent', child, barren, 'barren')
-        end)
-
         it("rejects a parent that another task depends on", function()
             local needed = create({description = "depended parent task"})
             local dependent = create({description = "depending on parent task", dependencies = {needed}})
             local child = task:add({description = "late child task", parent = needed})
             assert.has_error(function() task:resolve(child) end)
-            assert.stub(cli.throw).was.called_with(cli, 'depended-parent', child, needed, dependent)
+            assert.stub(cli.throw).was.called_with(cli, 'dependency-with-children', dependent, needed)
         end)
 
         it("rejects a link to a task that does not exist", function()
@@ -222,11 +213,6 @@ describe("taskdefinitions", function()
             local function sorted(...) local list = {...} table.sort(list) return list end
             assert.same(sorted(first, second), task.tasks[parent].children)
             assert.is_nil(task.tasks[first].children)
-        end)
-
-        it("is no leaf unless its type says otherwise", function()
-            local vexid = create({description = "accepting parent task"})
-            assert.is_false(task.tasks[vexid].leaf)
         end)
 
         it("lists the tasks linking to a task as its backlinks and the tasks it links to as its forwardlinks", function()

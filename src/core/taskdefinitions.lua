@@ -45,6 +45,7 @@ task:task 'basetask' {
         manualtags = schema.maybe {schema.vec {schema.tagoverride}},
         tags = schema.autotagged,
         parent = schema.parent,
+        children = schema.unstored {schema.isvalidparent},
         recur = schema.maybe {schema.recurrence},
         over = schema.default {
             schema.maybe {schema.datefield},
@@ -150,13 +151,6 @@ task:transient 'children' {
             return other and other.parent == t.vexid
         end)
         return #children > 0 and children or nil
-    end
-}
-
-task:transient 'leaf' {
-    vextype = 'basetask',
-    definition = function(t)
-        return false
     end
 }
 

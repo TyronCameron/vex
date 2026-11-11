@@ -130,12 +130,10 @@ schema.register 'childless' {
     end
 }
 
-schema.register 'hasvalidparent' {
-    validate = function(self, parent, context)
-        local target = task:getsingle(parent)
-        if target.leaf then cli:throw('leaf-parent', context.vexid, parent, target.vextype) end
-        local dependents = target.dependents
-        if #dependents > 0 then cli:throw('depended-parent', context.vexid, parent, dependents[1]) end
+schema.register 'isvalidparent' {
+    validate = function(self, children, context)
+        local dependents = children and context.task.dependents or {}
+        if #dependents > 0 then cli:throw('dependency-with-children', dependents[1], context.vexid) end
         return true
     end
 }
@@ -191,7 +189,6 @@ schema.register 'dependencies' (schema.maybe {
 schema.register 'parent' (schema.maybe {
     schema.all {
         schema.formatted {schema.vexlink},
-        schema.acyclic {'parent', 'parent-cycle'},
-        schema.hasvalidparent
+        schema.acyclic {'parent', 'parent-cycle'}
     }
 })

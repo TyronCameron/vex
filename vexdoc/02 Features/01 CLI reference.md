@@ -168,7 +168,6 @@ Values are separated by `:`.
 | `--between field:low:high` | Tasks with `low <= field <= high`. Leave `low` or `high` empty for an open side: `cost::9`. Dates may be `YYYY-MM-DD`. |
 | `--step field[:field...]` | The tasks one hop along `field`, such as `parent`, `children`, `forwardlinks` or `backlinks`. |
 | `--tree field[:field...]` | The tasks and everything reachable by following `field`, hop after hop. |
-| `--reversetree field[:field...]` | The tasks and everything that reaches them through `field`. |
 | `--complement` | Every task not in the focus. |
 | `--union focus` | Tasks in either focus. |
 | `--intersect focus` | Tasks in both. |

@@ -24,7 +24,7 @@ A focus is a saved query over your tasks. `vex focus` builds one and most other 
 | `--rn` | Numbers each group's tasks from 1. |
 | `--first n`, `--last n` | The first or last `n` tasks, per group after `--groupby`. Order them with `--orderby` first. |
 | `--step field` | The tasks one hop along `field`: `parent`, `children`, `forwardlinks`, `backlinks`. |
-| `--tree field`, `--reversetree field` | The tasks plus everything reachable from, or reaching, them through `field`. |
+| `--tree field` | The tasks plus everything reachable from them through `field`: `--tree children` walks down the hierarchy, `--tree parent` walks up it. |
 | `--union`, `--intersect`, `--xor`, `--notin`, `--onlyin`, `--complement` | Set operations. |
 
 ## Named focuses

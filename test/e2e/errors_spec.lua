@@ -26,6 +26,7 @@ describe("vex user-facing errors (e2e, subprocess)", function()
     {"an unknown shell", "is not known", {"autocomplete", "nosuchshell"}},
     {"a malformed match", "Bad pattern `[a`", {"focus", "all", "--match", "description:[a"}},
     {"an unknown focus operation", "Unknown focus operation `bogus`", {"focus", "all", "--bogus", "x"}},
+    {"the retired reversetree", "Unknown focus operation `reversetree`", {"focus", "all", "--reversetree", "children"}},
     {"contains without a value", "You need to provide a field and value", {"focus", "all", "--contains", "tags"}},
     {"a manual tag with a space", "Expected a tag", {"add", "Spaced", "tag", "task", "--manualtags", "two words"}},
     {"a recurring recipe without a recurrence", "The `recurring` recipe needs `--recur`", {"recipe", "recurring", "Wash", "dishes"}},
@@ -125,13 +126,13 @@ describe("vex user-facing errors (e2e, subprocess)", function()
 
   it("rejects a parent whose type has no children", function()
     local atom = vex(dir, "add", "Childless", "atom", "task", "--vextype", "atom")
-    fails(dir, "are leaves and have no children", "add", "Orphaned", "child", "task", "--parent", atom)
+    fails(dir, "is an `atom`, which can't have children", "add", "Orphaned", "child", "task", "--parent", atom)
   end)
 
   it("rejects a parent that another task depends on", function()
     local needed = vex(dir, "add", "Needed", "plain", "task")
     vex(dir, "add", "Needing", "plain", "task", "--dependencies", needed)
-    fails(dir, "depends on `" .. needed .. "`", "add", "Late", "child", "task", "--parent", needed)
+    fails(dir, "because it has children", "add", "Late", "child", "task", "--parent", needed)
   end)
 
   it("rejects two files holding one vexid", function()

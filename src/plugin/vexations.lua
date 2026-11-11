@@ -3,7 +3,15 @@ local recipe = require 'core.recipe'
 local vexdex = require 'core.vexdex'
 local func = require 'lib.func'
 local schema = require 'lib.schema'
+local cli = require 'lib.cli'
 require 'core.schemaext'
+
+schema.register 'hasnochildren' {
+    validate = function(self, children, context)
+        if children then cli:throw('has-children', context.vexid, context.task.vextype, children[1]) end
+        return true
+    end
+}
 
 task:task 'abstract':extends 'basetask' {
     schema = schema.atleast {
@@ -34,6 +42,7 @@ task:task 'exploration':extends 'basetask' {
         status = schema.status,
         dependencies = schema.dependencies,
         vexbody = schema.empty,
+        children = schema.unstored {schema.hasnochildren},
     }
 }
 
@@ -41,6 +50,7 @@ task:task 'atom':extends 'basetask' {
     schema = schema.atleast {
         status = schema.status,
         dependencies = schema.dependencies,
+        children = schema.unstored {schema.hasnochildren},
     }
 }
 
@@ -50,15 +60,6 @@ recipe:recipe 'abstract' {
         return {task:add(taskproperties)}
     end 
 }
-
-for _, vextype in ipairs({'exploration', 'atom'}) do
-    task:transient 'leaf' {
-        vextype = vextype,
-        definition = function(t)
-            return true
-        end
-    }
-end
 
 local function inabstract(name)
     local add = recipe.recipes[name].add

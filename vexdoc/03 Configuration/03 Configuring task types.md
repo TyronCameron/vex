@@ -50,12 +50,13 @@ $ vex focus all --select shouting
 
 A definition can read other fields and transients, and query other tasks through `focus`.
 
-A type redefines an inherited transient by registering its own. Every task takes children unless its type's `leaf` transient is true, which is how atoms and explorations refuse them. A task naming a leaf as its `parent` then fails with `leaf-parent`:
+A type redefines an inherited transient by registering its own.
+
+A type checks a transient through its schema with `schema.unstored`, which validates the value a field reads without ever storing it. Every task takes children unless its type says otherwise. Atoms and explorations refuse them with the vexations plugin's `hasnochildren` check on `children`, and a type of your own can do the same. Then a task naming one as its `parent` fails with `has-children`:
 
 ```lua
-task:transient 'leaf' {
-    vextype = 'bug',
-    definition = function(t) return true end
+task:task 'chore':extends 'task' {
+    schema = schema.atleast { children = schema.unstored {schema.hasnochildren} }
 }
 ```
 

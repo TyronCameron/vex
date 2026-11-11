@@ -120,7 +120,7 @@ describe("vex CLI lifecycle (e2e, subprocess)", function()
   it("vex set refuses to switch an abstract with children to an atom", function()
     local parent = vex(dir, "add", "Plan", "the", "trip", "--vextype", "abstract")
     vex(dir, "add", "Book", "flights", "--parent", parent)
-    helper.vex_fails(dir, "are leaves and have no children", "set", parent, "--vextype", "atom")
+    helper.vex_fails(dir, "can't have children", "set", parent, "--vextype", "atom")
   end)
 
   it("vex set never keeps a repeated dependency", function()

@@ -116,6 +116,8 @@ timed("vex set atom-1-1 (hub) --due tomorrow", dir, "set", atom(1), "--due", "to
 timed("vex add (no links)", dir, "add", "Unlinked atom", "--vextype", "atom")
 timed("vex add (depends on hub)", dir, "add", "Hub dependent atom", "--vextype", "atom", "--dependencies", atom(1))
 timed("vex view all csv", dir, "view", "all", "csv")
+timed("vex focus group-1-1 --tree children (down)", dir, "focus", group(1), "--tree", "children")
+timed(string.format("vex focus %s --tree parent (up)", atom(atoms)), dir, "focus", atom(atoms), "--tree", "parent")
 
 helper.rm_tmp_dir(dir)
 

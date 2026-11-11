@@ -211,18 +211,11 @@ cli:error 'parent-cycle' {
     hint = "A task cannot be its own parent or sit under one of its own descendants. Choose another parent, or remove it with `--clear --parent`."
 }
 
-cli:error 'leaf-parent' {
-    function(vexid, parent, vextype)
-        return 'Task `' .. tostring(vexid) .. '` cannot sit under `' .. tostring(parent) .. '`, because tasks of type `' .. tostring(vextype) .. '` are leaves and have no children.'
+cli:error 'has-children' {
+    function(vexid, vextype, child)
+        return 'Task `' .. tostring(vexid) .. '` is an `' .. tostring(vextype) .. '`, which can\'t have children, but `' .. tostring(child) .. '` names it as its parent.'
     end,
-    hint = "Choose a parent of a type that takes children, such as an abstract, or change the type of the parent."
-}
-
-cli:error 'depended-parent' {
-    function(vexid, parent, dependent)
-        return 'Task `' .. tostring(vexid) .. '` cannot sit under `' .. tostring(parent) .. '`, because `' .. tostring(dependent) .. '` depends on `' .. tostring(parent) .. '`.'
-    end,
-    hint = "Nothing may depend on a task with children. Remove that dependency first, or have it depend on the tasks under the parent instead."
+    hint = "Move the child under a task that takes children, such as an abstract, or clear its parent with `--clear --parent`."
 }
 
 cli:error 'immutable-vexid' {

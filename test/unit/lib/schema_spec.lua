@@ -668,6 +668,37 @@ describe("schema", function()
         end)
     end)
 
+    describe("unstored", function()
+        local derived = {__index = function(_, key) if key == 'kids' then return {"a", "b"} end end}
+        local s = schema.atleast {kids = schema.unstored {schema.vec {schema.str}}}
+
+        it("checks the value a field reads without storing it", function()
+            local instance = setmetatable({}, derived)
+            assert.equal(instance, s:prevalidate(instance, {}))
+            assert.is_nil(rawget(instance, 'kids'))
+            assert.is_true(s:validate(instance, {}))
+            s:postvalidate(instance, {})
+            assert.is_nil(rawget(instance, 'kids'))
+        end)
+
+        it("fails when the value it reads is wrong", function()
+            local wrong = setmetatable({}, {__index = function(_, key) if key == 'kids' then return {1} end end})
+            assert.is_false(s:validate(wrong, {}))
+        end)
+
+        it("is left out when formatted, and kept when unformatted", function()
+            assert.is_nil(s:apply('format', setmetatable({}, derived)).kids)
+            assert.same({"a"}, s:unapply('format', {kids = {"a"}}).kids)
+        end)
+
+        it("fails when the field is stored", function()
+            local instance = setmetatable({kids = {"a"}}, derived)
+            local ok, failure = s:validate(instance, {})
+            assert.is_false(ok)
+            assert.truthy(tostring(failure):find("can't be stored", 1, true))
+        end)
+    end)
+
     describe("path", function()
         it("normalises a relative path when prevalidating it", function()
             assert.equal("a/b", schema.path:prevalidate("./a//b/"))
