@@ -5,5 +5,6 @@ description: Write a troubleshooting FAQ
 created: "2026-10-29 23:48:42"
 modified: "2026-10-30 00:54:44"
 status: done
+parent: "[[write-missing-documentation-1]]"
 ---
 Cover an empty focus, a stale index, and a rejected set, each with the fix.

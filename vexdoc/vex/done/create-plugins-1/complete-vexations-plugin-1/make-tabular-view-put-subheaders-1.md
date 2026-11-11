@@ -5,6 +5,7 @@ description: Make tabular view put subheaders up for abstracts
 created: "2026-10-19 07:28:00"
 modified: "2026-10-25 12:12:32"
 status: done
+parent: "[[complete-vexations-plugin-1]]"
 ---
 
 When the tabular view shows abstracts and their descendants, group rows under a subheader per abstract (following `children`), instead of one flat table.

@@ -44,6 +44,8 @@ task:task 'basetask' {
         owner = schema.maybe {schema.any(config.taskowners)},
         manualtags = schema.maybe {schema.vec {schema.tagoverride}},
         tags = schema.autotagged,
+        parent = schema.parent,
+        children = schema.unstored {schema.isvalidparent},
         recur = schema.maybe {schema.recurrence},
         over = schema.default {
             schema.maybe {schema.datefield},
@@ -61,11 +63,6 @@ event:register('post-task-resolve', 'recur', function(vexid, t, previous)
     nexttask[t.over] = naturaltime.parse(t.recur, t[t.over] or os.time())
     local successor = task:add(nexttask)
     task:resolve(successor)
-    local parent = t.parent
-    if parent and task:getsingle(parent).children then
-        task:set(parent, {children = successor}, {children = 'insert'})
-        task:resolve(parent)
-    end
 end)
 
 task:task 'task':extends 'basetask' {
@@ -141,16 +138,19 @@ task:transient 'dependents' {
 task:transient 'lineage' {
     vextype = 'basetask',
     definition = function(t)
-        local ancestors = focus.focus(t.vexid):reversetree('children', 'options'):get()
+        local ancestors = focus.focus(t.vexid):tree('parent'):get()
         return func.reverse(func.imap(func.slice(ancestors, 2, 'end'), function(ancestor) return ancestor.vexid end))
     end
 }
 
-task:transient 'parent' {
+task:transient 'children' {
     vextype = 'basetask',
     definition = function(t)
-        local ancestors = focus.focus(t.vexid):reversetree('children', 'options'):get()
-        return ancestors[2] and ancestors[2].vexid
+        local children = func.ifilter(t.backlinks, function(vexid)
+            local other = vexdex:get(vexid)
+            return other and other.parent == t.vexid
+        end)
+        return #children > 0 and children or nil
     end
 }
 

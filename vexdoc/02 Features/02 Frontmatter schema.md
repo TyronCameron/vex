@@ -14,7 +14,8 @@ Every task is validated against the schema of its `vextype` and of each type tha
 | `due` | datetime | Optional. When a task has none, vex fills in the earliest `due` of the open tasks that depend on it, the date it is needed by; it stays empty if none of them has one. Once set it is an ordinary date: it doesn't change again unless you change it (`vex set <id> --clear --due` lets it be filled in afresh). A task can't be due before one of its open dependencies (equal dates are fine; tasks without a `due`, and finished tasks, don't count), otherwise vex fails with `due-out-of-order`. |
 | `cost`, `benefit` | number | Optional. |
 | `owner` | text | Optional. Must be one of the `taskowners` in `.vex/config.lua`. |
-| `dependencies` | list of links | Optional. Each entry must be an existing task without `children` or `options`, and dependencies can't form a cycle. |
+| `parent` | link | Optional. The task this one sits under, such as an abstract or a decision. It must exist, take children (explorations and atoms don't), have nothing depending on it, and not be the task itself or one of its descendants. |
+| `dependencies` | list of links | Optional. Each entry must be an existing task without children, and dependencies can't form a cycle. |
 | `manualtags` | list of tags | Optional. Your own tags, which override the tag rules: `#pinned` always tags the task, `-#review` never does. vex adds a missing `#`. If a tag is both pinned and suppressed, suppressed wins (see below). |
 | `recur` | text | Optional. How often the task comes back: `daily`, `weekly`, `monthly`, `3 days` and the like. When the task reaches a final status, vex adds the next one, with its `over` date moved on by this much, among the same parent's children. |
 | `over` | field name | The date field `recur` moves along. `due` when `recur` is set. Must name a `date` or `datetime` field. |
@@ -46,11 +47,11 @@ The first command pins `#pinned` and suppresses `#review`. The second hands `#re
 
 | Field | Type | Types | Description |
 | --- | --- | --- | --- |
-| `children` | list of links | `abstract` | The tasks this one groups. Defaults to an empty list. A task can be the child of only one abstract. |
-| `options` | list of links | `decision` | Required. The tasks being chosen between. |
-| `decision` | link | `decision` | Optional. The chosen option; it must be one of `options`. |
+| `decision` | link | `decision` | Optional. The chosen option; it must be one of the decision's children. |
 
-`abstract` and `exploration` tasks must have an empty body. `decision`, `exploration` and `atom` tasks can't have `children`.
+`abstract` and `exploration` tasks must have an empty body. `abstract` and `decision` tasks can't have `dependencies`.
+
+A task's `children` aren't stored: they are the tasks whose `parent` it is, worked out each time they are read, like the other transients. `vex get <id> --children` lists them.
 
 ## Transients
 

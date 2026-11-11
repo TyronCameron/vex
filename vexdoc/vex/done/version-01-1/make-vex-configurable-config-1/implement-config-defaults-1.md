@@ -5,6 +5,7 @@ description: "Choose each plugin slot's active member from config.lua"
 created: "2026-07-06 12:00:00"
 modified: "2026-11-04 02:09:23"
 status: done
+parent: "[[make-vex-configurable-config-1]]"
 ---
 
 Ensure that every plugin is swappable and changeable through the config file.

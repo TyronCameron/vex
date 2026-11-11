@@ -5,6 +5,7 @@ description: Create the next occurrence when a recurring task is done
 created: "2026-10-19 21:29:42"
 modified: "2026-11-07 11:27:25"
 status: done
+parent: "[[support-recurring-tasks-1]]"
 ---
 
 We want recurring tasks. What is known so far:

@@ -5,6 +5,7 @@ description: Allow splatting a focus into other operations
 created: "2026-10-29 22:31:16"
 modified: "2026-10-30 03:17:28"
 status: done
+parent: "[[nonessential-enhancements-1]]"
 ---
 
 Let a saved focus feed its vexids into a list field of another command, so a query result can become links without typing the vexids:

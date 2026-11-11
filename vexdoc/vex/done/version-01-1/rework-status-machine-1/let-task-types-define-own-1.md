@@ -5,6 +5,7 @@ description: Let task types define their own statuses as subtypes of todo doing 
 created: "2026-10-19 20:55:58"
 modified: "2026-10-30 07:09:14"
 status: done
+parent: "[[rework-status-machine-1]]"
 ---
 
 The design journal ([[Vex]], "Statuses") says users can create new statuses for their tasks, as subtypes of `todo`, `doing` and `done`. Today the status machine is fixed in the base `task` schema (`src/core/taskdefinitions.lua`). A custom type can only replace the whole `status` field, and the `phase` transient then reads its own states.

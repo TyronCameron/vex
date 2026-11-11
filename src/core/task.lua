@@ -329,7 +329,10 @@ function TaskManager:reindexall(force)
             local other = found[task.vexid] or (recorded[task.vexid] and vexdex:taskroot() .. '/' .. recorded[task.vexid])
             if other and lfs.attributes(other, 'mode') == 'file' then cli:throw('duplicate-vexid', task.vexid, other, path) end
             found[task.vexid] = path
-            if not vexdex:get(task.vexid) then self:index(task.vexid) end
+            if not vexdex:get(task.vexid) then
+                self:index(task.vexid)
+                if self.tasktypes[task.vextype] then vexdex:unsafe_link(task.vexid, self:forwardlinks(task)) end
+            end
             table.insert(vexids, task.vexid)
         end
     end

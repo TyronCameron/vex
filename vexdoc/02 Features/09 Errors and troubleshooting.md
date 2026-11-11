@@ -13,7 +13,7 @@ Every user mistake fails with a named error, a message and a hint, and exits non
 | `uninterpretable` | A time phrase in a focus (`--between due:someday:now`) that vex can't read. A bad `--due` on `add` or `set` is a normalisation failure instead. | Use a phrase from [[01 CLI reference#Interpreting times]]. |
 | `unknown-vextype` | `--vextype` names a type that isn't registered. | Use `task`, `abstract`, `decision`, `exploration`, `atom` or one from `.vex/tasks`. |
 | `unknown-view`, `unknown-recipe` | No such view or recipe. | `vex view` and `vex recipe` list them. |
-| `unknown-modifier` | `--insert` or `--remove` before something that isn't a list field. | `vex set x --insert --children a,b`, or `--clear` to unset a field. |
+| `unknown-modifier` | `--insert` or `--remove` before something that isn't a list field. | `vex set x --insert --dependencies a,b`, or `--clear` to unset a field. |
 | `clear-with-value` | `--clear` before a field that is also given a value. | Use `vex set x --clear --field` alone, or drop `--clear`. |
 | `missing-value` | A `set` flag with no value. | Give it one, or put `--clear` before it to unset the field. |
 | `immutable-vexid` | `vex set --vexid`. | A vexid is the task's identity: add a new task and remove the old one. |
@@ -21,10 +21,10 @@ Every user mistake fails with a named error, a message and a hint, and exits non
 | `task-creation-failed` | A description of 3 characters or fewer. | Describe the task in at least two words. |
 | `task-already-exists`, `path-already-exists` | The new vexid or file path is taken. | Reword the description, or `vex resolve all` if the file isn't indexed. |
 | `resolution-failed-normalisation`, `-validation`, `-derivation` | A field is invalid. The message names the field, and the footer links the file. | Fix the value, or the file if you edited it by hand. The task stays as it was. |
-| `multiple-parents` | A task is in two abstracts' `children`. | Remove it from one. |
-| `self-child` | A task is in its own `children`. | Remove it. |
+| `parent-cycle` | A task's `parent` is the task itself or one of its descendants. | Choose another parent, or `--clear --parent`. |
+| `has-children` | A task names an atom or an exploration as its `parent`; those types take no children. | Move the child under an abstract or a decision, or `--clear --parent`. |
 | `dependency-cycle` | Dependencies that lead back to the task. | Remove one of them. |
-| `dependency-with-children` | A dependency on an abstract or a decision. | Depend on the atoms under it. |
+| `dependency-with-children` | A dependency on a task that has children, such as an abstract or a decision, or a child under a task something depends on. | Depend on the tasks under it. |
 | `due-out-of-order` | A task is due earlier than one of its dependencies. | Change one of the due dates. |
 | `duplicate-vexid` | Two files hold the same `vexid`, usually a copied task file. | Keep one. Nothing was changed. |
 | `bad-autotags` | `autotags` isn't a table of tag names mapped to functions. | `autotags = { done = function(t) return t.phase == 'final' end }`. |
@@ -40,7 +40,7 @@ Every user mistake fails with a named error, a message and a hint, and exits non
 
 **vex doesn't see a file I added or edited.** A command picks up an edited file when the task is in its focus, but a filter runs over the index first. Run `vex resolve all` to take in every changed or new file.
 
-**`set` was rejected.** The message says which field and why; the file is left as it was. The usual causes: a status that goes backwards ([[06 Status and state machines]]), a `children` or `dependencies` entry that breaks the rules above, an `owner` missing from `taskowners`.
+**`set` was rejected.** The message says which field and why; the file is left as it was. The usual causes: a status that goes backwards ([[06 Status and state machines]]), a `parent` or `dependencies` entry that breaks the rules above, an `owner` missing from `taskowners`.
 
 **A file is in the wrong folder.** Run `vex resolve all`, or `vex resolve all --force` after changing `paths.groupby`. With `paths.groupby`, vex owns the layout and moves files back.
 

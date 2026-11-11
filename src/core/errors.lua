@@ -204,18 +204,18 @@ cli:error 'resolution-failed-linking' {
     hint = "Ensure that data is correct and that the tasktype definitions in `config.lua` are sound."
 }
 
-cli:error 'multiple-parents' {
-    function(vexid, parent, otherparent)
-        return 'Task `' .. tostring(vexid) .. '` cannot be a child of both `' .. tostring(parent) .. '` and `' .. tostring(otherparent) .. '`.'
+cli:error 'parent-cycle' {
+    function(vexid, parent)
+        return 'Task `' .. tostring(vexid) .. '` cannot sit under `' .. tostring(parent) .. '`, because `' .. tostring(parent) .. '` is already beneath it.'
     end,
-    hint = "A task may appear in at most one abstract's `children`. Remove it from one of them."
+    hint = "A task cannot be its own parent or sit under one of its own descendants. Choose another parent, or remove it with `--clear --parent`."
 }
 
-cli:error 'self-child' {
-    function(vexid)
-        return 'Task `' .. tostring(vexid) .. '` cannot be a child of itself.'
+cli:error 'has-children' {
+    function(vexid, vextype, child)
+        return 'Task `' .. tostring(vexid) .. '` is an `' .. tostring(vextype) .. '`, which can\'t have children, but `' .. tostring(child) .. '` names it as its parent.'
     end,
-    hint = "Remove the task from its own `children`."
+    hint = "Move the child under a task that takes children, such as an abstract, or clear its parent with `--clear --parent`."
 }
 
 cli:error 'immutable-vexid' {
@@ -241,9 +241,9 @@ cli:error 'due-out-of-order' {
 
 cli:error 'dependency-with-children' {
     function(vexid, dependency)
-        return 'Task `' .. tostring(vexid) .. '` cannot depend on `' .. tostring(dependency) .. '`, because it has children or options.'
+        return 'Task `' .. tostring(vexid) .. '` cannot depend on `' .. tostring(dependency) .. '`, because it has children.'
     end,
-    hint = "Depend on the atoms under an abstract, or on the option a decision chose, instead."
+    hint = "Depend on the tasks under it instead, such as the atoms under an abstract or the option a decision chose."
 }
 
 cli:error "unknown-view" {
@@ -292,7 +292,7 @@ cli:error "unknown-modifier" {
     function(modifier)
         return 'Unknown modifier `' .. tostring(modifier) .. '`.'
     end,
-    hint = "Put `--insert` or `--remove` before a list field, e.g. `vex set my-task --insert --children a,b`, or `--clear` before any field to unset it."
+    hint = "Put `--insert` or `--remove` before a list field, e.g. `vex set my-task --insert --dependencies a,b`, or `--clear` before any field to unset it."
 }
 
 cli:error "clear-with-value" {

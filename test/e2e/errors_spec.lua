@@ -26,6 +26,7 @@ describe("vex user-facing errors (e2e, subprocess)", function()
     {"an unknown shell", "is not known", {"autocomplete", "nosuchshell"}},
     {"a malformed match", "Bad pattern `[a`", {"focus", "all", "--match", "description:[a"}},
     {"an unknown focus operation", "Unknown focus operation `bogus`", {"focus", "all", "--bogus", "x"}},
+    {"the retired reversetree", "Unknown focus operation `reversetree`", {"focus", "all", "--reversetree", "children"}},
     {"contains without a value", "You need to provide a field and value", {"focus", "all", "--contains", "tags"}},
     {"a manual tag with a space", "Expected a tag", {"add", "Spaced", "tag", "task", "--manualtags", "two words"}},
     {"a recurring recipe without a recurrence", "The `recurring` recipe needs `--recur`", {"recipe", "recurring", "Wash", "dishes"}},
@@ -117,13 +118,21 @@ describe("vex user-facing errors (e2e, subprocess)", function()
     fails(dir, "validation step failed", "resolve", "all")
   end)
 
-  it("rejects a task that is a child of two abstracts", function()
-    local child = vex(dir, "add", "Shared", "child", "task")
-    local first = vex(dir, "add", "First", "parent", "--vextype", "abstract")
-    local second = vex(dir, "add", "Second", "parent", "--vextype", "abstract")
-    helper.link(dir, first, "children", {child})
-    helper.link(dir, second, "children", {child})
-    fails(dir, "cannot be a child of both", "resolve", "all")
+  it("rejects a parent cycle", function()
+    local first = vex(dir, "add", "First", "cycling", "parent", "--vextype", "abstract")
+    local second = vex(dir, "add", "Second", "cycling", "parent", "--vextype", "abstract", "--parent", first)
+    fails(dir, "is already beneath it", "set", first, "--parent", second)
+  end)
+
+  it("rejects a parent whose type has no children", function()
+    local atom = vex(dir, "add", "Childless", "atom", "task", "--vextype", "atom")
+    fails(dir, "is an `atom`, which can't have children", "add", "Orphaned", "child", "task", "--parent", atom)
+  end)
+
+  it("rejects a parent that another task depends on", function()
+    local needed = vex(dir, "add", "Needed", "plain", "task")
+    vex(dir, "add", "Needing", "plain", "task", "--dependencies", needed)
+    fails(dir, "because it has children", "add", "Late", "child", "task", "--parent", needed)
   end)
 
   it("rejects two files holding one vexid", function()
@@ -138,9 +147,9 @@ describe("vex user-facing errors (e2e, subprocess)", function()
     fails(dir, "field = vextype", "resolve", "all")
   end)
 
-  it("rejects an abstract listing itself as a child", function()
+  it("rejects a task as its own parent", function()
     local parent = vex(dir, "add", "Self", "parent", "--vextype", "abstract")
-    fails(dir, "cannot be a child of itself", "set", parent, "--children", parent)
+    fails(dir, "is already beneath it", "set", parent, "--parent", parent)
   end)
 
   it("rejects changing a vexid", function()
@@ -162,10 +171,10 @@ describe("vex user-facing errors (e2e, subprocess)", function()
   end)
 
   it("rejects a dependency on a task with children", function()
-    local leaf = vex(dir, "add", "Grouped", "leaf", "task")
     local parent = vex(dir, "add", "Grouping", "parent", "--vextype", "abstract")
+    local leaf = vex(dir, "add", "Grouped", "leaf", "task")
     local dependent = vex(dir, "add", "Needy", "dependent", "task")
-    helper.link(dir, parent, "children", {leaf})
+    helper.link(dir, leaf, "parent", parent)
     vex(dir, "resolve", "all")
     fails(dir, "has children", "set", dependent, "--dependencies", parent)
   end)

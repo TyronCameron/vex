@@ -1,4 +1,3 @@
-local cli = require 'lib.cli'
 local schema = require 'lib.schema'
 require 'core.schemaext'
 
@@ -68,25 +67,10 @@ describe("schemaext", function()
         end)
     end)
 
-    describe("children", function()
-        it("defaults to an empty list", function()
-            assert.same({}, schema.children:prevalidate(nil, {}))
-        end)
-    end)
-
-    describe("constraints", function()
-        before_each(function()
-            stub(cli, 'throw', function(self, name) error(name) end)
-        end)
-
-        after_each(function()
-            cli.throw:revert()
-        end)
-
-        it("refuses a task that is its own child", function()
-            assert.has_error(function() schema.notself:validate("a-task-1", {vexid = "a-task-1"}) end)
-            assert.stub(cli.throw).was.called_with(cli, 'self-child', "a-task-1")
-            assert.is_true(schema.notself:validate("other-task-1", {vexid = "a-task-1"}))
+    describe("parent", function()
+        it("is optional", function()
+            assert.is_nil(schema.parent:prevalidate(nil, {}))
+            assert.is_true(schema.parent:validate(nil, {}))
         end)
     end)
 
