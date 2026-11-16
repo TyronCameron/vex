@@ -52,11 +52,11 @@ A definition can read other fields and transients, and query other tasks through
 
 A type redefines an inherited transient by registering its own.
 
-A type checks a transient through its schema with `schema.unstored`, which validates the value a field reads without ever storing it. Every task takes children unless its type says otherwise. Atoms and explorations refuse them with the vexations plugin's `hasnochildren` check on `children`, and a type of your own can do the same. Then a task naming one as its `parent` fails with `has-children`:
+Every task takes children unless its type says otherwise. Atoms and explorations refuse them with `children = schema.none` in their schema, and a type of your own can do the same. `children` is a transient, so the check reads the tasks that name this one as `parent`. Once a task names such a type as its `parent`, that task fails to resolve:
 
 ```lua
 task:task 'chore':extends 'task' {
-    schema = schema.atleast { children = schema.unstored {schema.hasnochildren} }
+    schema = schema.atleast { children = schema.none }
 }
 ```
 

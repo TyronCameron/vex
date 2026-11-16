@@ -6,12 +6,15 @@ local schema = require 'lib.schema'
 local cli = require 'lib.cli'
 require 'core.schemaext'
 
-schema.register 'hasnochildren' {
-    validate = function(self, children, context)
-        if children then cli:throw('has-children', context.vexid, context.task.vextype, children[1]) end
+schema.register 'dependable' {
+    validate = function(self, dependency, context)
+        local vextype = task:getsingle(dependency).vextype
+        if vextype == 'abstract' or vextype == 'decision' then cli:throw('undependable', context.vexid, dependency, vextype) end
         return true
     end
 }
+
+local dependencies = schema.all {schema.dependencies, schema.maybe {schema.vec {schema.dependable}}}
 
 task:task 'abstract':extends 'basetask' {
     schema = schema.atleast {
@@ -40,17 +43,17 @@ task:task 'decision':extends 'basetask' {
 task:task 'exploration':extends 'basetask' {
     schema = schema.atleast {
         status = schema.status,
-        dependencies = schema.dependencies,
+        dependencies = dependencies,
         vexbody = schema.empty,
-        children = schema.unstored {schema.hasnochildren},
+        children = schema.none,
     }
 }
 
 task:task 'atom':extends 'basetask' {
     schema = schema.atleast {
         status = schema.status,
-        dependencies = schema.dependencies,
-        children = schema.unstored {schema.hasnochildren},
+        dependencies = dependencies,
+        children = schema.none,
     }
 }
 

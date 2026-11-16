@@ -20,11 +20,10 @@ Every user mistake fails with a named error, a message and a hint, and exits non
 | `recipe-needs-flag` | `vex recipe recurring` without `--recur`, or `vex recipe repeat` without a whole number above 0 for `--n`. | Add the flag. |
 | `task-creation-failed` | A description of 3 characters or fewer. | Describe the task in at least two words. |
 | `task-already-exists`, `path-already-exists` | The new vexid or file path is taken. | Reword the description, or `vex resolve all` if the file isn't indexed. |
-| `resolution-failed-normalisation`, `-validation`, `-derivation` | A field is invalid. The message names the field, and the footer links the file. | Fix the value, or the file if you edited it by hand. The task stays as it was. |
+| `resolution-failed-normalisation`, `-validation`, `-derivation` | A field is invalid. The message names the field, and the footer links the file. A failure on `children` means a task names an atom or an exploration as its `parent`, and those take no children. | Fix the value, or the file if you edited it by hand. The task stays as it was. |
 | `parent-cycle` | A task's `parent` is the task itself or one of its descendants. | Choose another parent, or `--clear --parent`. |
-| `has-children` | A task names an atom or an exploration as its `parent`; those types take no children. | Move the child under an abstract or a decision, or `--clear --parent`. |
 | `dependency-cycle` | Dependencies that lead back to the task. | Remove one of them. |
-| `dependency-with-children` | A dependency on a task that has children, such as an abstract or a decision, or a child under a task something depends on. | Depend on the tasks under it. |
+| `undependable` | An atom or an exploration depends on an abstract or a decision. | Depend on the tasks under it. |
 | `due-out-of-order` | A task is due earlier than one of its dependencies. | Change one of the due dates. |
 | `duplicate-vexid` | Two files hold the same `vexid`, usually a copied task file. | Keep one. Nothing was changed. |
 | `bad-autotags` | `autotags` isn't a table of tag names mapped to functions. | `autotags = { done = function(t) return t.phase == 'final' end }`. |

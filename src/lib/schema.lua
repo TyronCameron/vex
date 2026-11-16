@@ -103,7 +103,6 @@ function Schema.new(definition)
         _postvalidate = definition.postvalidate,
         _iterate = definition.iterate,
         _isos = definition.isos,
-        _stored = definition.stored ~= false,
         _error = definition.error,
         _name = definition.name or 'schema',
         extra = definition.extra or {} 
@@ -232,7 +231,7 @@ function Schema:postvalidate(value, context)
 end
 
 local function transform(self, isoname, direction, value, context)
-    if value == nil or (direction == 'forward' and not self._stored) then return nil end
+    if value == nil then return nil end
     if self._isos and self._isos[isoname] then
         if direction == 'forward' and not self:validate(value) then return value end
         local ok, res = pcall(self._isos[isoname][direction], self, value, context)
@@ -855,26 +854,7 @@ Schema.register 'derive' {
     postvalidate = postvalidate_children
 }
 
--- checks a value worked out elsewhere, such as a transient, and never stores one
-Schema.register 'unstored' {
-    stored = false,
-    iterate = function(self, instance, context)
-        return coroutine.wrap(function()
-            coroutine.yield(1, nil)
-        end)
-    end,
-    prevalidate = function() return nil end,
-    validate = function(self, instance, context)
-        local key = context.path[#context.path]
-        if key ~= nil and type(context.root) == "table" and rawget(context.root, key) ~= nil then
-            return false, "`" .. tostring(key) .. "` is worked out by vex and can't be stored"
-        end
-        return validate_children(self, instance, context)
-    end,
-    postvalidate = function() return nil end
-}
-
--- unformat when required
+-- unformat when required 
 Schema.register 'formatted' {
     iterate = function(self, instance, context)
         return coroutine.wrap(function()

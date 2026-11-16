@@ -106,7 +106,7 @@ describe("vex storage (e2e, subprocess)", function()
       local atom = vex(dir, "add", names[1], "--vextype", "atom")
       local child = vex(dir, "add", names[2])
       helper.link(dir, child, "parent", atom)
-      helper.vex_fails(dir, "can't have children", "resolve", "all", "--force")
+      helper.vex_fails(dir, "validation step failed while resolving `" .. atom .. "`", "resolve", "all", "--force")
     end)
   end
 

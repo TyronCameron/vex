@@ -30,20 +30,29 @@ describe("vexations", function()
 
     describe("links", function()
 
-        it("rejects a dependency on a task with children", function()
-            local parent = create({description = "depended on abstract", vextype = 'abstract'})
-            create({description = "grouped leaf task", parent = parent})
-            local dependent = task:add({description = "depending on abstract task", dependencies = {parent}})
-            assert.has_error(function() task:resolve(dependent) end)
-            assert.stub(cli.throw).was.called_with(cli, 'dependency-with-children', dependent, parent)
+        it("rejects an atom or an exploration depending on an abstract or a decision", function()
+            for _, vextype in ipairs({'abstract', 'decision'}) do
+                local target = create({description = "undependable " .. vextype .. " target", vextype = vextype})
+                for _, dependenttype in ipairs({'atom', 'exploration'}) do
+                    local dependent = task:add({description = "depending " .. dependenttype .. " on " .. vextype, vextype = dependenttype, dependencies = {target}})
+                    assert.has_error(function() task:resolve(dependent) end)
+                    assert.stub(cli.throw).was.called_with(cli, 'undependable', dependent, target, vextype)
+                end
+            end
         end)
 
-        it("rejects a dependency on a decision with options", function()
-            local decision = create({description = "depended on decision", vextype = 'decision'})
-            create({description = "optional leaf task", parent = decision})
-            local dependent = task:add({description = "depending on decision task", dependencies = {decision}})
-            assert.has_error(function() task:resolve(dependent) end)
-            assert.stub(cli.throw).was.called_with(cli, 'dependency-with-children', dependent, decision)
+        it("lets a plain task depend on an abstract", function()
+            local target = create({description = "dependable abstract target", vextype = 'abstract'})
+            local dependent = create({description = "plain task on abstract", dependencies = {target}})
+            assert.same({target}, task.tasks[dependent].dependencies)
+        end)
+
+        it("refuses to turn a task an atom depends on into an abstract", function()
+            local needed = create({description = "turning needed atom", vextype = 'atom'})
+            local dependent = create({description = "turning dependent atom", vextype = 'atom', dependencies = {needed}})
+            task:set(needed, {vextype = 'abstract'}, {status = 'clear'})
+            assert.has_error(function() task:resolve(needed) end)
+            assert.stub(cli.throw).was.called_with(cli, 'undependable', dependent, needed, 'abstract')
         end)
 
         it("places an abstract's phase from the phases of its children", function()
@@ -87,7 +96,7 @@ describe("vexations", function()
             local parent = create({description = "childless " .. vextype .. " parent", vextype = vextype})
             local child = task:add({description = "unwanted " .. vextype .. " child", parent = parent})
             assert.has_error(function() task:resolve(child) end)
-            assert.stub(cli.throw).was.called_with(cli, 'has-children', parent, vextype, child)
+            assert.stub(cli.throw).was.called_with(cli, 'resolution-failed-validation', parent, match._, match._)
         end
 
         it("lets an atom depend on an atom", function()
@@ -112,7 +121,7 @@ describe("vexations", function()
             local child = create({description = "switching parent child", parent = parent})
             task:set(parent, {vextype = 'atom'})
             assert.has_error(function() task:resolve(parent) end)
-            assert.stub(cli.throw).was.called_with(cli, 'has-children', parent, 'atom', child)
+            assert.stub(cli.throw).was.called_with(cli, 'resolution-failed-validation', parent, match._, match._)
         end)
 
         it("lets any task type sit under an abstract", function()

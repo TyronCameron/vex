@@ -120,24 +120,6 @@ schema.register 'acyclic' {
     end
 }
 
-schema.register 'childless' {
-    validate = function(self, dependency, context)
-        local target = focus.focus(dependency):get()[1]
-        if #(target.children or {}) > 0 then
-            cli:throw('dependency-with-children', context.vexid, dependency)
-        end
-        return true
-    end
-}
-
-schema.register 'isvalidparent' {
-    validate = function(self, children, context)
-        local dependents = children and context.task.dependents or {}
-        if #dependents > 0 then cli:throw('dependency-with-children', dependents[1], context.vexid) end
-        return true
-    end
-}
-
 schema.register 'dueinorder' {
     validate = function(self, dependency, context)
         local needed = vexdex:get(dependency)
@@ -180,7 +162,6 @@ schema.register 'dependencies' (schema.maybe {
         schema.all {
             schema.formatted {schema.vexlink},
             schema.acyclic {'dependencies', 'dependency-cycle'},
-            schema.childless,
             schema.dueinorder
         }
     }

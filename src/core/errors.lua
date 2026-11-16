@@ -211,13 +211,6 @@ cli:error 'parent-cycle' {
     hint = "A task cannot be its own parent or sit under one of its own descendants. Choose another parent, or remove it with `--clear --parent`."
 }
 
-cli:error 'has-children' {
-    function(vexid, vextype, child)
-        return 'Task `' .. tostring(vexid) .. '` is an `' .. tostring(vextype) .. '`, which can\'t have children, but `' .. tostring(child) .. '` names it as its parent.'
-    end,
-    hint = "Move the child under a task that takes children, such as an abstract, or clear its parent with `--clear --parent`."
-}
-
 cli:error 'immutable-vexid' {
     function(vexid)
         return 'The vexid of `' .. tostring(vexid) .. '` cannot be changed.'
@@ -239,11 +232,11 @@ cli:error 'due-out-of-order' {
     hint = "A task must be due no earlier than the tasks it depends on. Change one of the due dates."
 }
 
-cli:error 'dependency-with-children' {
-    function(vexid, dependency)
-        return 'Task `' .. tostring(vexid) .. '` cannot depend on `' .. tostring(dependency) .. '`, because it has children.'
+cli:error 'undependable' {
+    function(vexid, dependency, vextype)
+        return 'Task `' .. tostring(vexid) .. '` cannot depend on `' .. tostring(dependency) .. '`, because nothing can depend on a task of type `' .. tostring(vextype) .. '`.'
     end,
-    hint = "Depend on the tasks under it instead, such as the atoms under an abstract or the option a decision chose."
+    hint = "Depend on the tasks under it instead."
 }
 
 cli:error "unknown-view" {
