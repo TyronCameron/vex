@@ -1,6 +1,7 @@
 local task = require 'core.task'
 local recipe = require 'core.recipe'
 local focus = require 'core.focus'
+local vexdex = require 'core.vexdex'
 local func = require 'lib.func'
 local schema = require 'lib.schema'
 require 'core.schemaext'
@@ -8,7 +9,7 @@ require 'core.schemaext'
 task:task 'abstract':extends 'basetask' {
     schema = schema.atleast {
         vexbody = schema.maybe {schema.empty},
-        status = schema.none,
+        status = schema.raw {schema.none},
         options = schema.none,
         dependencies = schema.none,
         children = schema.children
@@ -40,7 +41,7 @@ task:task 'exploration':extends 'basetask' {
     schema = schema.atleast {
         status = schema.status,
         dependencies = schema.dependencies,
-        vexbody = schema.empty,
+        vexbody = schema.maybe {schema.empty},
         children = schema.none,
         options = schema.none,
     }
@@ -81,10 +82,9 @@ inabstract 'repeat'
 local function childphases(t)
     local children = rawget(t, 'children')
     if type(children) ~= "table" then children = {children} end
-    local indexed = func.ifilter(focus.focus('all'):get(), function(child)
-        return func.any(children, function(vexid) return vexid == child.vexid end)
-    end)
-    return func.imap(indexed, function(child) return child.phase end)
+    local indexed = func.ifilter(children, function(vexid) return vexdex:get(vexid) end)
+    if #indexed == 0 then return {} end
+    return func.imap(focus.focus(indexed):get(), function(child) return child.phase end)
 end
 
 task:transient 'phase' {

@@ -97,6 +97,16 @@ function func.values(tab)
 	return values 
 end
 
+function func.setdiff(list, others)
+	local seen = {}
+	for _, value in ipairs(others) do seen[value] = true end
+	return func.ifilter(list, function(value)
+		if seen[value] then return false end
+		seen[value] = true
+		return true
+	end)
+end
+
 function func.imerge(a, b)
 	local tab = {}
 	for _, value in ipairs(a) do

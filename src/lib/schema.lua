@@ -40,9 +40,10 @@ function Context:snapshot()
     }, Context)
 end
 
-local function stored(instance, key)
-    if type(instance) == "table" then return rawget(instance, key) end
-    return instance[key]
+-- reads a child's value from its container, the way the child's schema says to (`schema.raw` reads it as stored)
+local function read(childschema, container, key)
+    if childschema then return childschema:_read(container, key) end
+    return container[key]
 end
 
 function Context:descend(schemakey, instancekey, fn)
@@ -55,7 +56,7 @@ function Context:descend(schemakey, instancekey, fn)
     end
     if instancekey ~= nil then
         table.insert(self.path, instancekey)
-        self.currentvalue = stored(self.currentvalue, instancekey)
+        self.currentvalue = read(self.currentschema, self.currentvalue, instancekey)
     end
 
     local value = fn()
@@ -87,6 +88,9 @@ Schema.__call = function(self, ...)
     if specification ~= nil then complete_schema.specification = specification end
     return complete_schema
 end
+function Schema:_read(container, key)
+    return container[key]
+end
 Schema.__tostring = function(self)
     return tostring(self._name)
 end
@@ -107,6 +111,7 @@ function Schema.new(definition)
         _validate = definition.validate,
         _postvalidate = definition.postvalidate,
         _iterate = definition.iterate,
+        _read = definition.read,
         _isos = definition.isos,
         _error = definition.error,
         _name = definition.name or 'schema',
@@ -333,7 +338,7 @@ function Schema:iterate(instance, context)
                 self.specification[schemakey] = childschema
                 context:descend(schemakey, instancekey, function()
                     if instancekey ~= nil then
-                        coroutine.yield(childschema, stored(instance, instancekey), schemakey, instancekey)
+                        coroutine.yield(childschema, read(childschema, instance, instancekey), schemakey, instancekey)
                     else
                         coroutine.yield(childschema, instance, schemakey, instancekey)
                     end
@@ -478,9 +483,7 @@ Schema.register 'any' {
         end)
     end,
     validate = function(self, instance, context) 
-        if self.specification == nil or func.isempty(self.specification) then 
-            return false, "Any schema is empty -- so trivially nothing can match"
-        end
+        if self.specification == nil or func.isempty(self.specification) then return true end
         local alternatives = {}
         for childschema, childinstance in self:iterate(instance, context) do 
             local valid, failure = childschema:validate(childinstance, context)
@@ -531,6 +534,20 @@ Schema.register 'none' {
         end 
         return true
     end
+}
+
+-- validates a field as its container stores it, never through the container's metatable
+Schema.register 'raw' {
+    read = function(self, container, key)
+        if type(container) == "table" then return rawget(container, key) end
+        return container[key]
+    end,
+    iterate = function(self, instance, context)
+        return coroutine.wrap(function() coroutine.yield(1, nil) end)
+    end,
+    prevalidate = prevalidate_children,
+    validate = validate_children,
+    postvalidate = postvalidate_children
 }
 
 -- checks for nil or the other type
@@ -809,7 +826,8 @@ Schema.register 'hasmetatable' {
 -- checks for an empty string or table 
 Schema.register 'empty' {
     validate = function(self, instance)
-        return instance == nil or #instance == 0, "Expected nothing here, got " .. tostring(instance)
+        local sized = type(instance) == "string" or type(instance) == "table"
+        return sized and #instance == 0, "Expected length 0, got " .. (sized and "length " .. #instance or tostring(instance))
     end
 }
 

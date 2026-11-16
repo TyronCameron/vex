@@ -34,13 +34,14 @@ describe("vex owner (e2e, subprocess)", function()
     assert.are_not.equal(0, helper.run_vex(dir, {"add", "Stranger", "task", "--owner", "mallory"}).code)
   end)
 
-  it("rejects any owner when no users are configured", function()
-    assert.are_not.equal(0, helper.run_vex(dir, {"add", "Lonely", "task", "--owner", "alice"}).code)
+  it("accepts any owner, or none, when no users are configured", function()
+    assert.are.equal(0, helper.run_vex(dir, {"add", "Lonely", "task", "--owner", "alice"}).code)
+    assert.are.equal(0, helper.run_vex(dir, {"add", "Unowned", "task"}).code)
   end)
 
-  it("leaves owner optional", function()
+  it("requires an owner once users are configured", function()
     users("alice")
-    assert.are.equal(0, helper.run_vex(dir, {"add", "Unowned", "task"}).code)
+    assert.are_not.equal(0, helper.run_vex(dir, {"add", "Unowned", "task"}).code)
   end)
 
   it("gives a new task the config's default tasktype", function()

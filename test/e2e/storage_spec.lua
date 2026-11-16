@@ -208,7 +208,7 @@ describe("vex storage (e2e, subprocess)", function()
     edit("child-task-here-1", "\ncost: 5\n", "\ncost: 9\n")
     for _, args in ipairs({{"get", "child-task-here-1", "--cost"}, {"view", "all", "csv"}, {"focus", "all"}}) do
       local result = helper.run_vex(dir, args)
-      assert.truthy(helper.strip_ansi(result.stderr):find("Known task files changed since vex last saw them: run `vex resolve all` to take them in.", 1, true), table.concat(args, " "))
+      assert.truthy(helper.strip_ansi(result.stderr):find("1 known task file changed since vex last saw it: run `vex resolve all` to take it in.", 1, true), table.concat(args, " "))
       assert.is_nil(result.stdout:find("changed since", 1, true))
     end
     assert.equal("5", vex(dir, "get", "child-task-here-1", "--cost"))

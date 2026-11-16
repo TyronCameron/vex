@@ -5,10 +5,32 @@ local event = require 'lib.event'
 -- Arguments
 -- ---------------------------------------------------------------------------
 
+-- what splits a word, outermost first: a comma splits any word into a list, and a colon splits a flag's value (and each item of its list) into parts. A splitter in quotes or after a backslash stays literal.
+local splitters = {
+    {char = ",", mark = "\1"},
+    {char = ":", mark = "\2", flagsonly = true},
+}
+
 local Flag = {}
+local Parts = {}
 
 local function isflag(word)
     return getmetatable(word) == Flag
+end
+
+local function isparts(value)
+    return getmetatable(value) == Parts
+end
+
+-- a flag's value with its parts joined back up, keeping any list
+local function joined(value)
+    if isparts(value) then return table.concat(value, ":") end
+    if type(value) == "table" then
+        local list = {}
+        for i, item in ipairs(value) do list[i] = joined(item) end
+        return list
+    end
+    return value
 end
 
 local Arguments = {}
@@ -18,7 +40,7 @@ function Arguments:flags()
     local taskproperties = {}
     for _, pair in ipairs(func.ifilter(self, isflag)) do
         if pair[2] then 
-            taskproperties[pair[1]] = pair[2]
+            taskproperties[pair[1]] = joined(pair[2])
         end 
     end
     return taskproperties
@@ -96,23 +118,19 @@ CLI.__index = CLI
 -- together into one word (e.g. status:"not done" => `status:not done`).
 -- A comma outside quotes splits a word into a list (a,b => {"a", "b"});
 -- `\,` keeps a literal comma, quoted or not.
+local marks = {}
+for _, splitter in ipairs(splitters) do marks[splitter.char] = splitter.mark end
+
 local function tokenize(txt)
     local tokens = {}
     local i, n = 1, #txt
     local buf = {}
-    local parts = {}
     local in_token = false
 
     local function flush()
         if in_token then
-            if #parts > 0 then
-                table.insert(parts, table.concat(buf))
-                table.insert(tokens, parts)
-            else
-                table.insert(tokens, table.concat(buf))
-            end
+            table.insert(tokens, table.concat(buf))
             buf = {}
-            parts = {}
             in_token = false
         end
     end
@@ -134,7 +152,7 @@ local function tokenize(txt)
                 local ch = txt:sub(i, i)
                 if ch == "\\" and i < n then
                     local nextch = txt:sub(i + 1, i + 1)
-                    if nextch == '"' or nextch == "\\" or nextch == "$" or nextch == "`" or nextch == "," then
+                    if nextch == '"' or nextch == "\\" or nextch == "$" or nextch == "`" or marks[nextch] then
                         table.insert(buf, nextch)
                         i = i + 2
                     else
@@ -155,19 +173,30 @@ local function tokenize(txt)
             else
                 i = i + 1
             end
-        elseif c == "," then
-            in_token = true
-            table.insert(parts, table.concat(buf))
-            buf = {}
-            i = i + 1
         else
             in_token = true
-            table.insert(buf, c)
+            table.insert(buf, marks[c] or c)
             i = i + 1
         end
     end
     flush()
     return tokens
+end
+
+-- splits a tokenized word at the splitters from level on: a comma list is a plain table, deeper splits are `Parts`
+local function split(word, isflagvalue, level)
+    level = level or 1
+    local splitter = splitters[level]
+    if not splitter then return word end
+    if splitter.flagsonly and not isflagvalue then
+        return split((word:gsub(splitter.mark, splitter.char)), isflagvalue, level + 1)
+    end
+    if not word:find(splitter.mark, 1, true) then return split(word, isflagvalue, level + 1) end
+    local parts = {}
+    for part in (word .. splitter.mark):gmatch("(.-)" .. splitter.mark) do
+        table.insert(parts, split(part, isflagvalue, level + 1))
+    end
+    return level == 1 and parts or setmetatable(parts, Parts)
 end
 
 -- Escapes a single argv-style word so that `tokenize` will read it back as
@@ -179,7 +208,8 @@ local function quote_word(word)
     local specials = quoted and '[\\"]' or '[\\"\']'
     local function escape(c) return c:find(specials) and "\\" .. c or c end
     local escaped = word:gsub("\\?.", function(match)
-        if match == "\\," then return match end
+        if match == "\\," or match == "\\:" then return match end
+        if quoted and match == ":" then return '":"' end
         return #match == 2 and "\\\\" .. escape(match:sub(2)) or escape(match)
     end)
     return quoted and '"' .. escaped .. '"' or escaped
@@ -200,14 +230,14 @@ local function parse_args(txt)
             local key = t:sub(3)
             local val = tokens[i + 1]
             if val and not isflagword(val) then
-                table.insert(args, setmetatable({key, val}, Flag))
+                table.insert(args, setmetatable({key, split(val, true)}, Flag))
                 i = i + 2
             else
                 table.insert(args, setmetatable({key}, Flag))
                 i = i + 1
             end
         else
-            table.insert(args, t)
+            table.insert(args, split(t, false))
             i = i + 1
         end
     end
@@ -366,6 +396,9 @@ end
 
 -- Tells a flag apart from a positional word or list.
 CLI.isflag = isflag
+
+-- Tells a flag value split at colons apart from a comma list.
+CLI.isparts = isparts
 
 -- Run from a raw arg string (or pass arg table directly).
 function CLI:run(input)

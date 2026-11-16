@@ -13,7 +13,7 @@ Every task is validated against the schema of its `vextype` and of each type tha
 | `vexbody` | text | Optional. The markdown body below the frontmatter. |
 | `due` | datetime | Optional. When a task has none, vex fills in the earliest `due` of the open tasks that depend on it, the date it is needed by; it stays empty if none of them has one. Once set it is an ordinary date: it doesn't change again unless you change it (`vex set <id> --clear --due` lets it be filled in afresh). A task can't be due before one of its open dependencies (equal dates are fine; tasks without a `due`, and finished tasks, don't count), otherwise vex fails with `due-out-of-order`. |
 | `cost`, `benefit` | number | Optional. |
-| `owner` | text | Optional. Must be one of the `taskowners` in `.vex/config.lua`. |
+| `owner` | text | Any name while `.vex/config.lua` sets no `taskowners`. Once it does, every task needs an owner, one of those names. |
 | `dependencies` | list of links | Optional. Each entry must be an existing task without `children` or `options`, and dependencies can't form a cycle. |
 | `manualtags` | list of tags | Optional. Your own tags, which override the tag rules: `#pinned` always tags the task, `-#review` never does. vex adds a missing `#`. If a tag is both pinned and suppressed, suppressed wins (see below). |
 | `recur` | text | Optional. How often the task comes back: `daily`, `weekly`, `monthly`, `3 days` and the like. When the task reaches a final status, vex adds the next one, with its `over` date moved on by this much, among the same parent's children. |

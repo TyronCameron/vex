@@ -26,7 +26,6 @@ describe("vex user-facing errors (e2e, subprocess)", function()
     {"vex init inside a project", "Already in a vex directory", {"init"}},
     {"a filter without a value", "`--filter` takes field:value, e.g. `--filter status:todo`.", {"focus", "all", "--filter", "status"}},
     {"a filter written with =", "`--filter` takes field:value", {"focus", "all", "--filter", "status=done"}},
-    {"an owner when none are configured", "No task owners are configured: add `taskowners", {"add", "Owned", "task", "--owner", "bob"}},
     {"a link to a task that does not exist", "No task `nosuch-1`.", {"add", "Linked", "task", "--dependencies", "nosuch-1"}},
     {"an unknown shell", "is not known", {"autocomplete", "nosuchshell"}},
     {"autocomplete without a shell", "Name your shell: bash, fish, powershell, zsh.", {"autocomplete"}},

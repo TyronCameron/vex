@@ -91,17 +91,6 @@ function Focus:chain(operation, focus, ...)
     end, func.imerge(self.operations or {}, {{ operation = operation, args = {...} }}))
 end
 
--- the tasks of list, in order and each once, that others doesn't hold
-local function without(list, others)
-    local seen = {}
-    for _, task in ipairs(others) do seen[task] = true end
-    return func.ifilter(list, function(task)
-        if seen[task] then return false end
-        seen[task] = true
-        return true
-    end)
-end
-
 function Focus:intersect(focus)
     focus = asfocus(focus)
     return Focus.new('intersect', function(tasks) 
@@ -161,21 +150,21 @@ function Focus:xor(focus)
     focus = asfocus(focus)
     return Focus.new('xor', function(tasks) 
         local mine, theirs = self:get(tasks), focus:get(tasks)
-        return func.imerge(without(mine, theirs), without(theirs, mine))
+        return func.imerge(func.setdiff(mine, theirs), func.setdiff(theirs, mine))
     end, func.imerge(self.operations or {}, {{ operation = 'xor', args = {{ name = focus.name, operations = focus.operations }}}}))
 end 
 
 function Focus:notin(focus)
     focus = asfocus(focus)
     return Focus.new('notin', function(tasks) 
-        return without(self:get(tasks), focus:get(tasks))
+        return func.setdiff(self:get(tasks), focus:get(tasks))
     end, func.imerge(self.operations or {}, {{ operation = 'notin', args = {{ name = focus.name, operations = focus.operations }}}}))
 end 
 
 function Focus:onlyin(focus)
     focus = asfocus(focus)
     return Focus.new('onlyin', function(tasks) 
-        return without(focus:get(tasks), self:get(tasks))
+        return func.setdiff(focus:get(tasks), self:get(tasks))
     end, func.imerge(self.operations or {}, {{ operation = 'onlyin', args = {{ name = focus.name, operations = focus.operations }}}}))
 end 
 
@@ -244,11 +233,19 @@ end
 function Focus.focus(focusname, ...)
     if select('#', ...) > 0 then return Focus.focus({focusname, ...}) end
     if type(focusname) ~= "table" then return namedfocus.focus(focusname or 'prev') end
-    local focus = namedfocus.focus(focusname[1])
-    for i = 2, #focusname do
-        focus = focus:union(namedfocus.focus(focusname[i]))
-    end
-    return Focus.new(focusname, function(tasks) return focus:get(tasks) end)
+    local focuses = func.imap(focusname, function(name) return namedfocus.focus(name) end)
+    return Focus.new(focusname, function(tasks)
+        local seen, list = {}, {}
+        for _, focus in ipairs(focuses) do
+            for _, task in ipairs(focus:get(tasks)) do
+                if not seen[task] then
+                    seen[task] = true
+                    table.insert(list, task)
+                end
+            end
+        end
+        return list
+    end)
 end
 
 -----------------------------------------
@@ -647,34 +644,15 @@ end
 -- Parsing
 -----------------------------------------
 
--- whether the colon at i joins the hours, minutes and seconds of a clock time written after a date or word, as in `2026-11-09 08:00:00`
-local function inclock(str, i)
-    local before, after = str:sub(1, i - 1), str:sub(i + 1)
-    return (before:match('[ T]%d%d?$') or before:match('[ T]%d%d?:%d%d$')) and after:match('^%d%d%f[%D]') ~= nil
-end
-
--- splits a flag's value at each colon outside a clock time
-local function split(str)
-    local parts, start = {}, 1
-    for i in str:gmatch('():') do
-        if not inclock(str, i) then
-            table.insert(parts, str:sub(start, i - 1))
-            start = i + 1
-        end
-    end
-    table.insert(parts, str:sub(start))
-    return unpack(parts)
-end
-
 function Focus:apply(args)
     local current = self
     for _, arg in ipairs(args) do
         if cli.isflag(arg) then 
             if type(Focus[arg[1]]) ~= "function" then cli:throw('unknown-focus-operation', arg[1]) end
             local split_args = {}
-            local values = type(arg[2]) == "table" and arg[2] or {arg[2]}
+            local values = type(arg[2]) == "table" and not cli.isparts(arg[2]) and arg[2] or {arg[2]}
             for _, value in ipairs(values) do
-                for _, part in ipairs({ split(value) }) do
+                for _, part in ipairs(cli.isparts(value) and value or {value}) do
                     table.insert(split_args, part)
                 end
             end
@@ -697,7 +675,7 @@ end
 
 function describe(operations)
     local function word(arg)
-        if type(arg) ~= "table" then return tostring(arg) end
+        if type(arg) ~= "table" then return (tostring(arg):gsub("[,:]", "\\%0")) end
         if arg.operations then return describe(arg.operations) end
         return table.concat(func.imap(arg, word), ',')
     end

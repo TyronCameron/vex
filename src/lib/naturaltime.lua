@@ -169,11 +169,11 @@ end
 local ordinals = {st = true, nd = true, rd = true, th = true}
 
 local function clock(word)
-    local h, m, s = word:match('^(%d%d?):(%d%d):?(%d?%d?)$')
+    local h, m, s = word:match('^(%d%d?)[:.](%d%d)[:.]?(%d?%d?)$')
     h, m, s = tonumber(h), tonumber(m), tonumber(s)
     if h and h < 24 and m < 60 and (s or 0) < 60 then return h, m, s end
     local meridiem
-    h, m, meridiem = word:match('^(%d%d?):?(%d*)([ap]m)$')
+    h, m, meridiem = word:match('^(%d%d?)[:.]?(%d*)([ap]m)$')
     h, m = tonumber(h), tonumber(m)
     if h and h >= 1 and h <= 12 and (m or 0) < 60 then return h % 12 + (meridiem == 'pm' and 12 or 0), m end
 end
@@ -189,6 +189,7 @@ end
 
 local function clocktime(tokens, i, state)
     local consumed = 1
+    if tokens[i]:find('.', 1, true) and unit(tokens[i + 1]) then return end
     local h, m, s = clock(tokens[i])
     if not h and tonumber(tokens[i]) and (tokens[i + 1] == 'am' or tokens[i + 1] == 'pm') then
         h, m = clock(tokens[i] .. tokens[i + 1])

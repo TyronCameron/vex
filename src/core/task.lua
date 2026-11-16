@@ -103,7 +103,8 @@ function TaskManager:registertask(name, parent, tab)
         parent = parent,
         name = name,
         schema = parent and self.tasktypes[parent].schema:merge(tab.schema) or tab.schema,
-        fields = tab.fields
+        fields = tab.fields,
+        fieldschemas = {}
     }
     if type(tab.schema.specification) == "table" then 
         for key in pairs(tab.schema.specification) do 
@@ -147,7 +148,11 @@ end
 
 function TaskManager:schemaof(vextype, field)
     local tasktype = self.tasktypes[vextype]
-    return tasktype and select(2, tasktype.schema:get({}, {field}))
+    if not tasktype then return nil end
+    if tasktype.fieldschemas[field] == nil then
+        tasktype.fieldschemas[field] = select(2, tasktype.schema:get({}, {field})) or false
+    end
+    return tasktype.fieldschemas[field] or nil
 end
 
 function TaskManager:transientof(vextype, name)
@@ -216,7 +221,7 @@ function TaskManager:remove(vexid)
     if vexdex:get(vexid) then
         local orphans = self:getsingle(vexid).children or {}
         if #orphans > 0 then
-            self:set(vexid, {}, {children = 'clear'})
+            self:set(vexid, {children = {}})
             self:resolve(vexid)
         end
         local linkers = func.imap(focus.focus(vexid):step('backlinks'):get(), function(linker) return linker.vexid end)
@@ -311,7 +316,7 @@ function TaskManager:show(vexid)
     if lfs.attributes(path, 'mode') ~= 'file' then path = self:find(vexid) or path end
     local text = lfsext.readfile(path)
     if not text then cli:throw('file', path) end
-    local result = pretty.string('# ' .. vexid .. '\n', 'cyan', 'underline', 'bold', {filelink = path}) .. taskformat.format(text)
+    local result = pretty.string('# ' .. string.upper(vexid) .. '\n', 'cyan', 'underline', 'bold', {filelink = path}) .. taskformat.format(text)
     event:trigger('post-task-show', vexid, result)
     return result
 end

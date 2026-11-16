@@ -1,5 +1,5 @@
 
-local function interactive()
+local function isinteractive()
     if os.getenv('NO_COLOR') then return false end
     local ok, ffi = pcall(require, 'ffi')
     if not ok then return true end
@@ -8,10 +8,15 @@ local function interactive()
     return not found or isatty(1) ~= 0
 end
 
+local pretty = {
+    style = {},
+    colour = isinteractive()
+}
+
 local PrettyString = {}
 PrettyString.__index = PrettyString
 PrettyString.__tostring = function(self)
-    if not PrettyString.colour then return self[1] end
+    if not pretty.colour then return self[1] end
     local text
     if #self == 1 then
         text = self[1]
@@ -157,13 +162,7 @@ end
 -- print(PrettyString("hello", "red", "bold", "strike"))
 -- print(PrettyString("hello", "dim", "underline"))
 
-local pretty = {style = {}}
 
--- whether styles and links are written as escape codes: only when stdout is a terminal and NO_COLOR is unset
-function pretty.colour(on)
-    PrettyString.colour = on
-end
-pretty.colour(interactive())
 
 -- function pretty.styles.reset()
 --     return nil

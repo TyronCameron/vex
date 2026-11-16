@@ -218,9 +218,10 @@ describe("schema", function()
         assert.falsy(s:validate('urgent'))
     end)
 
-    it("`schema.any` of nothing matches nothing", function()
-        assert.falsy(schema.any {}:validate('anything'))
-        assert.falsy(schema.any(nil):validate('anything'))
+    it("`schema.any` of nothing places no restriction, so matches anything", function()
+        assert.truthy(schema.any {}:validate('anything'))
+        assert.truthy(schema.any {}:validate(nil))
+        assert.truthy(schema.any(nil):validate('anything'))
     end)
 
     it("`schema.all` validates when all subschemas match", function()
@@ -353,16 +354,39 @@ describe("schema", function()
         assert.falsy(s:validate(obj))
     end)
 
+    describe("`schema.raw`", function()
+        local derived = setmetatable({}, {__index = function(_, key) if key == 'status' then return 'doing' end end})
+
+        it("reads a field as the table stores it, not through its metatable", function()
+            assert.falsy(schema.atleast {status = schema.none}:validate(derived))
+            assert.truthy(schema.atleast {status = schema.raw {schema.none}}:validate(derived))
+            local stored = setmetatable({status = 'todo'}, getmetatable(derived))
+            assert.falsy(schema.atleast {status = schema.raw {schema.none}}:validate(stored))
+        end)
+
+        it("prevalidates, postvalidates and collects through its schema", function()
+            local s = schema.atleast {when = schema.raw {schema.default {schema.num, default = function() return 7 end}}}
+            assert.equal(7, s:prevalidate(setmetatable({}, getmetatable(derived))).when)
+            assert.same({'x'}, schema.atleast {link = schema.raw {schema.str}}:collect('str', {link = 'x'}))
+            assert.same({}, schema.atleast {status = schema.raw {schema.str}}:collect('str', derived))
+        end)
+    end)
+
     it("`schema.empty` validates an empty string", function()
         assert.truthy(schema.empty:validate(""))
     end)
 
-    it("`schema.empty` validates a missing value", function()
-        assert.truthy(schema.empty:validate(nil))
+    it("`schema.empty` invalidates a missing value, which `schema.maybe` allows", function()
+        assert.falsy(schema.empty:validate(nil))
+        assert.truthy(schema.maybe {schema.empty}:validate(nil))
     end)
 
-    it("`schema.empty` invalidates a non-empty string", function()
-        assert.falsy(schema.empty:validate("hello"))
+    it("`schema.empty` invalidates a non-empty string or table, naming its length", function()
+        local ok, err = schema.empty:validate("hello")
+        assert.falsy(ok)
+        assert.truthy(tostring(err):find("Expected length 0, got length 5", 1, true))
+        assert.truthy(schema.empty:validate({}))
+        assert.falsy(schema.empty:validate({1}))
     end)
 
     -- ==================== Modifier schemas ====================

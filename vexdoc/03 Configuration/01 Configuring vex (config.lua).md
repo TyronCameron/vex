@@ -24,7 +24,7 @@ This repository's own config sets `taskfolder = "vexdoc/vex"`: its backlog is th
 | Setting | Effect |
 | --- | --- |
 | `taskfolder` | The folder, relative to the project root, that holds the task files. |
-| `taskowners` | The names `owner` may take. With no task owners, tasks can't have an owner. |
+| `taskowners` | The names `owner` may take. Empty, `owner` is free text and optional. Once it lists names, every task needs an owner from the list. |
 | `default.tasktype` | The `vextype` of a task added without one. |
 | `paths.groupby` | Nests task files in folders by their fields (see below). |
 | `loglimit` | How many lines the verb and event logs in `.vex/vexdex` keep (see [[Events and hooks]]). Defaults to 100. |

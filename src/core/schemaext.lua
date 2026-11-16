@@ -139,7 +139,7 @@ schema.register 'dueinorder' {
     end
 }
 
-schema.register 'unblocked' {
+schema.register 'if-blocked-then-not-started' {
     validate = function(self, dependency, context)
         local leaving = (context.previous.phase or 'initial') == 'initial' and context.task.phase ~= 'initial'
         if leaving and task:getsingle(dependency).phase ~= 'final' then
@@ -204,7 +204,7 @@ schema.register 'dependencies' (schema.maybe {
             schema.acyclic,
             schema.childless,
             schema.dueinorder,
-            schema.unblocked
+            schema['if-blocked-then-not-started']
         }
     }
 })

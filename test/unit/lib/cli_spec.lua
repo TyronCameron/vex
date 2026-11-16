@@ -232,6 +232,30 @@ describe("CLI", function()
             assert.same({"", "x\\y"}, parsed({"", "x\\y"}):literals())
         end)
 
+        it("splits a flag's value, and each of its list items, into parts at colons", function()
+            local value = parsed({"--between", "due:today,tomorrow"})[1][2]
+            assert.is_true(cli.isparts(value[1]))
+            assert.same({"due", "today"}, value[1])
+            assert.equal("tomorrow", value[2])
+            assert.same({"created", "1 week ago", "now"}, parsed({"--between", "created:1 week ago:now"})[1][2])
+        end)
+
+        it("keeps a colon escaped with a backslash, or inside quotes in a raw string", function()
+            assert.same({"due", "08:00"}, parsed({"--filter", "due:08\\:00"})[1][2])
+            assert.equal("a:b", cli:parse("--flag 'a:b'")[1][2])
+        end)
+
+        it("keeps colons in positional words", function()
+            assert.same({"Implement", "Focus:interpret"}, parsed({"Implement", "Focus:interpret"}):positional())
+        end)
+
+        it("gives a verb's flags with their parts joined back up", function()
+            local flags = parsed({"--vexbody", "Note: one, two", "--due", "8:30am", "--children", "a:b,c"}):flags()
+            assert.equal("Note: one, two", flags.vexbody)
+            assert.equal("8:30am", flags.due)
+            assert.same({"a:b", "c"}, flags.children)
+        end)
+
         it("maps each flag to the valueless flag just before it", function()
             local args = parsed({"--insert", "--children", "a,b", "--status", "done", "--remove", "--options", "c"})
             assert.same({children = "insert", options = "remove"}, args:modifiers())

@@ -41,11 +41,7 @@ task:task 'basetask' {
         },
         cost = schema.maybe {schema.num},
         benefit = schema.maybe {schema.num},
-        owner = schema.maybe {
-            #config.taskowners > 0 and schema.any(config.taskowners) or schema.constraint {
-                function() return false, "No task owners are configured: add `taskowners = {'alice', 'bob'}` to `.vex/config.lua`" end
-            }
-        },
+        owner = schema.any(config.taskowners),
         manualtags = schema.maybe {schema.vec {schema.tagoverride}},
         tags = schema.autotagged,
         recur = schema.maybe {schema.recurrence},

@@ -7,6 +7,7 @@
 - `--field value` sets a field; a `--field` without a value names one.
 - Quoting works as in a shell: `--vexbody "two words"` is one value, and `--filter status:"not done"` matches `not done`.
 - A comma outside quotes makes a list: `--children a,b` sets two children, and `vex focus a,b` focuses on both tasks. A value containing spaces keeps its commas, and `\,` writes a literal comma.
+- A colon splits a flag's value into parts, which focus flags read as `field:value` (`--filter status:done`, `--between due:today:friday`). It splits values with spaces too, so write a time with dots (`08.30`) or escape its colons (`08\:30`). Commands that set fields, such as `set` and `add`, take the value whole, so `--vexbody "Note: done"` and `--due 8:30am` work as written.
 
 ## Commands
 
@@ -166,7 +167,7 @@ Values are separated by `:`.
 | `--fuzzy field:value[:n]` | Tasks whose `field` contains `value` within `n` edits, ignoring case. `n` defaults to one edit for every four characters of `value`. |
 | `--match field:pattern` | Tasks whose `field` matches a Lua pattern (`^`, `$`, `.*`, `%d`; no `\|` alternation): `description:"^Fix.*$"`. |
 | `--nil field` | Tasks that hold no value for `field`, transients included: `--nil due`. |
-| `--between field:low:high` | Tasks with `low <= field <= high`. Leave `low` or `high` empty for an open side: `cost::9`. Dates may be `YYYY-MM-DD`, and a time after a date keeps its colons: `--between 'due:2026-11-09 08:00:2026-11-10 17:00'`. |
+| `--between field:low:high` | Tasks with `low <= field <= high`. Leave `low` or `high` empty for an open side: `cost::9`. Dates may be `YYYY-MM-DD`, and a time of day is written with dots, as in `--between 'due:2026-11-09 08.00:2026-11-10 17.00'`. |
 | `--step field[:field...]` | The tasks one hop along `field`, such as `children`, `forwardlinks` or `backlinks`. |
 | `--tree field[:field...]` | The tasks and everything reachable by following `field`, hop after hop. |
 | `--reversetree field[:field...]` | The tasks and everything that reaches them through `field`. |
@@ -221,7 +222,7 @@ A saved focus is read again each time it is used, so "next tuesday" always means
 | Periods | `next week`, `last month`, `next year`, `this year`, `next fall`, `winter` |
 | Dates | `26 July`, `July 26th`, `the 26th of December 2026`, `the 3rd`, `2026-07-26` |
 | Times of day | `first light`, `dawn`, `morning`, `morn`, `noon`, `arvo`, `afternoon`, `end of day`, `eve`, `dusk`, `night`, `midnight` |
-| Clock times | `5pm`, `3:30pm`, `15:00`, `at 9` |
+| Clock times | `5pm`, `3:30pm`, `15:00`, `15.00`, `8.30pm`, `at 9` |
 | Offsets | `fifteen minutes`, `in 3 days`, `half day`, `an hour and a half`, `2 weeks ago` |
 
 - A weekday or date means its next occurrence. A date with no year falls on or after today; a weekday falls after today.
@@ -240,7 +241,7 @@ A saved focus is read again each time it is used, so "next tuesday" always means
 Resolution keeps every task valid. `add`, `set`, `remove` and `recipe` resolve the tasks they touch, `set`, `remove` and `resolve` first resolve the tasks in their focus whose files changed on disk, and `vex resolve` resolves a focus on demand. Commands that only read never resolve. For each task, vex runs the schema of its type and of every type it extends:
 
 1. **Normalise.** Fill defaults (`vextype`, `status`, `created`, `modified`) and convert values: `"15"` to `15`, `"2026-08-01 09:00:00"` to a timestamp, `[[vexid]]` to `vexid`.
-2. **Validate.** Check every field against its schema. Links must point at existing tasks, `status` must follow its state machine, `owner` must be a configured user, dependencies must not form a cycle, and a child can have only one parent.
+2. **Validate.** Check every field against its schema. Links must point at existing tasks, `status` must follow its state machine and can't leave `todo` while a dependency is unfinished, `owner` must be a configured user when `taskowners` is set, dependencies must not form a cycle, and a child can have only one parent.
 3. **Derive.** Compute derived fields and record the task's links.
 4. **Index.** Store the task in `.vex/vexdex` and write its file, formatted for reading, if that changes it. `modified` moves only when the task's content changed.
 

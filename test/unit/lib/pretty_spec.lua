@@ -5,7 +5,7 @@ local pretty = require 'lib.pretty'
 describe("pretty", function()
 
     before_each(function()
-        pretty.colour(true)
+        pretty.colour = true
     end)
 
     it("`pretty.tabular` counts East Asian wide characters as two columns, cutting them whole", function()
@@ -18,9 +18,9 @@ describe("pretty", function()
     end)
 
     it("writes plain text, without styles or links, when colour is off", function()
-        pretty.colour(false)
+        pretty.colour = false
         assert.equal("hello", pretty.string("hello", "bold", "red", {filelink = "/tmp/x"}))
-        pretty.colour(true)
+        pretty.colour = true
         assert.not_equal("hello", pretty.string("hello", "bold"))
     end)
 

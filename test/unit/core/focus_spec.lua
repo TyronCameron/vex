@@ -151,17 +151,16 @@ describe("Focus", function()
             assert.same({tasks[1]}, parts:get(tasks))
         end)
 
-        it("splits a flag's value at colons, but not at those inside a clock time", function()
+        it("takes a flag's value as the parts the CLI split it into at colons", function()
             local function args(flags)
                 local ops = f:apply(require('lib.cli'):parse(flags)).operations
                 return ops[#ops].args
             end
-            assert.same({"due", "2026-11-09 08:00:00"}, args("--filter 'due:2026-11-09 08:00:00'"))
-            assert.same({"due", "2026-11-09 08:00", "2026-11-10 09:00"}, args("--between 'due:2026-11-09 08:00:2026-11-10 09:00'"))
-            assert.same({"due", "tomorrow 8:30", ""}, args("--between 'due:tomorrow 8:30:'"))
+            assert.same({"due", "2026-11-09 08.00.00"}, args("--filter 'due':'2026-11-09 08.00.00'"))
+            assert.same({"due", "2026-11-09 08:00", "2026-11-10 09:00"}, args("--between due:'2026-11-09 08:00':'2026-11-10 09:00'"))
+            assert.same({"due", "today", "tomorrow"}, args("--between due:today,tomorrow"))
             assert.same({"cost", "", "9"}, args("--between cost::9"))
-            assert.same({"cost", "10", "20"}, args("--between cost:10:20"))
-            assert.same({"created", "1 week ago", "now"}, args("--between 'created:1 week ago:now'"))
+            assert.same({"created", "1 week ago", "now"}, args("--between 'created':'1 week ago':now"))
         end)
 
         it("rejects a malformed pattern", function()

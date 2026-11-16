@@ -23,8 +23,10 @@ local function pop_focus_and_take_edits(args)
 end
 
 local function warn_stale()
-    if #focus.focus('updated'):get() == 0 then return end
-    cli:warn(pretty.string("Known task files changed since vex last saw them", 'yellow') .. ": run `vex resolve all` to take them in.")
+    local stale = #focus.focus('updated'):get()
+    if stale == 0 then return end
+    local text = stale == 1 and "1 known task file changed since vex last saw it" or stale .. " known task files changed since vex last saw them"
+    cli:warn(pretty.string(text, 'yellow') .. ": run `vex resolve all` to take " .. (stale == 1 and "it" or "them") .. " in.")
 end
 
 -- joins accumulated output lines into the verb's return value; nil (rather
