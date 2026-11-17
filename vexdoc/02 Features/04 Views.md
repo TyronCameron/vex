@@ -45,7 +45,7 @@ $ vex view all tabular --groupby vextype:status --orderby vexid --select vextype
 
 ## `csv`
 
-The same data as comma-separated values, for spreadsheets, `duckdb` or scripts. Like the other views it leaves out the body, which lives only in the task file. Dates are written as in the task file (`2026-10-31 08:00:00`) and a list such as `children` is one cell of comma-separated values. A cell holding a comma, a double quote, a line break or leading or trailing spaces is wrapped in double quotes, with each quote inside doubled, so any CSV reader gets the fields back as they are:
+The same data as comma-separated values, for spreadsheets, `duckdb` or scripts. Like the other views it leaves out the body, which lives only in the task file. Dates are written as in the task file (`2026-10-31 08:00:00`) and a list such as `dependencies` is one cell of comma-separated values. A cell holding a comma, a double quote, a line break or leading or trailing spaces is wrapped in double quotes, with each quote inside doubled, so any CSV reader gets the fields back as they are:
 
 ```console
 $ vex view all csv > tasks.csv

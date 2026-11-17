@@ -18,8 +18,8 @@ local verbs = {
   {"get", "all", ",", ";", "--vexid", "--cost"},
   {"set", DEPENDENT, "--cost", "4"},
   {"set", DEPENDENT, "--clear", "--cost"},
-  {"set", PARENT, "--insert", "--children", DEPENDENT},
-  {"set", PARENT, "--remove", "--children", DEPENDENT},
+  {"set", DEPENDENT, "--parent", PARENT},
+  {"set", DEPENDENT, "--parent", DECISION},
   {"resolve", "all"},
   {"resolve", "all", "--force"},
   {"resolve", CHILD, "--force"},
@@ -74,16 +74,17 @@ local focuses = {
   {"focus", "all", "--match", "description:^.*child"},
   {"focus", "all", "--select", "description"},
   {"focus", PARENT, "--tree", "children"},
-  {"focus", CHILD, "--reversetree", "children"},
+  {"focus", CHILD, "--tree", "parent"},
   {"focus", PARENT, "--step", "children"},
-  {"focus", PARENT, "--step", "forwardlinks"},
-  {"focus", CHILD, "--step", "backlinks"},
-  {"focus", PARENT, "--tree", "forwardlinks"},
-  {"focus", CHILD, "--tree", "backlinks"},
+  {"focus", CHILD, "--step", "forwardlinks"},
+  {"focus", PARENT, "--step", "backlinks"},
+  {"focus", CHILD, "--tree", "forwardlinks"},
+  {"focus", PARENT, "--tree", "backlinks"},
   {"focus", CHILD, "--complement"},
   {"focus", "all", "--filter", "vextype:task", "--select", "cost"},
   {"focus", "all", "--nil", "due"},
   {"focus", "all", "--contains", "children:" .. CHILD, count = 1},
+  {"focus", "all", "--filter", "parent:" .. PARENT, count = 1},
   {"focus", "all", "--between", "cost:1:9"},
   {"focus", "all", "--between", "due:2026-01-01:2026-12-31", count = 1},
   {"focus", "all", "--union", "none"},
@@ -115,11 +116,11 @@ describe("vex smoke test: every verb, view and focus (e2e, subprocess)", functio
     vex(dir, "add", "Parent", "abstract", "here", "--vextype", "abstract")
     vex(dir, "add", "Dependent", "atom", "here", "--vextype", "atom")
     vex(dir, "add", "Choose", "a", "car")
-    helper.link(dir, PARENT, "children", {CHILD})
+    helper.link(dir, CHILD, "parent", PARENT)
     helper.link(dir, DEPENDENT, "dependencies", {CHILD})
     local decision = dir .. "/" .. DECISION .. ".md"
     helper.write_file(decision, helper.read_file(decision):gsub("vextype: task", "vextype: decision"))
-    helper.link(dir, DECISION, "options", {CHILD, DEPENDENT})
+    helper.link(dir, DEPENDENT, "parent", DECISION)
     vex(dir, "resolve", "all")
     vex(dir, "set", DEPENDENT, "--status", "done")
   end)

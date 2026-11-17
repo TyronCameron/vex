@@ -50,6 +50,16 @@ $ vex focus all --select shouting
 
 A definition can read other fields and transients, and query other tasks through `focus`.
 
+A type redefines an inherited transient by registering its own.
+
+Every task takes children unless its type says otherwise. Atoms and explorations refuse them with `children = schema.none` in their schema, and a type of your own can do the same. `children` is a transient, so the check reads the tasks that name this one as `parent`. Once a task names such a type as its `parent`, that task fails to resolve:
+
+```lua
+task:task 'chore':extends 'task' {
+    schema = schema.atleast { children = schema.none }
+}
+```
+
 ## Writing a file
 
 Each example on this page is a complete file: save it as a `.lua` file in `.vex/tasks` and vex loads it on the next command, with nothing else required. Every file runs with these already in scope, alongside Lua's standard globals: `task` (the task manager), `recipe` (the recipe manager), `focus` (the `Focus` class), `view` (the view manager) and `schema` (the schema library).

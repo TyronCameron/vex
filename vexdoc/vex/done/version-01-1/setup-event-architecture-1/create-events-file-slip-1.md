@@ -5,6 +5,7 @@ description: Create events file and slip in events architecture
 created: "2026-07-10 22:10:05"
 modified: "2026-10-30 07:09:14"
 status: done
+parent: "[[setup-event-architecture-1]]"
 ---
 See [[Events and hooks]]
 

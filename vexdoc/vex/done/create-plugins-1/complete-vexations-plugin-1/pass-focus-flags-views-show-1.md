@@ -5,6 +5,7 @@ description: Pass tabular view flags to its focus and show groups
 created: "2026-10-24 22:45:32"
 modified: "2026-10-25 12:12:32"
 status: done
+parent: "[[complete-vexations-plugin-1]]"
 ---
 `vex view` handed its flags to the view as a hash, and the `tabular` view ignored them, so ordering, grouping or filtering a table meant saving a new focus first. The view also flattened a grouped focus with `focus:get()`, so the groups vanished. [[04 Views]] and [[01 CLI reference]] describe both.
 

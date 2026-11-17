@@ -52,14 +52,9 @@ local function levels()
   return result
 end
 
-local function children(tree, level, index)
-  local count, kids = #tree[level], {}
-  if level == layers then
-    for i = index, atoms, count do table.insert(kids, atom(i)) end
-  else
-    for i = index, #tree[level + 1], count do table.insert(kids, group(tree[level + 1][i])) end
-  end
-  return kids
+-- the i-th task of the level below sits under the abstracts of a level in turn
+local function parent(tree, level, i)
+  return group(tree[level][(i - 1) % #tree[level] + 1])
 end
 
 local results = {}
@@ -75,10 +70,14 @@ local function timed(step, dir, ...)
   record(step, now() - start)
 end
 
-local function add(dir, description, vextype, field, links)
+local function add(dir, description, vextype, parentid, links)
   local args = {"add", description, "--vextype", vextype}
+  if parentid then
+    table.insert(args, "--parent")
+    table.insert(args, parentid)
+  end
   if #links > 0 then
-    table.insert(args, "--" .. field)
+    table.insert(args, "--dependencies")
     table.insert(args, table.concat(links, ","))
   end
   helper.vex(dir, unpack(args))
@@ -99,16 +98,16 @@ local function progress()
   end
 end
 
-for i = 1, atoms do
-  add(dir, "Atom " .. i, "atom", "dependencies", dependencies(i))
-  progress()
-end
 local tree = levels()
-for level = layers, 1, -1 do
+for level = 1, layers do
   for index, id in ipairs(tree[level]) do
-    add(dir, "Group " .. id, "abstract", "children", children(tree, level, index))
+    add(dir, "Group " .. id, "abstract", level > 1 and parent(tree, level - 1, index) or nil, {})
     progress()
   end
+end
+for i = 1, atoms do
+  add(dir, "Atom " .. i, "atom", parent(tree, layers, i), dependencies(i))
+  progress()
 end
 record(string.format("create %d tasks with vex add", total), now() - start)
 
@@ -117,6 +116,8 @@ timed("vex set atom-1-1 (hub) --due tomorrow", dir, "set", atom(1), "--due", "to
 timed("vex add (no links)", dir, "add", "Unlinked atom", "--vextype", "atom")
 timed("vex add (depends on hub)", dir, "add", "Hub dependent atom", "--vextype", "atom", "--dependencies", atom(1))
 timed("vex view all csv", dir, "view", "all", "csv")
+timed("vex focus group-1-1 --tree children (down)", dir, "focus", group(1), "--tree", "children")
+timed(string.format("vex focus %s --tree parent (up)", atom(atoms)), dir, "focus", atom(atoms), "--tree", "parent")
 
 helper.rm_tmp_dir(dir)
 

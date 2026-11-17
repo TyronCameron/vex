@@ -5,6 +5,7 @@ description: Create report view
 created: "2026-05-19 21:27:24"
 modified: "2026-10-30 07:09:14"
 status: todo
+parent: "[[add-planning-views-1]]"
 ---
 
 I want this view to show all tasks in the form of a markdown report. 

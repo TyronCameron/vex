@@ -5,6 +5,7 @@ description: Consider making every action atomic
 created: "2026-10-30 04:17:57"
 modified: "2026-11-04 10:53:06"
 status: done
+parent: "[[harden-resolution-storage-1]]"
 ---
 **Undecided.** This is a place to weigh the idea, not a commitment, and nothing tests it. Decide first whether vex should guarantee that a command either writes everything or nothing.
 

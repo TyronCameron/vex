@@ -5,6 +5,7 @@ description: Decide how one project holds several task folders
 created: "2026-10-20 09:47:59"
 modified: "2026-10-30 03:17:28"
 status: todo
+parent: "[[allow-several-task-folders-one-1]]"
 ---
 
 Needs more thinking before any code. The design journal ([[Vex]], "Nesting") suggests one project spanning several task folders. Today `taskfolder` is one path, and `TaskManager:reindexall`, `TaskManager:find` and `default.grouppath` all assume a single root.

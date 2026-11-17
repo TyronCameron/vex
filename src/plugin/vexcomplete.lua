@@ -184,7 +184,7 @@ end
 function suggest.focusflags()
     return {
         '--select', '--filter', '--fuzzy', '--match', '--between',
-        '--tree', '--reversetree', '--union', '--intersect',
+        '--tree', '--union', '--intersect',
         '--complement', '--xor', '--notin', '--onlyin'
     }
 end

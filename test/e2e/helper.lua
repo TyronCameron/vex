@@ -197,8 +197,12 @@ end
 function M.link(dir, vexid, field, targets)
   local path = assert(M.task_file(dir, vexid), "no task file for " .. vexid)
   local items = {field .. ":"}
-  for _, target in ipairs(targets) do
-    table.insert(items, '  - "[[' .. target .. ']]"')
+  if type(targets) == "string" then
+    items = {field .. ': "[[' .. targets .. ']]"'}
+  else
+    for _, target in ipairs(targets) do
+      table.insert(items, '  - "[[' .. target .. ']]"')
+    end
   end
   local content = M.read_file(path)
     :gsub("\n" .. field .. ": %[%]\n", "\n", 1)

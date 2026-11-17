@@ -67,9 +67,8 @@ describe("vex get separators and feeding a focus into a list field (e2e, subproc
     atoms = {}
     local parent = vex(dir, "add", "Parent", "abstract", "--vextype", "abstract")
     for i = 1, 3 do
-      atoms[i] = vex(dir, "add", "Child", "atom", tostring(i), "--vextype", "atom")
+      atoms[i] = vex(dir, "add", "Child", "atom", tostring(i), "--vextype", "atom", "--parent", parent)
     end
-    vex(dir, "set", parent, "--children", table.concat(atoms, ","))
     final = vex(dir, "add", "Final", "atom", "--vextype", "atom")
     vex(dir, "focus", parent, "--tree", "children", "--filter", "vextype:atom")
   end)
@@ -80,6 +79,13 @@ describe("vex get separators and feeding a focus into a list field (e2e, subproc
 
   it("puts a focus's vexids in one line when given a comma", function()
     assert.equal(table.concat(atoms, ","), vex(dir, "get", "prev", ","))
+  end)
+
+  it("leaves out the tasks with children with --nil children", function()
+    vex(dir, "focus", "all", "--nil", "children")
+    local got = vex(dir, "get", "prev", ",")
+    for _, vexid in ipairs({atoms[1], atoms[2], atoms[3], final}) do assert.truthy(got:find(vexid, 1, true)) end
+    assert.is_nil(got:find("parent-abstract-1", 1, true))
   end)
 
   it("sets a list field from the saved focus through shell substitution", function()

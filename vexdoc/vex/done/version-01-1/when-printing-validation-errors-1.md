@@ -5,6 +5,7 @@ description: "When printing validation errors, pretty print them"
 created: "2026-07-10 22:12:48"
 modified: "2026-10-30 07:09:14"
 status: done
+parent: "[[version-01-1]]"
 ---
 
 Pretty print validation errors. At the moment we get something like this 

@@ -143,6 +143,15 @@ describe("Focus", function()
         end)
     end)
 
+    it("refuses to replay a saved focus with an operation it no longer has", function()
+        stub(cli, 'throw', function(self, name) error(name) end)
+        vexdex:setfocus({operations = {{operation = 'focus', args = {'all'}}, {operation = 'reversetree', args = {'children'}}}})
+        local ok, err = pcall(Focus.read)
+        cli.throw:revert()
+        assert.is_false(ok)
+        assert.truthy(err:find('unknown-focus-operation', 1, true))
+    end)
+
     it("nil keeps tasks that have no value for the field", function()
         local tasks = {{vexid = "a", cost = 1}, {vexid = "b"}, {vexid = "c", cost = 9}}
         local f = Focus.new("all", function(t) return t end)
@@ -539,7 +548,7 @@ describe("Focus", function()
         assert.truthy(err:find('no-focus', 1, true))
     end)
 
-    describe("tree and reversetree", function()
+    describe("tree", function()
 
         local root = {vexid = "root", children = {"mid"}}
         local mid = {vexid = "mid", children = {"leaf"}, dependencies = {"other"}}
@@ -594,36 +603,22 @@ describe("Focus", function()
             assert.same({"first", "second"}, vexids(f:tree('children'):get()))
         end)
 
-        it("reversetree collects each task and everything above it", function()
-            local f = Focus.new("leaf", function() return {leaf} end)
-            assert.same({"leaf", "mid", "root"}, vexids(f:reversetree('children'):get(linked)))
-        end)
-
-        it("tree and reversetree follow several fields at once", function()
+        it("tree follows several fields at once", function()
             local decision = {vexid = "decision", options = {"option"}}
             local option = {vexid = "option"}
             local both = {root, decision, option}
             universe(both)
             local f = Focus.new("decision", function() return {decision} end)
             assert.same({"decision", "option"}, vexids(f:tree('children', 'options'):get()))
-            local g = Focus.new("option", function() return {option} end)
-            assert.same({"option", "decision"}, vexids(g:reversetree('children', 'options'):get()))
         end)
 
-        it("tree and reversetree follow forwardlinks like any other field", function()
+        it("tree follows forwardlinks like any other field", function()
             local hub = {vexid = "hub", forwardlinks = {"leaf", "other"}}
             local spoke = {vexid = "leaf", forwardlinks = {}}
             local far = {vexid = "other", forwardlinks = {}}
             universe({hub, spoke, far})
             local f = Focus.new("hub", function() return {hub} end)
             assert.same({"hub", "leaf", "other"}, vexids(f:tree('forwardlinks'):get()))
-            local g = Focus.new("leaf", function() return {spoke} end)
-            assert.same({"leaf", "hub"}, vexids(g:reversetree('forwardlinks'):get()))
-        end)
-
-        it("reversetree tolerates tasks without the field", function()
-            local f = Focus.new("other", function() return {other} end)
-            assert.same({"other", "mid"}, vexids(f:reversetree('dependencies'):get(linked)))
         end)
 
         it("step moves one hop along a field", function()
@@ -640,10 +635,10 @@ describe("Focus", function()
             assert.same({"leaf", "other"}, vexids(f:step('children', 'dependencies'):get()))
         end)
 
-        it("tree, reversetree and step need a field", function()
+        it("tree and step need a field", function()
             stub(cli, 'throw', function(self, name) error(name) end)
             local f = Focus.new("root", function() return {root} end)
-            for _, operation in ipairs({'tree', 'reversetree', 'step'}) do
+            for _, operation in ipairs({'tree', 'step'}) do
                 local ok, err = pcall(function() return f[operation](f) end)
                 assert.is_false(ok)
                 assert.truthy(err:find('usage', 1, true))

@@ -5,6 +5,7 @@ description: Load project plugins from the vex folder
 created: "2026-10-19 09:21:53"
 modified: "2026-11-04 02:09:32"
 status: done
+parent: "[[make-vex-configurable-config-1]]"
 ---
 
 [[Plugin architecture]] says to replace a slot's implementation by adding a module of the same name under `src/plugin`. That means editing vex's own source: a project has no way to ship a plugin. `Plugin:addall` only scans `src/plugin`, and `load` only requires `plugin.<name>` from vex's `package.path`.

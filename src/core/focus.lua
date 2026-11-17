@@ -587,26 +587,26 @@ function Focus:tree(...)
     end, ...)
 end
 
--- reversetree
-local function get_parents(fields)
-    return function(task) 
-        local parents = {}
-        for _, vexid in ipairs(vexdex:linksto(task.vexid)) do
-            local parent = vexdex.index[vexid]
-            if parent and func.any(links(parent, fields), function(child) return child == task.vexid end) then
-                table.insert(parents, parent)
-            end
-        end
-        return parents
-    end 
-end
-
-function Focus:reversetree(...)
-    local fields = assertfields('reversetree', ...)
-    return self:chain('reversetree', function(tasks) 
-        return walk(tasks, get_parents(fields))
-    end, ...)
-end
+-- reversetree is retired: walk up with tree('parent') and down with tree('children')
+-- local function get_parents(fields)
+--     return function(task) 
+--         local parents = {}
+--         for _, vexid in ipairs(vexdex:linksto(task.vexid)) do
+--             local parent = vexdex.index[vexid]
+--             if parent and func.any(links(parent, fields), function(child) return child == task.vexid end) then
+--                 table.insert(parents, parent)
+--             end
+--         end
+--         return parents
+--     end 
+-- end
+--
+-- function Focus:reversetree(...)
+--     local fields = assertfields('reversetree', ...)
+--     return self:chain('reversetree', function(tasks) 
+--         return walk(tasks, get_parents(fields))
+--     end, ...)
+-- end
 
 -- step field...
 function Focus:step(...)
@@ -716,6 +716,7 @@ function deserialize(saved)
         if op.operation == 'focus' then
             f = Focus.focus(unpack(op.args))
         else
+            if type(Focus[op.operation]) ~= "function" then cli:throw('unknown-focus-operation', op.operation) end
             f = f[op.operation](f, unpack(op.args))
         end
     end

@@ -49,7 +49,7 @@ fix-flaky-webhook-retry-1
 Link the pieces together and move work along:
 
 ```console
-$ vex set ship-billing-rewrite-1 --children migrate-existing-invoices-1,fix-flaky-webhook-retry-1
+$ vex set migrate-existing-invoices-1,fix-flaky-webhook-retry-1 --parent ship-billing-rewrite-1
 $ vex set fix-flaky-webhook-retry-1 --status done
 ```
 
@@ -101,11 +101,11 @@ A recipe in `.vex/recipes/release.lua` creates the same structure every time:
 recipe:recipe 'release' {
     add = function(task, taskproperties)
         local name = taskproperties.description
+        local release = task:add({description = name, vextype = 'abstract'})
         local stages = {}
         for _, stage in ipairs({'Spike', 'Build', 'Test'}) do
-            table.insert(stages, task:add({description = stage .. ' ' .. name, vextype = 'atom'}))
+            table.insert(stages, task:add({description = stage .. ' ' .. name, vextype = 'atom', parent = release}))
         end
-        local release = task:add({description = name, vextype = 'abstract', children = stages})
         return {release, unpack(stages)}
     end
 }
