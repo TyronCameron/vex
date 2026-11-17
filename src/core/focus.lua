@@ -74,7 +74,7 @@ end)
 -- Binary Operations
 -----------------------------------------
 
-local deserialize, describe
+local deserialize
 
 local function asfocus(focus)
     if type(focus) == "string" then return Focus.focus(focus) end
@@ -673,25 +673,6 @@ function Focus.parse(args)
     return current:apply(args)
 end
 
-function describe(operations)
-    local function word(arg)
-        if type(arg) ~= "table" then return (tostring(arg):gsub("[,:]", "\\%0")) end
-        if arg.operations then return describe(arg.operations) end
-        return table.concat(func.imap(arg, word), ',')
-    end
-    local words = {}
-    for _, op in ipairs(operations) do
-        if op.operation == 'focus' then
-            table.insert(words, word(op.args[1]))
-        else
-            local value = table.concat(func.imap(op.args, word), ':')
-            if value:find('%s') then value = "'" .. value .. "'" end
-            table.insert(words, '--' .. op.operation .. (value ~= '' and ' ' .. value or ''))
-        end
-    end
-    return table.concat(words, ' ')
-end
-
 -- the fields the focus's last select asked for, vexid included, or nil when it selects none
 function Focus:selected()
     for i = #self.operations, 1, -1 do
@@ -702,7 +683,22 @@ end
 
 -- the focus and flags that rebuild this focus, as typed after `vex focus`
 function Focus:describe()
-    return describe(self.operations)
+    local function word(arg)
+        if type(arg) ~= "table" then return (tostring(arg):gsub("[,:]", "\\%0")) end
+        if arg.operations then return Focus.describe(arg) end
+        return table.concat(func.imap(arg, word), ',')
+    end
+    local words = {}
+    for _, op in ipairs(self.operations) do
+        if op.operation == 'focus' then
+            table.insert(words, word(op.args[1]))
+        else
+            local value = table.concat(func.imap(op.args, word), ':')
+            if value:find('%s') then value = "'" .. value .. "'" end
+            table.insert(words, '--' .. op.operation .. (value ~= '' and ' ' .. value or ''))
+        end
+    end
+    return table.concat(words, ' ')
 end
 
 -----------------------------------------
