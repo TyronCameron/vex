@@ -37,13 +37,12 @@ end
 -- only need one
 local v = View.new()
 
--- every field the tasks hold, and those the focus selects, so a column shows for a transient such as an abstract's status
-local function columns(focus, tasks)
+-- every field the tasks hold, so a column shows for a transient such as an abstract's status
+local function columns(tasks)
     local found = {}
     for _, t in ipairs(tasks) do
         for k in pairs(t) do if k ~= 'vexbody' then found[k] = true end end
     end
-    for _, k in ipairs(focus:selected() or {}) do found[k] = true end
     return found
 end
 
@@ -69,7 +68,7 @@ end
 v:view 'csv' {
     display = function(focus, flags)
         local tasks = focus:get()
-        local cols = columns(focus, tasks)
+        local cols = columns(tasks)
         return format.csv(func.imap(tasks, function(t) return row(t, cols, true) end))
     end
 }
@@ -99,7 +98,7 @@ v:view 'ics' {
             local epoch = t[field]
             if epoch ~= nil then
                 if not isdate(t, field) then cli:throw('not-a-date-field', field) end
-                local fields = row(t, columns(focus, {t}), true)
+                local fields = row(t, columns({t}), true)
                 local allday = atmidnight(epoch)
                 local start = icstime(epoch, allday)
                 local event = {
@@ -167,7 +166,7 @@ v:view 'tabular' {
     display = function(focus, flags, flagwords)
         local applied = focus:apply(flagwords)
         local tasks = applied:result()
-        return pretty.tabular(tabularrows({}, tasks, 0, columns(applied, applied:get())), sortdata)
+        return pretty.tabular(tabularrows({}, tasks, 0, columns(applied:get())), sortdata)
     end
 }
 

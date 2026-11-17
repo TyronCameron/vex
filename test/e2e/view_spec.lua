@@ -42,11 +42,6 @@ describe("vex view with focus flags (e2e, subprocess)", function()
     assert.truthy(out:find('^%[\n  {\n    "created"'), out)
   end)
 
-  it("keeps a column it was asked to select, even when no task has a value for it", function()
-    local out = vex(dir, "view", "all", "tabular", "--select", "owner,status")
-    assert.truthy(out:find("│ owner", 1, true), out)
-  end)
-
   it("names the group of tasks with no value for the grouped field", function()
     local out = vex(dir, "view", "all", "tabular", "--groupby", "owner")
     assert.truthy(out:find("│ owner: (none)", 1, true), out)
