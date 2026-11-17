@@ -7,6 +7,7 @@ dependencies:
   - "[[implement-inline-plugin-1]]"
 modified: "2026-10-19 09:22:08"
 status: todo
+parent: "[[create-inline-plugin-1]]"
 ---
 
 [[01 CLI reference#Inline tags]]: an indented tag becomes a child of the tag above it. When `vex inline` meets an indented tag under another tag, add it to the parent's `children` (the parent must then be an `abstract`). Cover nested and sibling tags in an e2e test.

@@ -1,4 +1,4 @@
-A task links to another by holding its vexid in `children`, `options`, `decision` or `dependencies`. In the task file a link is written `[[vexid]]`, so Obsidian draws the graph. vex checks every link when it resolves: the target must exist, a child has one parent, and dependencies can't form a cycle.
+A task links to another by holding its vexid in `parent`, `decision` or `dependencies`. In the task file a link is written `[[vexid]]`, so Obsidian draws the graph. vex checks every link when it resolves: the target must exist, and neither parents nor dependencies can form a cycle. A task's `children` are the tasks whose `parent` it is, worked out from the backlinks rather than stored.
 
 ## Links as fields
 
@@ -11,29 +11,29 @@ Two transients answer "what does this task link to?" and "what links to it?". Th
 
 ```console
 $ vex get migrate-existing-invoices-1 --forwardlinks --backlinks
-	ship-billing-rewrite-1,write-cutover-runbook-1
+ship-billing-rewrite-1	write-cutover-runbook-1
 ```
 
-The task links to nothing, and is linked from its parent and from a task that depends on it. `backlinks` come from the index, so they are as fresh as the last `vex resolve`.
+The task links to its parent, and is linked from a task that depends on it. `backlinks` come from the index, so they are as fresh as the last `vex resolve`.
 
 ## Walking links
 
 `--step` moves one hop and `--tree` follows links until they run out ([[05 Getting into focus]]):
 
 ```console
-$ vex focus migrate-existing-invoices-1 --step backlinks
+$ vex focus migrate-existing-invoices-1 --step forwardlinks
+Focusing on 1 vex
+$ vex focus migrate-existing-invoices-1 --tree forwardlinks
 Focusing on 2 vexes
-$ vex focus migrate-existing-invoices-1 --tree backlinks
-Focusing on 3 vexes
 ```
 
-The second focus adds the task itself to the two above. `--step children` and `--tree children` walk the abstract hierarchy the same way.
+The second focus adds the task itself to its parent. `--step children` and `--tree children` walk down the hierarchy the same way, and `--tree parent` walks up it.
 
 ## What follows from a change
 
 Links are why one change can touch many files:
 
-- **Resolving a task** resolves every task linked to it or from it, transitively, so derived fields stay right, and re-files them: a parent's change moves its children, and a finished dependency moves its dependents ([[01 Configuring vex (config.lua)#Grouping task files into folders]]).
+- **Resolving a task** resolves every task linked to it or from it, transitively, so derived fields stay right, and re-files them: a parent's change moves the tasks under it, and a finished dependency moves its dependents ([[01 Configuring vex (config.lua)#Grouping task files into folders]]).
 - **Removing a task** strips its vexid from every task that linked to it, then resolves them, so no link is left dangling.
 
 An abstract's `status` also follows its children ([[06 Status and state machines]]).

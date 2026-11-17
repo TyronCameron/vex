@@ -19,11 +19,11 @@ $ vex recipe chore Take out the bins
 recipe:recipe 'release' {
     add = function(task, taskproperties)
         local name = taskproperties.description
+        local release = task:add({description = name, vextype = 'abstract'})
         local stages = {}
         for _, stage in ipairs({'Spike', 'Build', 'Test'}) do
-            table.insert(stages, task:add({description = stage .. ' ' .. name, vextype = 'atom'}))
+            table.insert(stages, task:add({description = stage .. ' ' .. name, vextype = 'atom', parent = release}))
         end
-        local release = task:add({description = name, vextype = 'abstract', children = stages})
         return {release, unpack(stages)}
     end
 }

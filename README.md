@@ -21,7 +21,7 @@ $ vex add Migrate existing invoices
 migrate-existing-invoices-1
 $ vex add Fix the flaky webhook retry
 fix-flaky-webhook-retry-1
-$ vex set ship-billing-rewrite-1 --children migrate-existing-invoices-1,fix-flaky-webhook-retry-1
+$ vex set migrate-existing-invoices-1,fix-flaky-webhook-retry-1 --parent ship-billing-rewrite-1
 $ vex set fix-flaky-webhook-retry-1 --status done
 $ vex view all kanban
 ┌───────────────────────────┬─────────────────────────────┐

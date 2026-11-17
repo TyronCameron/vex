@@ -17,14 +17,14 @@ A focus is a saved query over your tasks. `vex focus` builds one and most other 
 | `--match field:pattern` | Tasks where `field` matches the Lua pattern, e.g. `description:"^Fix.*$"`. |
 | `--between field:low:high` | Tasks where `field` is in the range. Either end may be empty. |
 | `--nil field` | Tasks with no value for `field`. |
-| `--contains field:value` | Tasks where `field` holds `value`: as an element of its list or as one of its keys, e.g. `"tags:#pinned"` or `children:fix-login-1`. The value is compared as given. |
+| `--contains field:value` | Tasks where `field` holds `value`: as an element of its list or as one of its keys, e.g. `"tags:#pinned"` or `children:fix-login-1`. `children` is a transient: the tasks whose `parent` a task is. The value is compared as given. |
 | `--select a,b` | Only those fields. |
 | `--orderby field[:desc]` | Tasks sorted by those fields. |
 | `--groupby field` | Tasks in groups. Later flags work per group. |
 | `--rn` | Numbers each group's tasks from 1. |
 | `--first n`, `--last n` | The first or last `n` tasks, per group after `--groupby`. Order them with `--orderby` first. |
-| `--step field` | The tasks one hop along `field`: `children`, `forwardlinks`, `backlinks`. |
-| `--tree field`, `--reversetree field` | The tasks plus everything reachable from, or reaching, them through `field`. |
+| `--step field` | The tasks one hop along `field`: `parent`, `children`, `forwardlinks`, `backlinks`. |
+| `--tree field` | The tasks plus everything reachable from them through `field`: `--tree children` walks down the hierarchy, `--tree parent` walks up it. |
 | `--union`, `--intersect`, `--xor`, `--notin`, `--onlyin`, `--complement` | Set operations. |
 
 ## Named focuses
@@ -124,7 +124,7 @@ $ vex view tabular --select owner,due,urgency
 └─────────────────────────────┴─────────────────────┴───────┴─────────┘
 ```
 
-`ready` drops finished and blocked tasks, and `--nil children` drops abstracts, which nobody works on directly. `urgency` ranks each owner's open tasks by `due`, so everyone's most urgent task comes first, then everyone's second. A task with no `due` takes its soonest open dependent's, so it ranks ahead of the tasks that need it. Tasks that tie share a rank, and `due` breaks the tie when you add `--orderby urgency:due`.
+`ready` drops finished and blocked tasks, and `--nil children` drops the tasks other tasks sit under, such as abstracts, which nobody works on directly. `urgency` ranks each owner's open tasks by `due`, so everyone's most urgent task comes first, then everyone's second. A task with no `due` takes its soonest open dependent's, so it ranks ahead of the tasks that need it. Tasks that tie share a rank, and `due` breaks the tie when you add `--orderby urgency:due`.
 
 ### Open decisions
 

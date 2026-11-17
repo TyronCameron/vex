@@ -201,7 +201,7 @@ cli:verb "set" {
     end,
     doc = "Allows you to set fields in the focus. Put --insert or --remove before a list field to add or remove values rather than overwrite it, or --clear before any field to unset it. Resolution is called on that `focus`. --force writes the fields as given without resolving, e.g. to reopen a finished task; links and derived fields catch up on the next `vex resolve <vexid> --force`.",
     args = "[focus] [--fields...]",
-    example = "vex set plan-trip-1 --insert --children book-flights-1,book-hotel-1"
+    example = "vex set go-on-trip-1 --insert --dependencies book-flights-1,book-hotel-1"
 }
 
 cli:verb "recipe" {

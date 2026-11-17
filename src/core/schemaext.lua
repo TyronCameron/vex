@@ -111,19 +111,10 @@ schema.register 'autotagged' {
 }
 
 schema.register 'acyclic' {
-    validate = function(self, dependency, context)
-        for _, reachable in ipairs(focus.focus(dependency):tree('dependencies'):get()) do
-            if reachable.vexid == context.vexid then cli:throw('dependency-cycle', context.vexid, dependency) end
-        end
-        return true
-    end
-}
-
-schema.register 'childless' {
-    validate = function(self, dependency, context)
-        local target = focus.focus(dependency):get()[1]
-        if #(target.children or {}) + #(target.options or {}) > 0 then
-            cli:throw('dependency-with-children', context.vexid, dependency)
+    validate = function(self, target, context)
+        local field, errorname = self.specification[1], self.specification[2]
+        for _, reachable in ipairs(focus.focus(target):tree(field):get()) do
+            if reachable.vexid == context.vexid then cli:throw(errorname, context.vexid, target) end
         end
         return true
     end
@@ -144,27 +135,6 @@ schema.register 'if-blocked-then-not-started' {
         local leaving = (context.previous.phase or 'initial') == 'initial' and context.task.phase ~= 'initial'
         if leaving and task:getsingle(dependency).phase ~= 'final' then
             cli:throw('blocked', context.vexid, context.task.status, dependency)
-        end
-        return true
-    end
-}
-
-schema.register 'notself' {
-    validate = function(self, child, context)
-        if child == context.vexid then cli:throw('self-child', child) end
-        return true
-    end
-}
-
-schema.register 'singleparent' {
-    validate = function(self, child, context)
-        for _, vexid in ipairs(vexdex:linksto(child)) do
-            local parent = vexdex:get(vexid)
-            if vexid ~= context.vexid and parent and type(parent.children) == "table" then
-                for _, other in ipairs(parent.children) do
-                    if other == child then cli:throw('multiple-parents', child, context.vexid, parent.vexid) end
-                end
-            end
         end
         return true
     end
@@ -201,21 +171,16 @@ schema.register 'dependencies' (schema.maybe {
     schema.unique {
         schema.all {
             schema.formatted {schema.vexlink},
-            schema.acyclic,
-            schema.childless,
+            schema.acyclic {'dependencies', 'dependency-cycle'},
             schema.dueinorder,
             schema['if-blocked-then-not-started']
         }
     }
 })
 
-schema.register 'children' (schema.default {
-    schema.unique {
-        schema.all {
-            schema.formatted {schema.vexlink},
-            schema.notself,
-            schema.singleparent
-        }
-    },
-    default = function() return {} end
+schema.register 'parent' (schema.maybe {
+    schema.all {
+        schema.formatted {schema.vexlink},
+        schema.acyclic {'parent', 'parent-cycle'}
+    }
 })

@@ -7,6 +7,7 @@ dependencies:
   - "[[rewrite-inline-tags-carry-task-1]]"
 modified: "2026-10-19 09:22:08"
 status: todo
+parent: "[[create-inline-plugin-1]]"
 ---
 
 [[01 CLI reference]] lists `vex open [focus]`: open each task in the focus in your editor (`$EDITOR`), at the tag that created it if there is one, otherwise at its task file. Needs the inline plugin to record where each tag lives.

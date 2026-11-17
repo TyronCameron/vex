@@ -5,6 +5,7 @@ description: Show every column and blank missing values in the tabular view
 created: "2026-10-19 09:21:47"
 modified: "2026-10-30 01:33:49"
 status: done
+parent: "[[fix-bugs-1]]"
 ---
 
 `pretty.tabular` took its columns from the first row only, so a field the first task lacked (e.g. `children` when the first task is an atom) was dropped for every task, and a field a later task lacked printed as `nil`. Columns are now the union of every row's fields, and a missing value is a blank cell.

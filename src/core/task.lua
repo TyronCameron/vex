@@ -219,23 +219,17 @@ function TaskManager:remove(vexid)
     assert(vexid, "remove() requires an id or focus")
     event:trigger('pre-task-remove', vexid)
     if vexdex:get(vexid) then
-        local orphans = self:getsingle(vexid).children or {}
-        if #orphans > 0 then
-            self:set(vexid, {children = {}})
-            self:resolve(vexid)
-        end
+        local grandparent = self:getsingle(vexid).parent
         local linkers = func.imap(focus.focus(vexid):step('backlinks'):get(), function(linker) return linker.vexid end)
         for _, linker in ipairs(linkers) do
             local task = self:getsingle(linker)
-            local adopts = type(task.children) == "table" and func.any(task.children, function(child) return child == vexid end)
             for field, value in pairs(task) do
                 if value == vexid then
-                    task[field] = nil
+                    task[field] = field == 'parent' and grandparent or nil
                 elseif type(value) == "table" then
                     task[field] = func.ifilter(value, function(link) return link ~= vexid end)
                 end
             end
-            if adopts then task.children = func.imerge(task.children, orphans) end
         end
         self:resolveall(linkers)
     end
@@ -349,7 +343,10 @@ function TaskManager:reindexall(force)
             local other = found[task.vexid] or (recorded[task.vexid] and vexdex:taskroot() .. '/' .. recorded[task.vexid])
             if other and lfs.attributes(other, 'mode') == 'file' then cli:throw('duplicate-vexid', task.vexid, other, path) end
             found[task.vexid] = path
-            if not vexdex:get(task.vexid) then self:index(task.vexid) end
+            if not vexdex:get(task.vexid) then
+                self:index(task.vexid)
+                if self.tasktypes[task.vextype] then vexdex:unsafe_link(task.vexid, self:forwardlinks(task)) end
+            end
             table.insert(vexids, task.vexid)
         end
     end

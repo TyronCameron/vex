@@ -5,5 +5,6 @@ description: "Create view next up. This view shows unblocked tasks, in order or 
 created: "2026-05-20 20:31:34"
 modified: "2026-10-30 07:09:14"
 status: done
+parent: "[[add-planning-views-1]]"
 ---
 Solved by the `ready` focus, which lists the unblocked tasks.

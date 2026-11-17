@@ -5,6 +5,7 @@ description: Let task types register hooks that receive the task manager and foc
 created: "2026-10-19 21:29:42"
 modified: "2026-10-30 03:17:28"
 status: todo
+parent: "[[support-recurring-tasks-1]]"
 ---
 
 **Unconfirmed: this needs further thinking.** The design below is one possibility, not a decision.

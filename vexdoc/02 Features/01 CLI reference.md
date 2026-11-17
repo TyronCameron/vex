@@ -6,7 +6,7 @@
 - `[focus]` is optional everywhere. Without it, a command uses your saved focus (`prev`). See [[#Focuses]].
 - `--field value` sets a field; a `--field` without a value names one.
 - Quoting works as in a shell: `--vexbody "two words"` is one value, and `--filter status:"not done"` matches `not done`.
-- A comma outside quotes makes a list: `--children a,b` sets two children, and `vex focus a,b` focuses on both tasks. A value containing spaces keeps its commas, and `\,` writes a literal comma.
+- A comma outside quotes makes a list: `--dependencies a,b` sets two dependencies, and `vex focus a,b` focuses on both tasks. A value containing spaces keeps its commas, and `\,` writes a literal comma.
 - A colon splits a flag's value into parts, which focus flags read as `field:value` (`--filter status:done`, `--between due:today:friday`). It splits values with spaces too, so write a time with dots (`08.30`) or escape its colons (`08\:30`). Commands that set fields, such as `set` and `add`, take the value whole, so `--vexbody "Note: done"` and `--due 8:30am` work as written.
 
 ## Commands
@@ -69,7 +69,14 @@ The task file goes in `taskfolder`. Its vexid comes from the description's first
 - "Make coffee for wife" → `make-coffee-wife-1`
 - "Investigate why the login page is slow on mobile" → `investigate-login-page-slow-1`
 
-`--vextype` picks the task type, and with it the schema the task is validated against (see [[03 Task types (and vexations)]]).
+`--vextype` picks the task type, and with it the schema the task is validated against (see [[03 Task types (and vexations)]]). `--parent` puts the new task under another one. `vex add` focuses on the task it adds, so `vex get` hands it to the next command:
+
+```console
+$ vex add Plan the trip --vextype abstract
+plan-trip-1
+$ vex add Book the flights --vextype atom --parent $(vex get)
+book-flights-1
+```
 
 ## Editing tasks
 
@@ -80,8 +87,8 @@ $ vex set make-coffee-wife-1 --status done --owner alice
 `set` overwrites each field you give it, then resolves the task. To edit a list field by value, put `--insert` or `--remove` before it:
 
 ```console
-$ vex set plan-trip-1 --insert --children book-flights-1,book-hotel-1
-$ vex set plan-trip-1 --remove --children book-flights-1
+$ vex set go-on-trip-1 --insert --dependencies book-flights-1,book-hotel-1
+$ vex set go-on-trip-1 --remove --dependencies book-flights-1
 ```
 
 `--insert` skips values already in the list.
@@ -89,7 +96,7 @@ $ vex set plan-trip-1 --remove --children book-flights-1
 To unset a field, put `--clear` before it. Repeat it for each field:
 
 ```console
-$ vex set my-abstract-1 --vextype atom --status done --clear --children
+$ vex set book-flights-1 --clear --parent
 $ vex set my-task-1 --clear --due --clear --owner
 ```
 
@@ -168,9 +175,8 @@ Values are separated by `:`.
 | `--match field:pattern` | Tasks whose `field` matches a Lua pattern (`^`, `$`, `.*`, `%d`; no `\|` alternation): `description:"^Fix.*$"`. |
 | `--nil field` | Tasks that hold no value for `field`, transients included: `--nil due`. |
 | `--between field:low:high` | Tasks with `low <= field <= high`. Leave `low` or `high` empty for an open side: `cost::9`. Dates may be `YYYY-MM-DD`, and a time of day is written with dots, as in `--between 'due:2026-11-09 08.00:2026-11-10 17.00'`. |
-| `--step field[:field...]` | The tasks one hop along `field`, such as `children`, `forwardlinks` or `backlinks`. |
+| `--step field[:field...]` | The tasks one hop along `field`, such as `parent`, `children`, `forwardlinks` or `backlinks`. |
 | `--tree field[:field...]` | The tasks and everything reachable by following `field`, hop after hop. |
-| `--reversetree field[:field...]` | The tasks and everything that reaches them through `field`. |
 | `--complement` | Every task not in the focus. |
 | `--union focus` | Tasks in either focus. |
 | `--intersect focus` | Tasks in both. |

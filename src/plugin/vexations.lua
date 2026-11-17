@@ -1,38 +1,42 @@
 local task = require 'core.task'
 local recipe = require 'core.recipe'
-local focus = require 'core.focus'
 local vexdex = require 'core.vexdex'
 local func = require 'lib.func'
 local schema = require 'lib.schema'
+local cli = require 'lib.cli'
 require 'core.schemaext'
+
+schema.register 'dependable' {
+    validate = function(self, dependency, context)
+        local vextype = task:getsingle(dependency).vextype
+        if vextype == 'abstract' or vextype == 'decision' then cli:throw('undependable', context.vexid, dependency, vextype) end
+        return true
+    end
+}
+
+local dependencies = schema.all {schema.dependencies, schema.maybe {schema.vec {schema.dependable}}}
 
 task:task 'abstract':extends 'basetask' {
     schema = schema.atleast {
         vexbody = schema.maybe {schema.empty},
         status = schema.raw {schema.none},
-        options = schema.none,
-        dependencies = schema.none,
-        children = schema.children
+        dependencies = schema.none
     }
 }
 
 task:task 'decision':extends 'basetask' {
     schema = schema.atleast {
         status = schema.status,
-        options = schema.vec {
-            schema.formatted {schema.vexlink}
-        },
         decision = schema.maybe {
             schema.all {
                 schema.formatted {schema.vexlink},
                 schema.constraint{
                     function(instance, context)
-                        return func.any(context.root.options, function(option) return option == instance end), "Decision not found in options"
+                        return func.any(context.task.children or {}, function(option) return option == instance end), "Decision not found in children"
                     end 
                 }
             }
         },
-        children = schema.none,
         dependencies = schema.none
     }
 }
@@ -40,19 +44,17 @@ task:task 'decision':extends 'basetask' {
 task:task 'exploration':extends 'basetask' {
     schema = schema.atleast {
         status = schema.status,
-        dependencies = schema.dependencies,
+        dependencies = dependencies,
         vexbody = schema.maybe {schema.empty},
         children = schema.none,
-        options = schema.none,
     }
 }
 
 task:task 'atom':extends 'basetask' {
     schema = schema.atleast {
         status = schema.status,
-        dependencies = schema.dependencies,
+        dependencies = dependencies,
         children = schema.none,
-        options = schema.none,
     }
 }
 
@@ -69,9 +71,8 @@ local function inabstract(name)
         add = function(task, taskproperties)
             local abstract = task:add({description = taskproperties.description, vextype = 'abstract'})
             task:resolve(abstract)
-            local children = add(task, taskproperties)
-            task:set(abstract, {children = children})
-            return {abstract, unpack(children)}
+            taskproperties.parent = abstract
+            return {abstract, unpack(add(task, taskproperties))}
         end
     }
 end
@@ -80,11 +81,7 @@ inabstract 'recurring'
 inabstract 'repeat'
 
 local function childphases(t)
-    local children = rawget(t, 'children')
-    if type(children) ~= "table" then children = {children} end
-    local indexed = func.ifilter(children, function(vexid) return vexdex:get(vexid) end)
-    if #indexed == 0 then return {} end
-    return func.imap(focus.focus(indexed):get(), function(child) return child.phase end)
+    return func.imap(t.children or {}, function(vexid) return vexdex:get(vexid).phase end)
 end
 
 task:transient 'phase' {
