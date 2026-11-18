@@ -104,7 +104,7 @@ function TaskManager:registertask(name, parent, tab)
         name = name,
         schema = parent and self.tasktypes[parent].schema:merge(tab.schema) or tab.schema,
         fields = tab.fields,
-        fieldschemas = {}
+        cached_subschemas = {}
     }
     if type(tab.schema.specification) == "table" then 
         for key in pairs(tab.schema.specification) do 
@@ -149,10 +149,10 @@ end
 function TaskManager:schemaof(vextype, field)
     local tasktype = self.tasktypes[vextype]
     if not tasktype then return nil end
-    if tasktype.fieldschemas[field] == nil then
-        tasktype.fieldschemas[field] = select(2, tasktype.schema:get({}, {field})) or false
+    if tasktype.cached_subschemas[field] == nil then
+        tasktype.cached_subschemas[field] = select(2, tasktype.schema:get({}, {field})) or false
     end
-    return tasktype.fieldschemas[field] or nil
+    return tasktype.cached_subschemas[field] or nil
 end
 
 function TaskManager:transientof(vextype, name)
