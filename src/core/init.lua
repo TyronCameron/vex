@@ -1,4 +1,4 @@
-local pretty = require 'lib.pretty'
+local format = require 'lib.format'
 local lfs = require "lib.lfs"
 local cli = require "lib.cli"
 local defaults = require "core.configdefaults"
@@ -17,7 +17,7 @@ end
 
 local function create_config(path)
     local f = io.open(path .. "/config.lua", "w")
-    local str = "return " .. pretty.table(defaults)
+    local str = "return " .. format.lua(defaults) .. "\n"
     f:write(str)
     f:close()
 end 

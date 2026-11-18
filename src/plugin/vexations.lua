@@ -19,6 +19,7 @@ local dependencies = schema.all {schema.dependencies, schema.maybe {schema.vec {
 task:task 'abstract':extends 'basetask' {
     schema = schema.atleast {
         vexbody = schema.maybe {schema.empty},
+        status = schema.raw {schema.none},
         dependencies = schema.none
     }
 }
@@ -44,7 +45,7 @@ task:task 'exploration':extends 'basetask' {
     schema = schema.atleast {
         status = schema.status,
         dependencies = dependencies,
-        vexbody = schema.empty,
+        vexbody = schema.maybe {schema.empty},
         children = schema.none,
     }
 }

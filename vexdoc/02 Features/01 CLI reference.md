@@ -7,6 +7,7 @@
 - `--field value` sets a field; a `--field` without a value names one.
 - Quoting works as in a shell: `--vexbody "two words"` is one value, and `--filter status:"not done"` matches `not done`.
 - A comma outside quotes makes a list: `--dependencies a,b` sets two dependencies, and `vex focus a,b` focuses on both tasks. A value containing spaces keeps its commas, and `\,` writes a literal comma.
+- A colon splits a flag's value into parts, which focus flags read as `field:value` (`--filter status:done`, `--between due:today:friday`). It splits values with spaces too, so write a time with dots (`08.30`) or escape its colons (`08\:30`). Commands that set fields, such as `set` and `add`, take the value whole, so `--vexbody "Note: done"` and `--due 8:30am` work as written.
 
 ## Commands
 
@@ -17,11 +18,11 @@
 | `vex init` | Creates a `.vex` folder in the current folder. |
 | `vex show [focus]` | Prints each task's file as it is on disk, frontmatter and body highlighted. The only command that shows the body. |
 | `vex get [focus] [row_sep] [col_sep] [--fields...]` | Prints one tab-separated line per task. `--select a,b` names the fields as a list. Defaults to `vexid`. A row separator and a column separator replace the newline and tab (see [[01 CLI reference#Feeding a focus into a list field]]). |
-| `vex view [focus] [view] [--flags...]` | Renders the focus with a view. With no arguments, lists the views. See [[04 Views]]. |
+| `vex view [focus] <view> [--flags...]` | Renders the focus with a view. With one word, the word is the view, shown for the saved focus. With no arguments, lists the views. See [[04 Views]]. |
 | `vex focus [focus] [--flags...]` | Builds and saves a focus. With no arguments, prints the saved focus and saves nothing. |
 | `vex add Description [--fields...]` | Creates and resolves a task, prints its vexid and focuses on it. |
-| `vex set [focus] [--fields...]` | Sets fields on every task in the focus, then resolves them. |
-| `vex remove [focus]` | Deletes every task in the focus, removes links to them from other tasks, and clears the focus. |
+| `vex set [focus] [--force] [--fields...]` | Sets fields on every task in the focus, then resolves them. `--force` writes them without resolving. |
+| `vex remove [focus]` | Deletes every task in the focus, removes links to them from other tasks, hands a removed abstract's children to its parent, and leaves an empty focus. |
 | `vex resolve [focus] [--force]` | Resolves the tasks in the focus whose files changed since vex last saw them, and writes back what changes. `vex resolve all` also takes in new task files and drops deleted ones. `--force` resolves every task in the focus; `vex resolve all --force` rebuilds the whole index from disk. |
 | `vex recipe [recipe] Description [--fields...]` | Creates tasks from a recipe and focuses on them. With no recipe, lists the recipes. |
 | `vex autocomplete shell` | Prints a completion script for `bash`, `zsh`, `fish` or `powershell`. |
@@ -44,7 +45,7 @@ Every user mistake, such as an unknown focus or an invalid field, fails with a n
 | `recipe` | ● | ● | ● | ● |
 | `autocomplete`, `suggest` | | | | |
 
-`show`, `get`, `view` and `focus` only read. `get`, `view` and `focus` read the index as last committed and never open a task file. When a task file was edited, moved or deleted by hand since vex last saw it, they print a warning on stderr and still show what the index holds; `vex resolve all` takes the change in. `show` prints the file itself, so it shows a hand edit straight away, unresolved. Commands that change tasks (`add`, `set`, `remove`, `resolve`, `recipe`) first take in hand edits to the tasks in their focus, then write every change and the index together when they finish. Every command appends to the logs in `.vex/vexdex`; those are a record, not state.
+`show`, `get`, `view` and `focus` only read. `get`, `view` and `focus` read the index as last committed and never open a task file. When a task file was edited, moved or deleted by hand since vex last saw it, they print a warning on stderr and still show what the index holds; `vex resolve all` takes the change in. `show` prints the file itself, so it shows a hand edit straight away, unresolved. Commands that change tasks (`add`, `set`, `remove`, `resolve`, `recipe`) first take in hand edits to the tasks in their focus (`set --force` doesn't), then write every change and the index together when they finish. Every command appends to the logs in `.vex/vexdex`; those are a record, not state.
 
 ## Initialisation
 
@@ -100,6 +101,14 @@ $ vex set my-task-1 --clear --due --clear --owner
 ```
 
 A field that the task type requires fails resolution as usual. A flag with no value, such as `vex set x --status`, is an error rather than being ignored.
+
+`--force`, anywhere after the focus, writes the fields as given and skips resolution entirely: no validation, no status machine, no cascade into linked tasks, and no taking in of hand edits. Use it to get out of a corner the rules won't let you leave, such as reopening a finished task:
+
+```console
+$ vex set tidy-readme-1 --force --status todo
+```
+
+The task's links, backlinks and derived fields only catch up the next time it resolves, which `vex resolve tidy-readme-1 --force` does at once.
 
 ## Focuses
 
@@ -162,10 +171,10 @@ Values are separated by `:`.
 | --- | --- |
 | `--select field,field` | Only those fields, plus `vexid`. Transients are included once selected. |
 | `--filter field:value` | Tasks whose `field` equals `value`. |
-| `--fuzzy field:value[:n]` | Tasks whose `field` contains `value` within `n` edits (default 3). |
+| `--fuzzy field:value[:n]` | Tasks whose `field` contains `value` within `n` edits, ignoring case. `n` defaults to one edit for every four characters of `value`. |
 | `--match field:pattern` | Tasks whose `field` matches a Lua pattern (`^`, `$`, `.*`, `%d`; no `\|` alternation): `description:"^Fix.*$"`. |
 | `--nil field` | Tasks that hold no value for `field`, transients included: `--nil due`. |
-| `--between field:low:high` | Tasks with `low <= field <= high`. Leave `low` or `high` empty for an open side: `cost::9`. Dates may be `YYYY-MM-DD`. |
+| `--between field:low:high` | Tasks with `low <= field <= high`. Leave `low` or `high` empty for an open side: `cost::9`. Dates may be `YYYY-MM-DD`, and a time of day is written with dots, as in `--between 'due:2026-11-09 08.00:2026-11-10 17.00'`. |
 | `--step field[:field...]` | The tasks one hop along `field`, such as `parent`, `children`, `forwardlinks` or `backlinks`. |
 | `--tree field[:field...]` | The tasks and everything reachable by following `field`, hop after hop. |
 | `--complement` | Every task not in the focus. |
@@ -219,7 +228,7 @@ A saved focus is read again each time it is used, so "next tuesday" always means
 | Periods | `next week`, `last month`, `next year`, `this year`, `next fall`, `winter` |
 | Dates | `26 July`, `July 26th`, `the 26th of December 2026`, `the 3rd`, `2026-07-26` |
 | Times of day | `first light`, `dawn`, `morning`, `morn`, `noon`, `arvo`, `afternoon`, `end of day`, `eve`, `dusk`, `night`, `midnight` |
-| Clock times | `5pm`, `3:30pm`, `15:00`, `at 9` |
+| Clock times | `5pm`, `3:30pm`, `15:00`, `15.00`, `8.30pm`, `at 9` |
 | Offsets | `fifteen minutes`, `in 3 days`, `half day`, `an hour and a half`, `2 weeks ago` |
 
 - A weekday or date means its next occurrence. A date with no year falls on or after today; a weekday falls after today.
@@ -238,7 +247,7 @@ A saved focus is read again each time it is used, so "next tuesday" always means
 Resolution keeps every task valid. `add`, `set`, `remove` and `recipe` resolve the tasks they touch, `set`, `remove` and `resolve` first resolve the tasks in their focus whose files changed on disk, and `vex resolve` resolves a focus on demand. Commands that only read never resolve. For each task, vex runs the schema of its type and of every type it extends:
 
 1. **Normalise.** Fill defaults (`vextype`, `status`, `created`, `modified`) and convert values: `"15"` to `15`, `"2026-08-01 09:00:00"` to a timestamp, `[[vexid]]` to `vexid`.
-2. **Validate.** Check every field against its schema. Links must point at existing tasks, `status` must follow its state machine, `owner` must be a configured user, dependencies must not form a cycle, and a child can have only one parent.
+2. **Validate.** Check every field against its schema. Links must point at existing tasks, `status` must follow its state machine and can't leave `todo` while a dependency is unfinished, `owner` must be a configured user when `taskowners` is set, dependencies must not form a cycle, and a child can have only one parent.
 3. **Derive.** Compute derived fields and record the task's links.
 4. **Index.** Store the task in `.vex/vexdex` and write its file, formatted for reading, if that changes it. `modified` moves only when the task's content changed.
 

@@ -41,7 +41,7 @@ task:task 'basetask' {
         },
         cost = schema.maybe {schema.num},
         benefit = schema.maybe {schema.num},
-        owner = schema.maybe {schema.any(config.taskowners)},
+        owner = schema.any(config.taskowners),
         manualtags = schema.maybe {schema.vec {schema.tagoverride}},
         tags = schema.autotagged,
         parent = schema.parent,

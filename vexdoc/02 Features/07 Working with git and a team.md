@@ -32,4 +32,4 @@ vex resolve all
 
 ## Sharing a backlog
 
-`owner` must be one of `taskowners` in `.vex/config.lua`, so commit that file and everyone assigns the same names. Each person keeps their own saved focus, so `vex focus all --filter owner:alice` is a personal view of a shared backlog.
+Once `taskowners` is set in `.vex/config.lua`, every task's `owner` must be one of them, so commit that file and everyone assigns the same names. Each person keeps their own saved focus, so `vex focus all --filter owner:alice` is a personal view of a shared backlog.

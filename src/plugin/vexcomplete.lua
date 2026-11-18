@@ -71,12 +71,12 @@ cli:error 'unknown-shell' {
 cli:verb "autocomplete" {
     function(args)
         local shell = args[1]
-        if not shell then cli:throw('usage') end 
+        if not shell then cli:throw('usage', 'Name your shell: ' .. table.concat(func.sortedkeys(scripts), ', ') .. '.') end
         if not scripts[shell] then cli:throw('unknown-shell', shell) end
         local snippet = scripts[shell].script
-        return "Please copy the snippet below and install it in your rc file or equivalent:\n```lua\n" .. snippet .. '```'
+        return "Please copy the snippet below and install it in your rc file or equivalent:\n```" .. shell .. "\n" .. snippet .. '```'
     end,
-    doc = "Installs autocomplete. You must provide your shell to the this function.",
+    doc = "Prints the shell completion snippet for your shell, to add to your rc file.",
     args = "shell",
     example = "vex autocomplete bash"
 }
@@ -86,9 +86,9 @@ cli:verb "suggest" {
     function(args)
         return suggest.suggest(args)
     end,
-    doc = "Installs autocomplete",
+    doc = "Prints completions for a command line. Called by the autocomplete snippet, not by hand.",
     args = "current Command...",
-    example = "vex autocomplete"
+    example = "vex suggest 2 vex view"
 }
 
 function suggest.options(suggestions)
@@ -102,7 +102,7 @@ local function parse_usage(usage)
     local pos, flags = {}, {}
     for token in usage:gmatch("%S+") do
         local flag = token:match("^%[%-%-(.-)%.?%.?%.?%]$")
-        local positional = token:match("^%[(.-)%]$")
+        local positional = token:match("^%[(.-)%]$") or token:match("^<(.-)>$")
         if flag then
             table.insert(flags, flag)
         elseif positional then
@@ -196,7 +196,9 @@ end
 -- vex suggest 2 vex focus --select field:value
 --> args = 2 vex focus {select, field:value}
 function suggest.suggest(args)
-    local current = tonumber(table.remove(args, 1))
+    local first = table.remove(args, 1)
+    local current = first and tonumber(first)
+    if not current then return suggest.unknown() end
     table.remove(args, 1)
     --> args = focus {select, field:value}
 

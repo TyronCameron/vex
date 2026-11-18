@@ -113,7 +113,7 @@ $ vex remove
 reorder-pantry-1
 ```
 
-`remove` deletes every task in the focus, removes links to them from other tasks, and clears your focus. It doesn't ask for confirmation, so check a wide focus with `vex focus` or `vex view tabular` first.
+`remove` deletes every task in the focus, removes links to them from other tasks, and leaves you an empty focus. A removed abstract's children move up to its parent. It doesn't ask for confirmation, so check a wide focus with `vex focus` or `vex view tabular` first.
 
 ## Next steps
 

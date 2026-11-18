@@ -27,6 +27,7 @@ Every event below fires as `pre-` and `post-`.
 | `verb-<verb>` | any command, e.g. `verb-add` | args | args, output |
 | `task-add` | creating a task in memory | properties | vexid, task |
 | `task-set` | setting fields | vexid, properties, modifiers | vexid, task |
+| `task-force` | keeping a task to write unresolved (`vex set --force`) | vexid | vexid, task |
 | `task-resolve` | resolving a task | vexid | vexid, task (nil when its file is gone or unreadable, and it left the index), the task as it was last indexed (an empty table if it never was) |
 | `task-remove` | unlinking a removed task | vexid | vexid |
 | `task-delete` | deleting a task's file | vexid | vexid, path |

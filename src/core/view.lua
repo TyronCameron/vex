@@ -37,21 +37,39 @@ end
 -- only need one
 local v = View.new()
 
-local function csvrow(t)
+-- every field the tasks hold, so a column shows for a transient such as an abstract's status
+local function columns(tasks)
+    local found = {}
+    for _, t in ipairs(tasks) do
+        for k in pairs(t) do if k ~= 'vexbody' then found[k] = true end end
+    end
+    return found
+end
+
+-- a task's value for each column, formatted, read through its transients where it stores none
+local function row(t, cols, raw)
     local formatted = task:format(t.vexid)
     local result = {}
-    for k, v in pairs(t) do
-        if k ~= 'vexbody' then
-            result[k] = type(v) == 'string' and v or formatted[k]
-            if result[k] == nil then result[k] = v end
+    for k in pairs(cols) do
+        local v = rawget(t, k)
+        local value
+        if v ~= nil then
+            value = (raw and type(v) == 'string') and v or formatted[k]
+            if value == nil then value = v end
+        elseif task:transientof(t.vextype, k) then
+            value = formatted[k]
         end
+        if value == nil then value = '' end
+        result[k] = value
     end
     return result
 end
 
 v:view 'csv' {
     display = function(focus, flags)
-        return format.csv(func.imap(focus:get(), csvrow))
+        local tasks = focus:get()
+        local cols = columns(tasks)
+        return format.csv(func.imap(tasks, function(t) return row(t, cols, true) end))
     end
 }
 
@@ -80,7 +98,7 @@ v:view 'ics' {
             local epoch = t[field]
             if epoch ~= nil then
                 if not isdate(t, field) then cli:throw('not-a-date-field', field) end
-                local row = csvrow(t)
+                local fields = row(t, columns({t}), true)
                 local allday = atmidnight(epoch)
                 local start = icstime(epoch, allday)
                 local event = {
@@ -100,12 +118,12 @@ v:view 'ics' {
                 end
                 local categories = func.imap(func.ifilter({t.vextype, t.owner}, function(c) return c ~= nil end), function(c) return format.icstext(tostring(c)) end)
                 table.insert(event, {name = 'CATEGORIES', value = table.concat(categories, ',')})
-                local keys = func.keys(row)
+                local keys = func.keys(fields)
                 table.sort(keys)
                 local details = {}
                 for _, key in ipairs(keys) do
-                    if key ~= 'description' then
-                        local value = row[key]
+                    local value = fields[key]
+                    if key ~= 'description' and value ~= '' then
                         if type(value) == 'table' then value = table.concat(value, ', ') end
                         table.insert(details, key .. ': ' .. tostring(value))
                     end
@@ -118,16 +136,9 @@ v:view 'ics' {
     end
 }
 
-local function tabularrow(t)
-    local formatted = task:format(t.vexid)
-    local result = {}
-    for k, v in pairs(t) do
-        if k ~= 'vexbody' then
-            result[k] = formatted[k]
-            if result[k] == nil then result[k] = v end
-        end
-    end
-    if result.path then result.path = pretty.string(result.path, {filelink = result.path}) end
+local function tabularrow(t, cols)
+    local result = row(t, cols)
+    if result.path ~= '' and result.path then result.path = pretty.string(result.path, {filelink = result.path}) end
     return result
 end
 
@@ -136,23 +147,26 @@ local function firsttask(tasks)
     return tasks[1]
 end
 
-local function tabularrows(rows, tasks, depth)
+local function tabularrows(rows, tasks, depth, cols)
     if not Focus.isgrouped(tasks) then
-        for _, t in ipairs(tasks) do table.insert(rows, tabularrow(t)) end
+        for _, t in ipairs(tasks) do table.insert(rows, tabularrow(t, cols)) end
         return rows
     end
     for _, group in ipairs(tasks) do
         local value = task:format(firsttask(group.tasks).vexid)[group.field]
         if value == nil then value = group.value end
+        if value == nil then value = '(none)' end
         table.insert(rows, pretty.subheader(group.field, value, depth))
-        tabularrows(rows, group.tasks, depth + 1)
+        tabularrows(rows, group.tasks, depth + 1, cols)
     end
     return rows
 end
 
 v:view 'tabular' {
     display = function(focus, flags, flagwords)
-        return pretty.tabular(tabularrows({}, focus:apply(flagwords):result(), 0), sortdata)
+        local applied = focus:apply(flagwords)
+        local tasks = applied:result()
+        return pretty.tabular(tabularrows({}, tasks, 0, columns(applied:get())), sortdata)
     end
 }
 
@@ -253,7 +267,7 @@ v:view 'list' {
 v:view 'json' {
     display = function(focus, flags)
         local tasks = focus:get()
-        return format.json(tasks, 2)
+        return format.json(tasks)
     end
 }
 
@@ -264,7 +278,7 @@ local function bymoves(field, tasks)
         for _, t in ipairs(tasks) do
             local status = task:schemaof(t.vextype, 'status')
             local distances = {[t.status] = ({initial = 0, interim = 1, final = 2})[t.phase]}
-            if status then
+            if status and status._name == 'statemachine' then
                 local machine = statemachine.new(status.specification.states, status.specification.initial, status.specification.initial)
                 distances = machine:distances()
             end
@@ -383,10 +397,10 @@ v:view 'overview' {
         local nil_deps = 0
         for _, task in ipairs(tasks) do
             if not task.parent then nil_parent = nil_parent + 1 end
-            if not task.dependencies then nil_deps = nil_deps + 1 end
+            if #(task.dependencies or {}) == 0 then nil_deps = nil_deps + 1 end
         end
-        add("  Tasks with nil parent:    " .. string.format("%.1f%%", nil_parent / #tasks * 100))
-        add("  Tasks with nil deps:     " .. string.format("%.1f%%", nil_deps / #tasks * 100))
+        add("  Tasks without a parent:       " .. string.format("%.1f%%", nil_parent / #tasks * 100))
+        add("  Tasks without dependencies:   " .. string.format("%.1f%%", nil_deps / #tasks * 100))
 
         -- ===== MOVEMENT =====
         add("")
@@ -407,14 +421,14 @@ v:view 'overview' {
             end
         end
         if earliest then
-            add("  Earliest task created:   " .. os.date("%Y-%m-%d", math.floor(earliest)))
+            add("  Earliest task created:        " .. os.date("%Y-%m-%d", math.floor(earliest)))
         else
-            add("  Earliest task created:   N/A")
+            add("  Earliest task created:        N/A")
         end
         if latest_mod then
-            add("  Latest modification:     " .. os.date("%Y-%m-%d", math.floor(latest_mod)))
+            add("  Latest modification:          " .. os.date("%Y-%m-%d", math.floor(latest_mod)))
         else
-            add("  Latest modification:     N/A")
+            add("  Latest modification:          N/A")
         end
 
         return table.concat(lines, "\n")

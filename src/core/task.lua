@@ -103,7 +103,8 @@ function TaskManager:registertask(name, parent, tab)
         parent = parent,
         name = name,
         schema = parent and self.tasktypes[parent].schema:merge(tab.schema) or tab.schema,
-        fields = tab.fields
+        fields = tab.fields,
+        cached_subschemas = {}
     }
     if type(tab.schema.specification) == "table" then 
         for key in pairs(tab.schema.specification) do 
@@ -147,7 +148,11 @@ end
 
 function TaskManager:schemaof(vextype, field)
     local tasktype = self.tasktypes[vextype]
-    return tasktype and select(2, tasktype.schema:get({}, {field}))
+    if not tasktype then return nil end
+    if tasktype.cached_subschemas[field] == nil then
+        tasktype.cached_subschemas[field] = select(2, tasktype.schema:get({}, {field})) or false
+    end
+    return tasktype.cached_subschemas[field] or nil
 end
 
 function TaskManager:transientof(vextype, name)
@@ -196,8 +201,8 @@ end
 function TaskManager:add(task)
     assert(task and type(task) == "table", "add() requires a table of task properties")
     event:trigger('pre-task-add', task)
-    if not (type(task.description) == "string") then cli:throw("task-creation-failed", "task must have a description to be added") end
-    if not (#task.description > 3) then cli:throw("task-creation-failed", "Need more than 3 characters to create a task") end
+    if type(task.description) ~= "string" then cli:throw("task-creation-failed", "A task needs a description.") end
+    if #task.description < 3 then cli:throw("task-creation-failed", "A description needs at least 3 characters.") end
     
     task.vexid = tagger.generate(task.description, vexdex.index)
     local existing_task = self:getsingle(task.vexid)
@@ -214,12 +219,13 @@ function TaskManager:remove(vexid)
     assert(vexid, "remove() requires an id or focus")
     event:trigger('pre-task-remove', vexid)
     if vexdex:get(vexid) then
+        local grandparent = self:getsingle(vexid).parent
         local linkers = func.imap(focus.focus(vexid):step('backlinks'):get(), function(linker) return linker.vexid end)
         for _, linker in ipairs(linkers) do
             local task = self:getsingle(linker)
             for field, value in pairs(task) do
                 if value == vexid then
-                    task[field] = nil
+                    task[field] = field == 'parent' and grandparent or nil
                 elseif type(value) == "table" then
                     task[field] = func.ifilter(value, function(link) return link ~= vexid end)
                 end
@@ -286,6 +292,14 @@ function TaskManager:set(vexid, tab, modifiers)
     self.tasks[vexid] = Task.new(task)
     event:trigger('post-task-set', vexid, self.tasks[vexid])
     return self.tasks[vexid] 
+end
+
+-- keeps a task as it stands, unresolved, for writeall to write and index
+function TaskManager:force(vexid)
+    event:trigger('pre-task-force', vexid)
+    self.unwritten[vexid] = true
+    event:trigger('post-task-force', vexid, self.tasks[vexid])
+    return vexid
 end
 
 -- shows a task's file as it is on disk
@@ -385,7 +399,10 @@ function TaskManager:resolvesingle(vexid)
     if not task.vextype then cli:throw('missing-required-field', task.vexid, 'vextype') end 
 
     local vextype = self.tasktypes[task.vextype]
-    if not vextype then cli:throw('unknown-vextype', task.vextype, func.keys(self.tasktypes)) end 
+    if not vextype then
+        local types = func.ifilter(func.sortedkeys(self.tasktypes), function(name) return self.tasktypes[name].parent end)
+        cli:throw('unknown-vextype', task.vextype, types)
+    end
 
     local context = {
         vexid = vexid,

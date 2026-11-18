@@ -13,7 +13,7 @@ A focus is a saved query over your tasks. `vex focus` builds one and most other 
 | Flag | Keeps |
 | --- | --- |
 | `--filter field:value` | Tasks where `field` equals `value`. |
-| `--fuzzy field:value[:n]` | Tasks where `field` contains `value`, give or take `n` typos. |
+| `--fuzzy field:value[:n]` | Tasks where `field` contains `value`, ignoring case, give or take `n` typos (by default one for every four characters). |
 | `--match field:pattern` | Tasks where `field` matches the Lua pattern, e.g. `description:"^Fix.*$"`. |
 | `--between field:low:high` | Tasks where `field` is in the range. Either end may be empty. |
 | `--nil field` | Tasks with no value for `field`. |
@@ -67,7 +67,7 @@ The same goes for phrases: a saved `--between due:now:"next tuesday"` always mea
 
 `vex focus`, `vex add` and `vex recipe` save their focus, and a command given no focus uses the saved one: `vex add Fix the leak` then `vex set --owner alice` edits the new task. Building a focus replaces the one you had; `vex view` applies its flags for one command only, so use it to look without losing your focus.
 
-`vex remove` clears the focus. With none saved, a command fails with `no-focus`.
+`vex remove` leaves an empty focus, so a command run straight after it with no focus changes nothing. With no focus saved at all, as in a fresh clone, a command fails with `no-focus`.
 
 ### `vex focus` on its own shows the focus
 

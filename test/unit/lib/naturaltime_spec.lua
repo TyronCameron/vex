@@ -60,6 +60,11 @@ describe("naturaltime", function()
         {"the 17th", at(2026, 10, 17)},
         {"2026-12-25", at(2026, 12, 25)},
         {"2026-12-25 09:15", at(2026, 12, 25, 9, 15)},
+        {"2026-12-25 09.15", at(2026, 12, 25, 9, 15)},
+        {"2026-12-25 09.15.00", at(2026, 12, 25, 9, 15)},
+        {"tomorrow 8.30", at(2026, 10, 18, 8, 30)},
+        {"tomorrow 8.30pm", at(2026, 10, 18, 20, 30)},
+        {"1.25 hours", now + 75 * 60},
     }
 
     for _, case in ipairs(cases) do
@@ -78,6 +83,20 @@ describe("naturaltime", function()
         assert.truthy(err:find("Cannot interpret `tomorrow blorp`", 1, true))
         assert.truthy(err:find("Unknown words: blorp", 1, true))
         assert.truthy(err:find("`next tuesday`", 1, true))
+    end)
+
+    it("rejects a date or time that does not exist", function()
+        for _, phrase in ipairs({"2026-02-30", "2026-13-01", "2026-12-25 25:00", "2026-12-25 09:75", "30 february"}) do
+            local ok, err = pcall(naturaltime.parse, phrase, now)
+            assert.is_false(ok, phrase)
+            assert.truthy(err:find("Cannot interpret `" .. phrase .. "`", 1, true), phrase)
+        end
+    end)
+
+    it("names only the words it does not know, not the numbers before them", function()
+        local ok, err = pcall(naturaltime.parse, "in 3 dayz", now)
+        assert.is_false(ok)
+        assert.truthy(err:find("Unknown words: dayz.", 1, true))
     end)
 
     it("rejects a relation with nothing to relate to", function()

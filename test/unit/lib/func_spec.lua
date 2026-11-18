@@ -101,6 +101,13 @@ describe("func", function()
 
     -- ==================== imerge ====================
 
+    it("`func.setdiff` keeps the items of the first list that the second lacks, in order and each once", function()
+        local a, b, c = {}, {}, {}
+        assert.same({"x", "z"}, func.setdiff({"x", "y", "z", "x"}, {"y"}))
+        assert.equal(c, func.setdiff({a, b, c}, {a, b})[1])
+        assert.same({}, func.setdiff({}, {"y"}))
+    end)
+
     it("`func.imerge` concatenates two arrays", function()
         local result = func.imerge({1, 2}, {3, 4})
         assert.equal(4, #result)

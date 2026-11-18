@@ -40,6 +40,12 @@ function Context:snapshot()
     }, Context)
 end
 
+-- reads a child's value from its container, the way the child's schema says to (`schema.raw` reads it as stored)
+local function read(childschema, container, key)
+    if childschema then return childschema:_read(container, key) end
+    return container[key]
+end
+
 function Context:descend(schemakey, instancekey, fn)
     local parentschema = self.currentschema
     local parentvalue = self.currentvalue
@@ -50,7 +56,7 @@ function Context:descend(schemakey, instancekey, fn)
     end
     if instancekey ~= nil then
         table.insert(self.path, instancekey)
-        self.currentvalue = self.currentvalue[instancekey]
+        self.currentvalue = read(self.currentschema, self.currentvalue, instancekey)
     end
 
     local value = fn()
@@ -82,6 +88,9 @@ Schema.__call = function(self, ...)
     if specification ~= nil then complete_schema.specification = specification end
     return complete_schema
 end
+function Schema:_read(container, key)
+    return container[key]
+end
 Schema.__tostring = function(self)
     return tostring(self._name)
 end
@@ -102,6 +111,7 @@ function Schema.new(definition)
         _validate = definition.validate,
         _postvalidate = definition.postvalidate,
         _iterate = definition.iterate,
+        _read = definition.read,
         _isos = definition.isos,
         _error = definition.error,
         _name = definition.name or 'schema',
@@ -328,7 +338,7 @@ function Schema:iterate(instance, context)
                 self.specification[schemakey] = childschema
                 context:descend(schemakey, instancekey, function()
                     if instancekey ~= nil then
-                        coroutine.yield(childschema, instance[instancekey], schemakey, instancekey)
+                        coroutine.yield(childschema, read(childschema, instance, instancekey), schemakey, instancekey)
                     else
                         coroutine.yield(childschema, instance, schemakey, instancekey)
                     end
@@ -473,9 +483,7 @@ Schema.register 'any' {
         end)
     end,
     validate = function(self, instance, context) 
-        if self.specification == nil or func.isempty(self.specification) then 
-            return false, "Any schema is empty -- so trivially nothing can match"
-        end
+        if self.specification == nil or func.isempty(self.specification) then return true end
         local alternatives = {}
         for childschema, childinstance in self:iterate(instance, context) do 
             local valid, failure = childschema:validate(childinstance, context)
@@ -526,6 +534,20 @@ Schema.register 'none' {
         end 
         return true
     end
+}
+
+-- validates a field as its container stores it, never through the container's metatable
+Schema.register 'raw' {
+    read = function(self, container, key)
+        if type(container) == "table" then return rawget(container, key) end
+        return container[key]
+    end,
+    iterate = function(self, instance, context)
+        return coroutine.wrap(function() coroutine.yield(1, nil) end)
+    end,
+    prevalidate = prevalidate_children,
+    validate = validate_children,
+    postvalidate = postvalidate_children
 }
 
 -- checks for nil or the other type
@@ -704,7 +726,7 @@ Schema.register 'date' {
             backward = function(self, value)
                 if type(value) ~= "string" then return value end
                 local y, mo, d = value:match("^(%d%d%d%d)-(%d%d)-(%d%d)$")
-                if not y then return value end
+                if not (y and naturaltime.exists {year = tonumber(y), month = tonumber(mo), day = tonumber(d)}) then return value end
                 return os.time({
                     year = tonumber(y), month = tonumber(mo), day = tonumber(d),
                     hour = tonumber(0), min = tonumber(0), sec = tonumber(0), 
@@ -742,7 +764,7 @@ Schema.register 'datetime' {
                     y, mo, d = value:match("^(%d%d%d%d)-(%d%d)-(%d%d)$")
                     h, mi, s, zone = 0, 0, 0, ""
                 end
-                if not y then return value end
+                if not (y and naturaltime.exists {year = tonumber(y), month = tonumber(mo), day = tonumber(d), hour = tonumber(h), min = tonumber(mi), sec = tonumber(s) or 0}) then return value end
                 local sign, zh, zm = zone:match("^([+-])(%d%d):?(%d%d)$")
                 if zone ~= "" and zone ~= "Z" and not sign then return value end
                 local epoch = os.time({
@@ -774,12 +796,19 @@ Schema.register 'datetime' {
 -- Descriptive schemas 
 -----------------------------------------------
 
+-- describes the bounds of a range, such as `at least 3` or `between 1 and 5`
+local function bounds(lower, upper)
+    if upper == "inf" then return "at least " .. tostring(lower) end
+    if lower == "-inf" then return "at most " .. tostring(upper) end
+    return "between " .. tostring(lower) .. " and " .. tostring(upper)
+end
+
 -- checks for a numeric range 
 Schema.register 'rng' {
     validate = function(self, instance)
         local lower = self.specification[1] or self.specification.lower or "-inf"
         local upper = self.specification[2] or self.specification.upper or "inf"
-        return (lower == "-inf" or lower <= instance) and (upper == "inf" or instance <= upper), "Range: " .. tostring(lower) .. " <= " .. tostring(instance) .. " <= " .. tostring(upper)
+        return (lower == "-inf" or lower <= instance) and (upper == "inf" or instance <= upper), "Expected a number " .. bounds(lower, upper) .. ", got " .. tostring(instance)
     end
 }
 
@@ -797,7 +826,8 @@ Schema.register 'hasmetatable' {
 -- checks for an empty string or table 
 Schema.register 'empty' {
     validate = function(self, instance)
-        return instance == nil or #instance == 0, "Non-empty length of " .. tostring(instance and #instance)
+        local sized = type(instance) == "string" or type(instance) == "table"
+        return sized and #instance == 0, "Expected length 0, got " .. (sized and "length " .. #instance or tostring(instance))
     end
 }
 
@@ -807,7 +837,7 @@ Schema.register 'size' {
         local lower = (self.specification and (self.specification[1] or self.specification.lower)) or 0
         local upper = (self.specification and (self.specification[2] or self.specification.upper)) or "inf"
         local size = #instance
-        return (lower == "-inf" or lower <= size) and (upper == "inf" or size <= upper), "Range: " .. tostring(lower) .. " <= " .. tostring(size) .. " <= " .. tostring(upper)
+        return (lower == "-inf" or lower <= size) and (upper == "inf" or size <= upper), "Expected " .. bounds(lower, upper) .. (type(instance) == "string" and " characters" or " items") .. ", got " .. tostring(size)
     end
 }
 

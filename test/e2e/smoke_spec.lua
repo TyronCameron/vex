@@ -122,7 +122,7 @@ describe("vex smoke test: every verb, view and focus (e2e, subprocess)", functio
     helper.write_file(decision, helper.read_file(decision):gsub("vextype: task", "vextype: decision"))
     helper.link(dir, DEPENDENT, "parent", DECISION)
     vex(dir, "resolve", "all")
-    vex(dir, "set", DEPENDENT, "--status", "done")
+    vex(dir, "set", DEPENDENT, "--force", "--status", "done")
   end)
 
   teardown(function()
@@ -135,7 +135,7 @@ describe("vex smoke test: every verb, view and focus (e2e, subprocess)", functio
       test(name(row), function()
         local out = vex(dir, unpack(row))
         if row.count then
-          assert.truthy(out:find("Focusing on " .. row.count .. " vex", 1, true), out)
+          assert.truthy(out:find("Focusing on " .. row.count .. " task", 1, true), out)
         end
       end)
     end
